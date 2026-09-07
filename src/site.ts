@@ -2,11 +2,8 @@
 // TODO: 把下面的占位内容换成你自己的真实信息。
 
 // 图片图床开关：'' = 走本地相对路径（public/ 随站点部署，Cloudflare Pages 自带 CDN）；
-// 若要改用 GitHub + jsDelivr 图床，填：
-//   export const IMG_CDN = 'https://cdn.jsdelivr.net/gh/CloudWingX/cloudwing@main/public';
-// 页面图片统一走 imgUrl()：非空时拼到 /shots/... 等以 / 开头的路径前。
-// 注意：jsDelivr 需要仓库已 push 且为公开；国内部分网络访问 jsDelivr 不稳定，可随时置回 ''。
-export const IMG_CDN = '';
+// 已启用 GitHub + jsDelivr 图床（仓库 CloudWingX/cloudwing，需 push 且为公开后生效）：
+export const IMG_CDN = 'https://cdn.jsdelivr.net/gh/CloudWingX/cloudwing@main/public';
 export const imgUrl = (p: string) => (p && p.startsWith('/') && IMG_CDN ? IMG_CDN + p : p);
 
 export const SITE = {
@@ -18,7 +15,7 @@ export const SITE = {
   tagline: 'CloudWing（云翼）—— 个人学习与作品档案空间 · 磨砂玻璃扁平化设计',
   author: 'CloudWing_X',
   email: 'you@example.com',
-  github: 'https://github.com/yourname',
+  github: 'https://github.com/CloudWingX',
   bilibili: 'https://space.bilibili.com/yourid',
   // 关于页与 footer 使用的备注
   notice:
