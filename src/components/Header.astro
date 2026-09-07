@@ -250,23 +250,45 @@ const isActive = (href: string) =>
 </style>
 
 <script>
-  // 移动端菜单：汉堡切换抽屉
-  const header = document.querySelector('[data-nav]');
-  const burger = header?.querySelector('[data-nav-burger]');
-  const drawer = header?.querySelector('[data-nav-drawer]');
-  if (burger && drawer) {
-    const setOpen = (open) => {
-      header.classList.toggle('menu-open', open);
-      drawer.hidden = !open;
-      burger.setAttribute('aria-expanded', String(open));
-      burger.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
-    };
-    burger.addEventListener('click', () => setOpen(drawer.hidden));
-    drawer.addEventListener('click', (e) => {
-      if (e.target.closest('a')) setOpen(false);
-    });
-    document.addEventListener('click', (e) => {
-      if (!header.contains(e.target)) setOpen(false);
-    });
+  // 移动端菜单：汉堡切换抽屉。
+  // 用“全局单次监听 + document 事件委托”实现：ClientRouter 软导航会重建 Header，
+  // 若把监听绑在首屏元素上，导航后新汉堡会失效 —— 委托到 document 则 DOM 重建后依然生效。
+  const setOpen = (open) => {
+    const header = document.querySelector('[data-nav]');
+    const drawer = header?.querySelector('[data-nav-drawer]');
+    const burger = header?.querySelector('[data-nav-burger]');
+    if (!header || !drawer || !burger) return;
+    header.classList.toggle('menu-open', open);
+    drawer.hidden = !open;
+    burger.setAttribute('aria-expanded', String(open));
+    burger.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
+  };
+
+  const onDocClick = (e) => {
+    const burger = e.target.closest('[data-nav-burger]');
+    const header = document.querySelector('[data-nav]');
+    const drawer = header?.querySelector('[data-nav-drawer]');
+    if (!header || !drawer) return;
+
+    if (burger) {
+      // 点汉堡：当前 hidden → 打开，否则关闭
+      setOpen(drawer.hidden);
+      return;
+    }
+    // 点击抽屉内的链接 → 关闭（链接自身的导航由 ClientRouter 处理）
+    if (e.target.closest('[data-nav-drawer] a')) {
+      setOpen(false);
+      return;
+    }
+    // 点击抽屉/汉堡以外的区域 → 关闭
+    if (!e.target.closest('[data-nav-drawer]') && !e.target.closest('.site-header')) {
+      setOpen(false);
+    }
+  };
+
+  // 只挂载一次（脚本模块在软导航时会重新执行，幂等保护避免重复监听）
+  if (!window.__cwNavWired) {
+    window.__cwNavWired = true;
+    document.addEventListener('click', onDocClick);
   }
 </script>
