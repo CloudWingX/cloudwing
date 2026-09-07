@@ -1,0 +1,71 @@
+---
+// 档案走马灯（纯装饰，aria-hidden；减少动效时静止）
+interface Props {
+  items: string[]; // 例如 ["W-001 · 晨昏边境", "STATUS · ACTIVE"]
+  reverse?: boolean;
+  speed?: number; // 单程秒数，默认 36
+  big?: boolean;  // 大字版（首屏字带用）
+}
+const { items, reverse = false, speed = 36, big = false } = Astro.props;
+const doubled = [...items, ...items];
+---
+{
+  items.length > 0 && (
+    <div class:list={['tk', { 'tk-lg': big }]} aria-hidden="true">
+      <div
+        class:list={['tk-track', { 'tk-rev': reverse }]}
+        style={`animation-duration:${speed}s`}
+      >
+        {doubled.map((it, i) => {
+          const sep = it.indexOf(' · ');
+          const head = sep > -1 ? it.slice(0, sep) : '';
+          const rest = sep > -1 ? it.slice(sep + 3) : it;
+          return (
+            <span>{head ? <b>{head}</b> : null}{rest}</span>
+          );
+        })}
+      </div>
+    </div>
+  )
+}
+
+<style>
+  .tk {
+    overflow: hidden;
+    border-top: 1px solid var(--line-2);
+    border-bottom: 1px solid var(--line-2);
+    background: var(--paper-1);
+    padding: 0.55rem 0;
+    user-select: none;
+  }
+  .tk-track {
+    display: flex;
+    width: max-content;
+    white-space: nowrap;
+    animation: tk-scroll linear infinite;
+  }
+  .tk-lg { padding: 0.8rem 0; }
+  .tk-lg .tk-track { animation-duration: 45s; }
+  .tk-rev { animation-direction: reverse; }
+  .tk:hover .tk-track { animation-play-state: paused; }
+  .tk span {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 0 1.1rem;
+    border-right: 1px solid var(--line-1);
+    font-variant-numeric: tabular-nums;
+  }
+  .tk-lg span {
+    font-size: 1.05rem;
+    letter-spacing: 0.34em;
+    color: var(--ink-2);
+  }
+  .tk b { color: var(--accent-ink); font-weight: 700; margin-right: 0.5em; }
+  @keyframes tk-scroll { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .tk-track { animation: none; }
+  }
+</style>

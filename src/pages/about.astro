@@ -1,0 +1,217 @@
+---
+import Base from '../layouts/Base.astro';
+import Lanyard from '../components/ReactBits/Lanyard.jsx';
+import AboutMagicBento from '../components/AboutMagicBento.jsx';
+import { SITE } from '../site';
+---
+<Base title="关于" center bodyClass="about-route">
+  <div class="about-root">
+    <div class="wrap about">
+      <header class="page-head" data-ent>
+        <p class="kicker"><b>PROFILE</b> / ABOUT · 关于</p>
+        <h1>{SITE.author}</h1>
+        <p class="sub">计算机科学与技术（本科在读）· 后端与质量保障方向 —— 用网站记录学习、代码与走过的每一步。</p>
+      </header>
+
+      <section class="who" data-ent style="--ad:.12s">
+        <p class="txt">
+          我是 {SITE.author}，计算机科学与技术专业本科生（2027 届），
+          方向偏后端与质量保障：能写 Java/Spring Boot 接口，也会用测试的眼光把缺陷讲清楚。
+          这个站点存放我的学习轨迹与产出——<a href="/works/">作品库</a>、<a href="/gallery/">影集</a>，
+          以及下面的档案卡。
+        </p>
+        <blockquote>把每一次练习，都变成一条可追溯的档案。</blockquote>
+      </section>
+
+      <!-- 履历：教育 · 实训 · 项目（内容来自本人简历） -->
+      <section class="track" data-ent style="--ad:.16s">
+        <h2 class="track-title">Education &amp; Practice</h2>
+        <div class="tl">
+          <article class="tl-row">
+            <span class="tl-time">2023.09 – 2027.06</span>
+            <div class="tl-body">
+              <h3>计算机科学与技术 · 本科（统招）</h3>
+              <p>主修 Java 程序设计、C 语言、Web 应用开发、数据结构、操作系统、计算机网络、数据库原理、软件工程；
+                大四冲刺阶段系统推进 Java 后端（JavaSE → JavaWeb → Spring Boot），坚持每日编码练习。</p>
+            </div>
+          </article>
+          <article class="tl-row">
+            <span class="tl-time">2025.07</span>
+            <div class="tl-body">
+              <h3>企业实践实训 · Web 系统方向</h3>
+              <p>随企业导师研读业务文档，梳理功能模块与校验规则；以功能用例走查系统操作路径，兼顾正向流程与异常边界；
+                结合日志与复现步骤协助定位页面/接口问题，并按规范跟进回归验证——完整经历「需求 → 用例 → 执行 → 缺陷 → 回归」闭环。</p>
+            </div>
+          </article>
+          <article class="tl-row">
+            <span class="tl-time">课程设计</span>
+            <div class="tl-body">
+              <h3>简易图书管理系统 · 前后端分离（核心开发）</h3>
+              <p>Spring Boot · MyBatis · MySQL · Vue · Axios · Git。设计用户/图书/借阅记录表结构与权限隔离；
+                按 Controller → Service → Mapper 分层实现登录鉴权、图书增删改查、借阅归还与分页，统一处理参数校验与异常；
+                前端 Vue + Axios 联调并解决跨域、中文乱码、时间格式等问题，配合测试专项验证与回归修复。</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- 技能与证书 -->
+      <section class="skills" data-ent style="--ad:.2s">
+        <h2 class="track-title">Stack &amp; Cert</h2>
+        <ul class="skill-groups">
+          <li><b>后端</b><span>Java · Spring Boot · MyBatis · RESTful API · 多线程入门</span></li>
+          <li><b>前端</b><span>HTML/CSS/JavaScript · Vue · Axios</span></li>
+          <li><b>数据与测试</b><span>MySQL（SQL/多表/事务/索引）· 接口测试 · 用例设计 · 缺陷跟进</span></li>
+          <li><b>工具与效率</b><span>Git · Maven · IDEA / VS Code · 文档驱动的 AI 辅助排错</span></li>
+        </ul>
+        <p class="cert">语言：大学英语四级（CET-4）通过，可阅读英文技术文档。</p>
+      </section>
+    </div>
+
+    <section class="mb-shell" data-ent style="--ad:.2s">
+      <div class="mb-wrap">
+        <AboutMagicBento client:load />
+      </div>
+    </section>
+
+    <p class="note" data-ent style="--ad:.3s">{SITE.notice}</p>
+
+    <!-- 挂绳工牌：桌面端放大置于右上角（正面中心为用户头像，加粗圆角方形边框） -->
+    <div class="ly-floater" aria-label="挂绳工牌">
+      <Lanyard
+        client:load
+        position={[0, 0, 22]}
+        gravity={[0, -40, 0]}
+        frontImage="/lanyard/avatar-front.svg"
+        imageFit="cover"
+      />
+    </div>
+  </div>
+</Base>
+
+<style>
+  .about-root { position: relative; }
+  .about { padding-bottom: 1rem; max-width: 720px; }
+
+  .who .txt { color: var(--ink-2); font-size: 1.05rem; line-height: 1.95; }
+  .who .txt a { color: var(--accent-deep); text-decoration: underline; text-underline-offset: 3px; }
+  .who blockquote {
+    margin: 1.4rem 0 0; padding: .1rem 0 .1rem 1rem;
+    border-left: 4px solid var(--accent);
+    color: var(--ink); font-weight: 600;
+  }
+
+  /* —— 履历时间线（教育 · 实训 · 项目） —— */
+  .track { margin-top: 3.2rem; }
+  .track-title {
+    font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 1.4rem;
+  }
+  .tl { display: flex; flex-direction: column; }
+  .tl-row {
+    position: relative; display: grid; grid-template-columns: 148px 1fr; gap: 1.2rem;
+    padding: 0 0 1.9rem 1.2rem;
+    border-left: 1px solid var(--line-2);
+  }
+  .tl-row::before {
+    content: ""; position: absolute; left: -5px; top: 6px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .tl-time {
+    font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em;
+    color: var(--ink-3); padding-top: 0.25rem;
+  }
+  .tl-body h3 { margin: 0 0 0.4rem; font-size: 1.05rem; color: var(--ink); }
+  .tl-body p { margin: 0; color: var(--ink-2); font-size: 0.95rem; line-height: 1.9; }
+  .tl-row:last-child { padding-bottom: 0; }
+  @media (max-width: 620px) {
+    .tl-row { grid-template-columns: 1fr; gap: 0.35rem; padding-left: 0.9rem; }
+  }
+
+  /* —— 技能与证书 —— */
+  .skills { margin-top: 3.4rem; }
+  .skill-groups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.7rem; }
+  .skill-groups li {
+    display: flex; align-items: baseline; gap: 1.1rem;
+    padding: 0.85rem 1.1rem;
+    border-radius: var(--r-m);
+    background: var(--glass);
+    border: 1px solid var(--line-1);
+    box-shadow: var(--shadow-sm);
+  }
+  .skill-groups b {
+    flex: 0 0 92px; font-family: var(--font-mono); font-size: 0.76rem;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-deep);
+  }
+  .skill-groups span { color: var(--ink-2); font-size: 0.95rem; line-height: 1.7; }
+  .cert {
+    margin: 1.2rem 0 0; color: var(--ink-2); font-size: 0.9rem;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .cert::before { content: "◆"; color: var(--accent); font-size: 0.6rem; }
+  @media (max-width: 520px) {
+    .skill-groups li { flex-direction: column; gap: 0.35rem; }
+  }
+
+  .mb-shell { width: min(1100px, 100%); margin: 2.6rem auto 0; padding: 0 var(--gutter); }
+  .mb-wrap { margin: 0 auto; }
+  .mb-shell :global(.card-grid) { max-width: none; margin: 0 auto; }
+
+  .note {
+    margin: 2.4rem auto 0; max-width: 46em; text-align: center;
+    color: var(--ink-3); font-size: .85rem; padding: 0 var(--gutter);
+  }
+
+  .ly-floater { position: relative; width: 100%; height: 440px; margin-top: 1rem; }
+  @media (min-width: 1025px) {
+    .ly-floater {
+      position: absolute; top: 4.5rem; right: max(1vw, 14px);
+      width: min(360px, 30vw); height: 560px; margin-top: 0; z-index: 1;
+    }
+    .mb-shell { margin-top: 3rem; }
+  }
+
+  /* 灵感导航卡已删除 → bento 现为 5 卡；
+     取消原版 CSS 对第 4 张的“大卡”规则，让 5 卡自然铺成 2 行（第 3 张 Gallery 仍为大卡） */
+  @media (min-width: 1024px) {
+    :global(body.about-route .magic-bento-card:nth-child(4)) {
+      grid-column: auto;
+      grid-row: auto;
+    }
+  }
+
+  /* ============================================================
+     MagicBento 日夜模式适配（V41，宿主覆盖，不改 ReactBits 本体）
+     卡底色/辉光色由 AboutMagicBento.jsx 按主题切换；
+     这里负责：浅色主题下卡片文字/边框/描边辉光变深色，深色主题维持原样。
+     ============================================================ */
+  :global(html[data-theme='light'] .mb-wrap) {
+    --white: #1b1d22; /* 卡片内小标签默认色 */
+    --border-color: #cfd2d8;
+    --background-dark: #f6f7f8; /* 卡片底色（无内联色时走这里，纯 CSS 随主题切换） */
+  }
+  :global(html[data-theme='light'] .magic-bento-card) {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  }
+  :global(html[data-theme='light'] .magic-bento-card__label) {
+    color: #3f4248;
+  }
+  :global(html[data-theme='light'] .magic-bento-card__title) {
+    color: #141416;
+  }
+  :global(html[data-theme='light'] .magic-bento-card__description) {
+    color: #55585f;
+  }
+  :global(html[data-theme='light'] .magic-bento-card--border-glow::after) {
+    background: radial-gradient(
+      var(--glow-radius) circle at var(--glow-x) var(--glow-y),
+      rgba(70, 74, 84, calc(var(--glow-intensity) * 0.75)) 0%,
+      rgba(70, 74, 84, calc(var(--glow-intensity) * 0.35)) 30%,
+      transparent 60%
+    );
+  }
+  :global(html[data-theme='light'] .particle::before) {
+    background: rgba(40, 42, 50, 0.16);
+  }
+</style>

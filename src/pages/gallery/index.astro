@@ -1,0 +1,239 @@
+---
+// 画廊（原“影集”，V44 重做）：去掉沉浸式 DomeGallery 球幕，
+// 改为与全站风格统一的玻璃卡片网格 + 点击大图浏览；背景沿用全站 Particles。
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+import { imgUrl } from '../../site';
+
+const fmt = (d: Date) => new Date(d).toISOString().slice(0, 10);
+const all = await getCollection('shots');
+const shots = all
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
+  .map((e) => ({
+    no: String(e.id).toUpperCase(),
+    title: e.data.title,
+    date: fmt(e.data.date),
+    game: e.data.game,
+    note: e.data.note,
+    image: imgUrl(e.data.image), // 图片走 IMG_CDN（图床开关）
+    aspect: e.data.aspect ?? '16:9',
+  }));
+const count = String(shots.length);
+---
+<Base title="画廊" center>
+  <div class="wrap">
+    <header class="page-head" data-ent>
+      <p class="kicker"><b>02</b> / GALLERY 画廊</p>
+      <h1>画廊</h1>
+      <p class="sub">游戏截图与日常收藏 · 当前 {count} 张 · 点击卡片可查看大图。</p>
+    </header>
+
+    <section class="section" style="padding-top:1.6rem">
+      <ul class="gal-grid">
+        {
+          shots.map((s, i) => (
+            <li class="gal-item" data-ent style={`--ad:${(i % 10) * 70}ms`}>
+              <button class="gal-card" type="button" data-gal-open
+                data-title={s.title}
+                data-meta={`${s.no} · ${s.date} · ${s.game}`}
+                data-note={s.note || ''}
+                data-img={s.image}
+                aria-label={`查看大图：${s.title}`}
+              >
+                <span class="gal-cover" style={`aspect-ratio:${s.aspect.replace(':', ' / ')}`}>
+                  <img src={s.image} alt={s.title} loading="lazy" />
+                </span>
+                <span class="gal-info">
+                  <span class="gal-no">{s.no}</span>
+                  <span class="gal-title">{s.title}</span>
+                  <span class="gal-meta">{s.date} · {s.game}</span>
+                </span>
+              </button>
+            </li>
+          ))
+        }
+      </ul>
+
+      {shots.length === 0 && (
+        <p class="sub">暂无截图。把图片放入 <code>public/shots/</code> 并添加 Markdown 即可展示。</p>
+      )}
+    </section>
+  </div>
+
+  <!-- 大图浏览 -->
+  <dialog class="gal-dialog" id="galDialog">
+    <button class="gd-close" type="button" data-gal-close aria-label="关闭">✕</button>
+    <figure>
+      <img id="gdImg" src="" alt="" />
+      <figcaption>
+        <span class="gd-title" id="gdTitle"></span>
+        <span class="gd-meta" id="gdMeta"></span>
+        <span class="gd-note" id="gdNote"></span>
+      </figcaption>
+    </figure>
+  </dialog>
+</Base>
+
+<style>
+  /* 画廊页样式：玻璃卡网格，跟随浅/深主题 */
+  .gal-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.1rem;
+  }
+  .gal-item { display: block; }
+
+  .gal-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0;
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-l);
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-sm);
+    color: var(--ink);
+    cursor: zoom-in;
+    overflow: hidden;
+    font: inherit;
+    text-align: left;
+    transition: transform 0.18s var(--ease), box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  .gal-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--accent);
+  }
+  .gal-cover {
+    display: block;
+    overflow: hidden;
+    background: var(--paper-1);
+    aspect-ratio: 16 / 9;
+  }
+  .gal-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s var(--ease);
+  }
+  .gal-card:hover .gal-cover img { transform: scale(1.05); }
+
+  .gal-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.8rem 1rem 0.95rem;
+  }
+  .gal-no {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  .gal-title {
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.35;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .gal-meta { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-2); }
+
+  /* 大图 dialog */
+  .gal-dialog {
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-l);
+    padding: 0.6rem 0.6rem 0.4rem;
+    background: var(--paper, #0c0c0e);
+    color: var(--ink);
+    box-shadow: var(--shadow-lg);
+    max-width: min(1040px, 94vw);
+    max-height: 92vh;
+  }
+  .gal-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  .gal-dialog figure { margin: 0; }
+  .gal-dialog img {
+    display: block;
+    width: 100%;
+    max-height: 76vh;
+    object-fit: contain;
+    border-radius: calc(var(--r-l) - 6px);
+  }
+  .gal-dialog figcaption {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.7rem 0.5rem 0.4rem;
+  }
+  .gd-title { font-weight: 700; font-size: 1.05rem; }
+  .gd-meta { font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-2); }
+  .gd-note { font-size: 0.88rem; color: var(--ink-2); }
+  .gd-note:empty { display: none; }
+  .gd-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--line-2);
+    background: color-mix(in srgb, var(--paper, #0c0c0e) 78%, transparent);
+    color: var(--ink);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .gd-close:hover { background: var(--accent); color: var(--on-accent); }
+
+  html[data-theme='light'] .gal-dialog { background: #f5f5f6; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gal-card, .gal-cover img { transition: none !important; }
+  }
+</style>
+
+<script>
+  // 画廊大图浏览：卡片 → dialog 大图（支持点击背板/✕/Esc 关闭）
+  const dlg = document.getElementById('galDialog');
+  if (dlg && typeof dlg.showModal === 'function') {
+    const img = document.getElementById('gdImg');
+    const titleEl = document.getElementById('gdTitle');
+    const metaEl = document.getElementById('gdMeta');
+    const noteEl = document.getElementById('gdNote');
+
+    document.addEventListener('click', (e) => {
+      const card = e.target.closest('[data-gal-open]');
+      if (!card) return;
+      const src = card.dataset.img;
+      if (!src) return;
+      img.src = src;
+      img.alt = card.dataset.title || '';
+      titleEl.textContent = card.dataset.title || '';
+      metaEl.textContent = card.dataset.meta || '';
+      noteEl.textContent = card.dataset.note || '';
+      dlg.showModal();
+      document.body.classList.add('modal-open');
+    });
+    document.querySelectorAll('[data-gal-close]').forEach((b) =>
+      b.addEventListener('click', () => { dlg.close(); document.body.classList.remove('modal-open'); })
+    );
+    dlg.addEventListener('click', (e) => {
+      if (e.target === dlg) { dlg.close(); document.body.classList.remove('modal-open'); }
+    });
+    dlg.addEventListener('close', () => document.body.classList.remove('modal-open'));
+  }
+</script>

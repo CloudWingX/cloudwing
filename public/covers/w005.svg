@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#faf8ff"/>
+      <stop offset="1" stop-color="#eee9fc"/>
+    </linearGradient>
+    <pattern id="hatch" width="28" height="28" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="28" stroke="#e0d9f6" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#hatch)" opacity="0.6"/>
+  <text x="72" y="110" font-family="Arial, sans-serif" font-size="30" letter-spacing="6" fill="#212a3e" font-weight="bold">RECORD / W-005</text>
+  <text x="72" y="158" font-family="Arial, sans-serif" font-size="22" letter-spacing="4" fill="#8f86b5">MECH STUDY — 工业造像（已废弃）</text>
+  <g transform="translate(1150 430)">
+    <circle r="230" fill="none" stroke="#6366f1" stroke-width="6"/>
+    <circle r="150" fill="none" stroke="#a5b4fc" stroke-width="2"/>
+    <circle r="60" fill="none" stroke="#a5b4fc" stroke-width="2"/>
+    <circle r="16" fill="#8b5cf6"/>
+    <line x1="-230" y1="0" x2="-150" y2="0" stroke="#6366f1" stroke-width="6"/>
+    <line x1="150" y1="0" x2="230" y2="0" stroke="#6366f1" stroke-width="6"/>
+    <line x1="0" y1="-230" x2="0" y2="-150" stroke="#6366f1" stroke-width="6"/>
+    <line x1="0" y1="150" x2="0" y2="230" stroke="#6366f1" stroke-width="6"/>
+  </g>
+  <rect x="72" y="700" width="300" height="60" rx="30" fill="#ffffff" stroke="#e2b8b0" stroke-width="2"/>
+  <circle cx="124" cy="730" r="10" fill="#ef4444"/>
+  <text x="152" y="742" font-family="Arial, sans-serif" font-size="28" letter-spacing="4" fill="#9f3a30" font-weight="bold">SCRAPPED</text>
+  <text x="72" y="830" font-family="Arial, Helvetica, sans-serif" font-size="300" font-weight="900" fill="none" stroke="#c7b8ec" stroke-width="4">005</text>
+</svg>

@@ -1,0 +1,255 @@
+---
+// 互动页（原 /account/，V38 起删除登录/账号系统；V40 起删除音乐电台）
+// 内容：个人博客留言板（giscus / GitHub Discussions，site.ts GISCUS 配置后启用）
+// 背景：GridScan（React Bits 原版）固定深色全屏，保持原观感不变。
+// bodyClass 沿用 'auth-route'：Base 据此不铺全站粒子层 + 本页自备深色路由令牌。
+import Base from '../layouts/Base.astro';
+import { SITE, GISCUS } from '../site';
+import { GridScan } from '../components/ReactBits/GridScan.jsx';
+
+const title = '互动';
+---
+<Base title={title} bodyClass="auth-route">
+  <div class="gs-fixed" aria-hidden="true">
+    <GridScan
+      client:load
+      enableWebcam={false}
+      showPreview={false}
+      sensitivity={0.6}
+      lineThickness={1.4}
+      linesColor="#d7d8dc"
+      scanColor="#ffffff"
+      gridScale={0.075}
+      lineStyle="solid"
+      lineJitter={0.08}
+      scanDirection="pingpong"
+      scanOpacity={0.8}
+      scanGlow={0.75}
+      scanSoftness={2.2}
+      scanDuration={2.6}
+      scanDelay={1.1}
+      enablePost={true}
+      bloomIntensity={0.45}
+      bloomThreshold={0}
+      bloomSmoothing={0.95}
+      chromaticAberration={0.0015}
+      noiseIntensity={0.012}
+      scanOnClick={false}
+      lightMode={false}
+    />
+    <div class="gs-shade"></div>
+  </div>
+
+  <div class="room-stage">
+    <div class="wrap room">
+      <header class="page-head" data-ent>
+        <p class="kicker"><b>ROOM</b> / 留言板</p>
+        <h1>{title}</h1>
+        <p class="sub">把想说的留下。</p>
+      </header>
+
+      <!-- ① 留言板（giscus） -->
+      <section class="room-card" data-ent style="--ad:.12s">
+        <div class="card-head">
+          <h2>留言板</h2>
+          <p>基于 GitHub Discussions（giscus）的博客留言板。</p>
+        </div>
+        <div id="guestbook">
+          {GISCUS.repo && GISCUS.repoId ? (
+            <div class="placeholder" id="giscusPending" hidden>
+              正在加载评论系统…
+            </div>
+          ) : (
+            <div class="placeholder" id="giscusPending">
+              <p>评论系统尚未启用。</p>
+              <ol>
+                <li>仓库开启 GitHub Discussions 并安装 <b>giscus</b> app；</li>
+                <li>在 <a href="https://giscus.app" target="_blank" rel="noreferrer">giscus.app</a> 生成配置；</li>
+                <li>把 <code>repo / repoId / categoryId</code> 等填入
+                  <code>src/site.ts</code> 的 <code>GISCUS</code> 后重新构建即可。</li>
+              </ol>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- giscus 配置载体（由 site.ts GISCUS 注入；未配置时为空 → 显示待配置提示） -->
+  <div
+    id="giscusCfg"
+    hidden
+    data-repo={GISCUS.repo}
+    data-repo-id={GISCUS.repoId}
+    data-category={GISCUS.category}
+    data-category-id={GISCUS.categoryId}
+    data-mapping={GISCUS.mapping}
+    data-reactions={GISCUS.reactionsEnabled}
+    data-input={GISCUS.inputPosition}
+    data-lang={GISCUS.lang}
+  ></div>
+</Base>
+
+<style>
+  /* ============================================================
+     互动路由（body.auth-route 沿用旧名：Base 据此不铺全站粒子层）
+     —— 恒定深色，让 GridScan 固定背景从导航铺到页脚
+     ============================================================ */
+
+  :global(body.auth-route) {
+    --bg: #0b0b0d;
+    --bg-deep: #050506;
+    --ink: #f2f2f3;
+    --ink-2: #b8babf;
+    --ink-3: #818389;
+    --on-accent: #0a0a0c;
+    --line-1: rgba(255, 255, 255, 0.14);
+    --line-2: rgba(255, 255, 255, 0.28);
+    --accent: #f4f4f5;
+    --accent-deep: #ffffff;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(255, 255, 255, 0.15);
+    --accent-grad: linear-gradient(135deg, #f7f7f8 0%, #b9babf 100%);
+    --glass: linear-gradient(160deg, rgba(38, 38, 41, 0.66), rgba(13, 13, 15, 0.42));
+    --glass-strong: linear-gradient(160deg, rgba(46, 46, 50, 0.8), rgba(18, 18, 20, 0.55));
+    --glass-soft: linear-gradient(160deg, rgba(38, 38, 41, 0.44), rgba(13, 13, 15, 0.22));
+    color: #f2f2f3;
+    min-height: 100vh;
+  }
+  :global(body.auth-route)::before { background-image: none; }
+  :global(body.auth-route .grid-bg) { display: none; }
+
+  /* 顶栏 / 页脚强制夜色玻璃 */
+  :global(body.auth-route .topbar) {
+    background: linear-gradient(160deg, rgba(38, 38, 42, 0.84), rgba(12, 12, 14, 0.52));
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  :global(body.auth-route .nav a:hover) { background: rgba(255, 255, 255, 0.13); color: var(--ink); }
+  :global(body.auth-route .nav a[aria-current='page']) {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--accent-ink);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  }
+  :global(body.auth-route .theme-toggle) { color: var(--ink-2); }
+  :global(body.auth-route .btn) { border-color: rgba(255, 255, 255, 0.3); }
+  :global(body.auth-route .site-footer) {
+    background: rgba(10, 10, 12, 0.42);
+    border-top-color: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  /* GridScan 固定铺满视口（不透明背景层），内容浮于其上 */
+  .gs-fixed {
+    position: fixed; inset: 0; z-index: 0; overflow: hidden;
+    background:
+      radial-gradient(70rem 46rem at 78% -10%, rgba(255, 255, 255, 0.07), transparent 60%),
+      radial-gradient(58rem 40rem at -8% 26%, rgba(255, 255, 255, 0.05), transparent 55%),
+      radial-gradient(52rem 40rem at 30% 112%, rgba(255, 255, 255, 0.06), transparent 62%),
+      linear-gradient(180deg, #1c1c1f 0%, #121214 42%, #0b0b0d 74%, #050506 100%);
+  }
+  .gs-shade {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background:
+      radial-gradient(120% 70% at 50% 34%, rgba(3, 5, 12, 0) 58%, rgba(3, 5, 12, 0.42) 100%),
+      linear-gradient(90deg, rgba(3, 5, 12, 0.42), rgba(3, 5, 12, 0) 15%, rgba(3, 5, 12, 0) 85%, rgba(3, 5, 12, 0.42));
+  }
+
+  .room-stage {
+    position: relative; z-index: 1;
+    padding: clamp(2rem, 5vw, 4rem) 0 clamp(2.4rem, 6vh, 4.6rem);
+  }
+  .wrap.room { max-width: var(--w-max); margin: 0 auto; padding: 0 var(--gutter); display: flex; flex-direction: column; gap: 1.2rem; }
+
+  .page-head { padding: 0.4rem 0 0.2rem; }
+  .page-head h1 { color: #ffffff; }
+  .page-head .sub { color: #b8babf; }
+  .kicker { color: #8a8c92; margin-bottom: 1.2rem; }
+  .kicker b { color: #ffffff; }
+
+  .room-card {
+    padding: 1.5rem 1.7rem 1.7rem;
+    border-radius: 20px;
+    background: linear-gradient(165deg, rgba(42, 42, 46, 0.6), rgba(12, 12, 14, 0.66));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow:
+      0 26px 64px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  }
+  .card-head h2 { margin: 0 0 0.2rem; color: #ffffff; font-size: 1.5rem; }
+  .card-head p { margin: 0; color: #9b9da3; font-size: 0.9rem; line-height: 1.7; }
+  .card-head { margin-bottom: 1.1rem; }
+
+  .placeholder {
+    padding: 1.2rem 1.3rem;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    color: #b8babf;
+    font-size: 0.9rem;
+    line-height: 1.9;
+    background: rgba(6, 6, 8, 0.35);
+  }
+  .placeholder p { margin: 0 0 0.4rem; color: #e6e7ea; }
+  .placeholder ol { margin: 0.2rem 0 0; padding-left: 1.2em; }
+  .placeholder a { color: #ffffff; }
+  .placeholder code {
+    background: rgba(255, 255, 255, 0.12);
+    padding: 0.05em 0.4em;
+    border-radius: 6px;
+    font-family: var(--font-code);
+    font-size: 0.82em;
+  }
+</style>
+
+<script>
+  // ============================================================
+  // 互动页客户端脚本：giscus 留言板
+  // ============================================================
+  // ---------- 留言板 giscus ----------
+  function initGiscus() {
+    if (!window.__GISCUS_REPO__ || !window.__GISCUS_REPO_ID__ || !window.__GISCUS_CATEGORY_ID__) {
+      return; // 未配置：保留“待配置”提示
+    }
+    const pending = document.getElementById('giscusPending');
+    if (pending) pending.hidden = true;
+    const box = document.getElementById('guestbook');
+    const s = document.createElement('script');
+    s.src = 'https://giscus.app/client.js';
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    const attrs = {
+      'data-repo': window.__GISCUS_REPO__,
+      'data-repo-id': window.__GISCUS_REPO_ID__,
+      'data-category': window.__GISCUS_CATEGORY__,
+      'data-category-id': window.__GISCUS_CATEGORY_ID__,
+      'data-mapping': window.__GISCUS_MAPPING__ || 'pathname',
+      'data-reactions-enabled': window.__GISCUS_REACTIONS__ || '1',
+      'data-emit-metadata': '0',
+      'data-input-position': window.__GISCUS_INPUT__ || 'top',
+      'data-theme': 'dark',
+      'data-lang': window.__GISCUS_LANG__ || 'zh-CN',
+      'data-loading': 'lazy',
+    };
+    for (const [k, v] of Object.entries(attrs)) if (v) s.setAttribute(k, v);
+    box.appendChild(s);
+  }
+
+  // giscus 配置（取自模板内 data-* 元素，site.ts GISCUS 留空即不启用）
+  const cfgEl = document.getElementById('giscusCfg');
+  const cfg = (cfgEl && cfgEl.dataset) || {};
+  window.__GISCUS_REPO__ = cfg.repo || '';
+  window.__GISCUS_REPO_ID__ = cfg.repoId || '';
+  window.__GISCUS_CATEGORY__ = cfg.category || '';
+  window.__GISCUS_CATEGORY_ID__ = cfg.categoryId || '';
+  window.__GISCUS_MAPPING__ = cfg.mapping || 'pathname';
+  window.__GISCUS_REACTIONS__ = cfg.reactions || '1';
+  window.__GISCUS_INPUT__ = cfg.input || 'top';
+  window.__GISCUS_LANG__ = cfg.lang || 'zh-CN';
+
+  (async function boot() {
+    initGiscus();
+  })();
+</script>

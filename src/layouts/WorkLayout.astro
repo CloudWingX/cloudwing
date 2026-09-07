@@ -1,0 +1,72 @@
+---
+// 作品详情页布局：由 src/pages/works/[slug].astro 传入 entry.data 渲染。
+// 作品正文（Markdown 渲染结果 <Content/>）会落入默认 slot。
+import { SITE } from '../site';
+import Base from './Base.astro';
+
+interface Props {
+  data: {
+    title: string;
+    summary?: string;
+    date?: string;
+    order?: number;
+    tags?: string[];
+    tools?: string[];
+    state?: string;
+    cover?: string;
+  };
+}
+const { data } = Astro.props;
+const title: string = data.title ?? SITE.title;
+const summary: string = data.summary ?? '';
+const date: string = data.date ? new Date(data.date).toISOString().slice(0, 10) : '';
+const order: number = data.order ?? 0;
+const tags: string[] = data.tags ?? [];
+const tools: string[] = data.tools ?? [];
+const state: string = data.state ?? '';
+const cover: string | undefined = data.cover;
+
+const no = 'W-' + String(order).padStart(3, '0');
+const stateAttr = state.includes('进行') || state.includes('WIP') || state.includes('开发')
+  ? 'warn'
+  : state.includes('停') || state.includes('废弃') || state.includes('ERR')
+    ? 'err'
+    : '';
+---
+<Base title={`${no} · ${title}`} description={summary} center>
+  <div class="wrap">
+    <article>
+      <header class="work-head">
+        <div class="no-big">RECORD / {no}</div>
+        <h1>{title}</h1>
+        {summary && <p class="sub">{summary}</p>}
+        <dl class="meta-grid">
+          <div><dt>编号</dt><dd class="num">{no}</dd></div>
+          <div><dt>归档日期</dt><dd class="num">{date}</dd></div>
+          {state && (
+            <div>
+              <dt>状态</dt>
+              <dd><span class="state" data-state={stateAttr}>{state}</span></dd>
+            </div>
+          )}
+          <div><dt>分类</dt><dd>{tags.join(' / ')}</dd></div>
+          {tools.length > 0 && <div><dt>工具链</dt><dd class="num">{tools.join(' · ')}</dd></div>}
+        </dl>
+      </header>
+      {cover && <img class="work-cover" src={cover} alt={`${no} ${title}`} width="1600" height="900" />}      <div class="prose">
+        <slot />
+      </div>
+      <nav class="pager" aria-label="页面导航">
+        <a href="/works/">← 返回作品库</a>
+        <a href="/">索引首页</a>
+      </nav>
+    </article>
+    <dialog id="lightbox" class="lightbox" aria-label="作品大图预览">
+      <img alt="" />
+      <div class="lb-cap">
+        <span class="lb-cap-title"></span>
+        <button type="button" class="lb-close">关闭 / ESC</button>
+      </div>
+    </dialog>
+  </div>
+</Base>

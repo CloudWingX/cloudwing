@@ -1,0 +1,12 @@
+.lanyard-wrapper {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  height: 100%; /* 原版 100vh，改由宿主容器给高度，便于嵌入页面区块 */
+  min-height: 420px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: scale(1);
+  transform-origin: center;
+}

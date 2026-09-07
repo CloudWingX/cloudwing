@@ -1,0 +1,90 @@
+---
+import { SITE } from '../site';
+import ClientRouter from 'astro/components/ClientRouter.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import PageParticlesBackground from '../components/PageParticlesBackground.jsx';
+import '../styles/global.css';
+import '../styles/motion.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  center?: boolean; // 居中版式（列表/详情/关于等页面用）
+  bodyClass?: string; // 追加到 <body> 的路由级类名（页面级全局样式定位用）
+}
+const { title = SITE.title, description = SITE.tagline, center = false, bodyClass } = Astro.props;
+const path = Astro.url.pathname;
+// Particles 全页背景：除 /account/（auth-route，固定 GridScan 背景）外全站启用
+const isAuth = !!bodyClass && bodyClass.split(/\s+/).includes('auth-route');
+const withParticles = !isAuth;
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — {SITE.latin}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
+    <!-- v3 字体：Latin→Outfit（Google），中文→MiSans（jsDelivr）；断网时自动回退系统字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400..900&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/gh/TPCTang/MiSans-Webfont@latest/fonts.css" rel="stylesheet" />
+    <meta name="generator" content={Astro.generator} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={`${title} — ${SITE.latin}`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content={SITE.title} />
+    <meta name="theme-color" content="#f4f4f5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)" />
+    <script is:inline>
+      // 尽早应用主题：白日/夜间 二态（历史 auto 偏好按系统解析一次），避免闪烁。
+      (function () {
+        function g(k) {
+          try { var v = localStorage.getItem(k) || sessionStorage.getItem(k); if (v) return v; } catch (e) { /* ignore */ }
+          try {
+            var m = document.cookie.match(new RegExp('(?:^|; )' + k + '=([^;]*)'));
+            if (m && m[1]) return decodeURIComponent(m[1]);
+          } catch (e2) { /* ignore */ }
+          return null;
+        }
+        function pref() {
+          var p = g('cw-theme-pref');
+          if (p === 'light' || p === 'dark' || p === 'auto') return p;
+          var old = g('cw-theme'); // 旧版本：已解析主题当作偏好迁移
+          if (old === 'light' || old === 'dark') return old;
+          return 'auto';
+        }
+        var mode = pref();
+        var resolved = mode === 'auto'
+          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : mode;
+        document.documentElement.dataset.theme = resolved;
+        document.documentElement.dataset.themePref = mode;
+      })();
+      // 尽早打上 js 标记，让「入场/显现」动效只在 JS 可用时接管（无 JS 则直接显示）
+      document.documentElement.classList.add('js');
+    </script>
+    <ClientRouter />
+  </head>
+  <body class:list={[bodyClass, { 'bg-particles': withParticles }]}>
+    {withParticles && (
+      // Particles 全页背景（fixed 层，见 .pparticles-layer；旧光斑/网格背景随之停用）
+      <PageParticlesBackground client:load />
+    )}
+    <div class="grid-bg" aria-hidden="true"></div>
+    <!-- 全局阅读进度（纯装饰，reduced-motion 下停用） -->
+    <div class="prog" aria-hidden="true"></div>
+    <Header current={path} />
+    <main id="main" class:list={['main-content', { 'center-page': center }]}>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+  <script>
+    import '../scripts/ui.js';
+  </script>
+</html>

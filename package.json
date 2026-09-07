@@ -1,0 +1,29 @@
+{
+  "name": "endfield-blog",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "个人档案站：受《明日方舟：终末地》官网“工业编辑风”启发的 Astro 静态博客，用于展示 AI 作品。",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/react": "^6.0.5",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
+    "@react-three/postprocessing": "^3.1.1",
+    "@react-three/rapier": "^2.2.0",
+    "@use-gesture/react": "^10.3.1",
+    "astro": "^7.3.1",
+    "face-api.js": "^0.22.2",
+    "gsap": "^3.15.0",
+    "meshline": "^3.3.1",
+    "ogl": "^1.0.11",
+    "postprocessing": "^6.39.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "three": "^0.185.1"
+  }
+}

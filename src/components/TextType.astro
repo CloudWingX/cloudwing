@@ -1,0 +1,40 @@
+---
+// TextType —— 打字机效果组件（Astro 原生移植版）
+// 原作：React Bits <TextType />（reactbits.dev）。本站为无 React 的 Astro 静态站，
+// 因此按同等语义实现：由 ui.js 的 typedEffects() 驱动，无需 gsap/React。
+// SSR 阶段先渲染首个句子 —— 无 JS / 搜索引擎都能读到文字。
+interface Props {
+  text: string | string[];
+  className?: string;  // 附加样式类（Astro 不透传 class，需用 className）
+  speed?: number;      // 打字速度 ms/字（默认 70）
+  del?: number;        // 删除速度 ms/字（默认 32）
+  pause?: number;      // 句子间停留 ms（默认 1700）
+  loop?: boolean;      // 是否循环多个句子（默认 true）
+  cursor?: string;     // 光标字符（默认 |）
+  onvisible?: boolean; // 进入视口再开始（默认 false）
+}
+
+const {
+  text,
+  className = '',
+  speed = 70,
+  del = 32,
+  pause = 1700,
+  loop = true,
+  cursor = '|',
+  onvisible = false,
+} = Astro.props;
+const list = (Array.isArray(text) ? text : [text]).filter((x): x is string => typeof x === 'string');
+const first = list[0] ?? '';
+---
+<span
+  class:list={['typed', className]}
+  data-typed
+  data-phrases={JSON.stringify(list)}
+  data-speed={speed}
+  data-del={del}
+  data-pause={pause}
+  data-loop={loop ? 'true' : 'false'}
+  data-cursor={cursor}
+  data-onvisible={onvisible ? 'true' : 'false'}
+>{first}</span>

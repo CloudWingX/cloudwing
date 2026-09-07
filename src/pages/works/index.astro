@@ -1,0 +1,124 @@
+---
+import Base from '../../layouts/Base.astro';
+import WorkCard from '../../components/WorkCard.astro';
+import { getCollection } from 'astro:content';
+
+type WMeta = {
+  no: string;
+  title: string;
+  summary: string;
+  date: string;
+  tags: string[];
+  cover: string;
+  url: string;
+};
+
+const fmtDate = (d: Date) => new Date(d).toISOString().slice(0, 10);
+const raw = await getCollection('works');
+raw.sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+const works: WMeta[] = raw.map((m) => ({
+  no: 'W-' + String(m.data.order ?? 0).padStart(3, '0'),
+  title: m.data.title ?? '未命名档案',
+  summary: m.data.summary ?? '',
+  date: fmtDate(m.data.date),
+  tags: m.data.tags ?? [],
+  cover: m.data.cover ?? '/covers/blank.svg',
+  url: `/works/${m.id}/`,
+}));
+
+// 分类统计：按出现次数降序，同次再按拼音
+const tagCounts = new Map<string, number>();
+works.forEach((w) => w.tags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
+const allTags = [...tagCounts.entries()].sort(
+  (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'),
+);
+---
+<Base title="作品库" center>
+  <div class="wrap">
+    <header class="page-head" data-ent>
+      <p class="kicker"><b>01</b> / INDEX OF WORKS</p>
+      <h1>作品库</h1>
+      <p class="sub">按归档日期倒序。标签支持多选组合（任一命中即显示），点“全部”清空筛选。</p>
+    </header>
+
+    <section class="section" style="padding-top:2rem">
+      <div class="filterbar rv" id="filterbar" role="group" aria-label="分类筛选">
+        <button type="button" class="chip on" data-tag="*">全部</button>
+        {allTags.map(([t, n]) => (
+          <button type="button" class="chip" data-tag={t}>
+            <span class="fl">{t}</span>
+            <i class="fc">{n}</i>
+          </button>
+        ))}
+        <span class="count" id="count">{works.length} 条档案</span>
+      </div>
+      <ul class="grid rv" id="grid" style="--d:.08s">
+        {works.map((w) => <WorkCard w={w} />)}
+      </ul>
+      <p class="sub" id="empty" hidden>该筛选下暂无作品，试试去掉几个标签。</p>
+      {works.length === 0 && (
+        <p class="sub">暂无档案。把作品 Markdown 文件放进 <code>src/content/works/</code> 即可展示。</p>
+      )}
+    </section>
+  </div>
+</Base>
+
+<style>
+  .filterbar .chip { display: inline-flex; align-items: center; gap: 0.45em; }
+  .filterbar .chip .fl { line-height: 1.2; }
+  .filterbar .fc {
+    font-style: normal; font-family: var(--font-mono);
+    font-size: 0.68em; color: var(--ink-3);
+    min-width: 1.5em; text-align: center;
+    border-radius: 999px; padding: 0.05em 0.2em;
+    background: var(--accent-soft);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .filterbar .chip:hover .fc { color: var(--accent-deep); }
+  .filterbar .chip.on .fc { color: var(--on-accent); background: rgba(255, 255, 255, 0.35); }
+</style>
+
+<script>
+  // 分类多选筛选（任一命中即显示）+ 实时数量
+  const bar = document.getElementById('filterbar');
+  const grid = document.getElementById('grid');
+  const countEl = document.getElementById('count');
+  const emptyEl = document.getElementById('empty');
+  if (bar && grid && countEl) {
+    const items = Array.from(grid.querySelectorAll('.wk-item')) as HTMLElement[];
+    const chips = Array.from(bar.querySelectorAll('button.chip')) as HTMLButtonElement[];
+    const allBtn = bar.querySelector('button[data-tag="*"]') as HTMLButtonElement | null;
+    const sel = new Set<string>();
+
+    const apply = () => {
+      const active = [...sel];
+      let n = 0;
+      for (const it of items) {
+        const tags = (it.dataset.tags ?? '').split(' ').filter(Boolean);
+        const show = active.length === 0 || active.some((t) => tags.includes(t));
+        it.hidden = !show;
+        if (show) n++;
+      }
+      countEl.textContent = `${n} / ${items.length} 条档案`;
+      if (emptyEl) emptyEl.hidden = n !== 0;
+    };
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const tag = chip.dataset.tag ?? '*';
+        if (tag === '*') {
+          sel.clear();
+        } else if (sel.has(tag)) {
+          sel.delete(tag);
+        } else {
+          sel.add(tag);
+        }
+        // 高亮：全部 只在无选择时点亮；其余按选中态
+        chips.forEach((c) => c.classList.toggle('on', c.dataset.tag === '*' ? sel.size === 0 : sel.has(c.dataset.tag ?? '')));
+        apply();
+      });
+    });
+    apply();
+  }
+</script>

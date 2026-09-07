@@ -1,0 +1,23 @@
+---
+// 作品卡片。props: w = { no, title, summary, tags, cover, url }
+const { w } = Astro.props;
+---
+<li class="wk-item" data-tags={(w.tags ?? []).join(' ')}>
+  <a class="wk-card" href={w.url}>
+    <div class="cov">
+      <img src={w.cover} alt={w.title} loading="lazy" width="640" height="400" />
+    </div>
+    <div class="body">
+      <div class="top">
+        <span class="no">{w.no}</span>
+        <time datetime={w.date}>{w.date}</time>
+      </div>
+      <h3>{w.title}</h3>
+      {w.summary && <p class="sum">{w.summary}</p>}
+      <div class="tags">
+        {(w.tags ?? []).map((t: string) => <span class="chip">{t}</span>)}
+      </div>
+      <span class="go">查看档案 <span class="go-arr">→</span></span>
+    </div>
+  </a>
+</li>

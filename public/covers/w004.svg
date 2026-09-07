@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="40" y="40" width="1520" height="820" rx="28" fill="none" stroke="#ffffff" stroke-width="4"/>
+  <text x="72" y="110" font-family="Arial, sans-serif" font-size="30" letter-spacing="6" fill="#ffffff" font-weight="bold">RECORD / W-004</text>
+  <text x="72" y="158" font-family="Arial, sans-serif" font-size="22" letter-spacing="4" fill="#e4dcfb">FRAGMENT — 残响档案</text>
+  <g transform="translate(800 470)" stroke="#ffffff" fill="none">
+    <path d="M0 -300 L260 -150 L260 150 L0 300 L-260 150 L-260 -150 Z" stroke-width="8"/>
+    <path d="M0 -210 L182 -105 L182 105 L0 210 L-182 105 L-182 -105 Z" stroke-width="3"/>
+    <circle cx="0" cy="0" r="34" fill="#ffffff"/>
+  </g>
+  <text x="72" y="830" font-family="Arial, Helvetica, sans-serif" font-size="300" font-weight="900" fill="#ffffff">004</text>
+  <rect x="1320" y="70" width="70" height="70" rx="16" fill="#ffffff" opacity="0.92"/>
+</svg>

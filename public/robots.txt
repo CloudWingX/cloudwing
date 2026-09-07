@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+# TODO: 绑定正式域名后，可改用 https://你的域名/sitemap.xml

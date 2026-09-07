@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5f6ff"/>
+      <stop offset="1" stop-color="#e8edfd"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="40" y="40" width="1520" height="820" rx="24" fill="none" stroke="#c7d2fe" stroke-width="2"/>
+  <path d="M56 56 L118 56 M56 56 L56 118" stroke="#6366f1" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M1544 844 L1482 844 M1544 844 L1544 782" stroke="#6366f1" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <text x="72" y="110" font-family="Arial, sans-serif" font-size="30" letter-spacing="6" fill="#212a3e" font-weight="bold">RECORD / W-002</text>
+  <text x="72" y="158" font-family="Arial, sans-serif" font-size="22" letter-spacing="4" fill="#8f99b5">SILENT WATCH — 静默监视</text>
+  <g transform="translate(1200 450)" stroke="#6366f1" fill="none">
+    <path d="M0 -260 L225 -130 L225 130 L0 260 L-225 130 L-225 -130 Z" stroke-width="3"/>
+    <path d="M0 -170 L147 -85 L147 85 L0 170 L-147 85 L-147 -85 Z" stroke-width="1.5" opacity="0.5"/>
+    <circle cx="0" cy="0" r="46" fill="#6366f1" stroke="#ffffff" stroke-width="3"/>
+  </g>
+  <rect x="72" y="700" width="640" height="5" rx="2.5" fill="#8b5cf6"/>
+  <text x="72" y="790" font-family="Arial, Helvetica, sans-serif" font-size="300" font-weight="900" fill="none" stroke="#b7c3f5" stroke-width="4">002</text>
+</svg>

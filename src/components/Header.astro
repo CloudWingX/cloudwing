@@ -1,0 +1,272 @@
+---
+import { SITE, NAV } from '../site';
+import HexMark from './HexMark.astro';
+
+const { current = '/' } = Astro.props;
+const isActive = (href: string) =>
+  href === '/' ? current === '/' : current.startsWith(href);
+---
+<header class="site-header" data-nav>
+  <div class="hd">
+    <a class="brand" href="/" aria-label="回到首页">
+      <HexMark size={24} fill="var(--ink)" />
+      <span class="bname">
+        {SITE.latin}
+      </span>
+    </a>
+
+    <nav class="nav" aria-label="主导航">
+      {
+        NAV.map((item) => (
+          <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="acts">
+      {SITE.github && (
+        <a class="pill ext" href={SITE.github} target="_blank" rel="noreferrer" title="GitHub">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+          </svg>
+          <span>GitHub</span>
+        </a>
+      )}
+      <button type="button" class="theme-toggle" aria-label="当前为白日模式，点击切换到夜间模式" aria-pressed="false" title="白日 / 夜间">
+        <span class="ico-moon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 13.6A8.6 8.6 0 0 1 10.4 3.8a8.6 8.6 0 1 0 9.8 9.8Z"/></svg>
+        </span>
+        <span class="ico-sun" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.1"/><path d="M12 2.8v2.3M12 18.9v2.3M2.8 12h2.3M18.9 12h2.3M5.5 5.5l1.6 1.6M16.9 16.9l1.6 1.6M18.5 5.5l-1.6 1.6M7.1 16.9l-1.6 1.6"/></svg>
+        </span>
+      </button>
+      <button type="button" class="burger" data-nav-burger aria-label="打开菜单" aria-expanded="false">
+        <span class="b-line"></span>
+        <span class="b-line"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 移动端抽屉 -->
+  <div class="drawer" data-nav-drawer hidden>
+    {NAV.map((item) => (
+      <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
+    ))}
+    {SITE.github && (
+      <a class="ext" href={SITE.github} target="_blank" rel="noreferrer">GitHub ↗</a>
+    )}
+  </div>
+</header>
+
+<style>
+  /* ============================================================
+     顶部导航（参考 reactbits.dev 主站导航）
+     细玻璃条 + 左侧品牌 + 常驻链接胶囊 + 右侧幽灵胶囊按钮
+     ============================================================ */
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 70;
+    padding: 0; /* 抵消旧版顶栏全局留白 */
+  }
+
+  .hd {
+    max-width: calc(var(--w-max) + 2 * var(--gutter));
+    margin: 0 auto;
+    padding: 12px var(--gutter);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  /* —— 品牌 —— */
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    color: var(--ink);
+    flex: none;
+  }
+  .brand .bname {
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.05;
+  }
+  .brand .bname small {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.54rem;
+    font-weight: 500;
+    letter-spacing: 0.24em;
+    color: var(--ink-3);
+  }
+
+  /* —— 中部链接胶囊 —— */
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .nav a {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.45rem 0.95rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-2);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+  }
+  .nav a:hover {
+    color: var(--ink);
+    background: var(--accent-soft);
+  }
+  .nav a[aria-current='page'] {
+    color: var(--accent-deep);
+    background: var(--accent-soft);
+    border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+
+  /* —— 右侧动作（幽灵胶囊按钮簇） —— */
+  .acts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+  }
+  .pill,
+  .theme-toggle,
+  .burger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid var(--line-2);
+    background: var(--glass-soft);
+    color: var(--ink-2);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s var(--ease);
+  }
+  .pill {
+    padding: 0 1rem;
+  }
+  .pill:hover,
+  .theme-toggle:hover {
+    color: var(--accent-deep);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+  }
+  .theme-toggle {
+    width: 40px;
+    flex: none;
+    padding: 0;
+  }
+  .burger {
+    display: none;
+    width: 40px;
+    padding: 0;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .b-line {
+    width: 16px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 0.25s ease;
+  }
+
+  .site-header.menu-open .b-line:first-child { transform: translateY(3.5px) rotate(45deg); }
+  .site-header.menu-open .b-line:last-child { transform: translateY(-3.5px) rotate(-45deg); }
+  .site-header.menu-open .burger { color: var(--accent-deep); }
+
+  /* —— 移动端抽屉 —— */
+  .drawer {
+    position: absolute;
+    top: calc(100% - 4px);
+    left: var(--gutter);
+    right: var(--gutter);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px;
+    border-radius: 18px;
+    border: 1px solid var(--line-2);
+    background: var(--glass-strong);
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    box-shadow: var(--shadow-lg);
+    animation: nav-in 0.22s var(--ease);
+  }
+  .drawer[hidden] { display: none; }
+  @keyframes nav-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: none; }
+  }
+  .drawer a {
+    display: block;
+    padding: 0.65rem 1rem;
+    border-radius: 12px;
+    color: var(--ink-2);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+  }
+  .drawer a:hover { background: var(--accent-soft); color: var(--ink); }
+  .drawer a[aria-current='page'] { color: var(--accent-deep); background: var(--accent-soft); }
+  .drawer a.ext { color: var(--ink-3); font-size: 0.8rem; }
+
+  @media (max-width: 960px) {
+    .nav { display: none; }
+    .burger { display: inline-flex; }
+  }
+  @media (max-width: 520px) {
+    .pill.ext span { display: none; }
+    .pill.ext { width: 40px; padding: 0; }
+  }
+</style>
+
+<script>
+  // 移动端菜单：汉堡切换抽屉
+  const header = document.querySelector('[data-nav]');
+  const burger = header?.querySelector('[data-nav-burger]');
+  const drawer = header?.querySelector('[data-nav-drawer]');
+  if (burger && drawer) {
+    const setOpen = (open) => {
+      header.classList.toggle('menu-open', open);
+      drawer.hidden = !open;
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
+    };
+    burger.addEventListener('click', () => setOpen(drawer.hidden));
+    drawer.addEventListener('click', (e) => {
+      if (e.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('click', (e) => {
+      if (!header.contains(e.target)) setOpen(false);
+    });
+  }
+</script>

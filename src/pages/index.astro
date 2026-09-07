@@ -1,0 +1,302 @@
+--- 
+// 首页 —— hero 大字标题 + 打字机标语 + 下方三个占位板块（可滚动，待填内容）
+// 背景：全站统一 React Bits <Particles /> 粒子背景（Base.astro 渲染，fixed 全页）
+import Base from '../layouts/Base.astro';
+import TextType from '../components/TextType.astro';
+import HomeWorksCardSwap from '../components/HomeWorksCardSwap.jsx';
+import HomeGalleryAccordion from '../components/HomeGalleryAccordion.jsx';
+import { SITE } from '../site';
+
+const words = SITE.latin.split(/\s+/).filter(Boolean);
+const lastWord = words.pop() ?? 'CloudWing';
+---
+<Base title="首页" bodyClass="home-route">
+  <div class="home">
+    <header class="hero" id="top">
+      <div class="wrap">
+        <h1 class="display display-tilt" data-ent style="--ad:.12s">
+          <span class="line1">HELLO THIS IS</span>
+          <span class="stroke">{lastWord}</span>
+        </h1>
+        <TextType
+          className="typed-hero"
+          text={['代码与图集 · 学习档案', '编号档案 · 过程可追溯', 'CloudWing / 云翼']}
+          speed={64}
+          pause={1500}
+        />
+      </div>
+    </header>
+
+    <!-- 下方三个占位板块：内容稍后接入，先用占位框撑起多屏滚动 -->
+    <!-- 01 板块：卡片锚定右下角；滚动进入时弹出、进入 02 前淡出（见下方脚本） -->
+    <section class="home-block works-block" id="sec-works" data-ent style="--ad:.2s">
+      <div class="wrap">
+        <p class="kicker"><b>01</b> / WORKS 作品库</p>
+        <h2>作品档案</h2>
+        <p class="hb-desc">这里放编号作品与配方档案：封面、工艺标签、过程说明。当前为空，先用占位展示板块布局（右下角为磨砂玻璃 CardSwap 堆叠卡片演示）。</p>
+      </div>
+      <HomeWorksCardSwap client:load />
+    </section>
+
+    <section class="home-block gallery-block" id="sec-gallery" data-ent style="--ad:.3s">
+      <div class="wrap">
+        <p class="kicker"><b>02</b> / GALLERY 画廊精选</p>
+        <h2>影像收藏</h2>
+        <p class="hb-desc">跨越不同时段的 MC 场景截图 · 悬停/点击可展开查看 · 完整图库见「<a href="/gallery/">画廊</a>」页。</p>
+        <div class="acc-holder">
+          <HomeGalleryAccordion client:load />
+        </div>
+      </div>
+    </section>
+
+    <section class="home-block about-home" id="sec-about" data-ent style="--ad:.4s">
+      <div class="wrap">
+        <p class="kicker"><b>03</b> / ABOUT 关于</p>
+        <h2>关于本站</h2>
+        <p class="hb-desc">一句话认识这里：这是谁、为什么做这个站，以及它想留下什么。</p>
+        <div class="ph-card about-teaser">
+          <p class="at-txt">
+            <b>{SITE.author}</b> —— 计算机科学与技术（本科在读），方向偏后端与质量保障：
+            能写 Java / Spring Boot 接口，也用测试的眼光对待每一个缺陷。
+            这个站把学习轨迹、代码与产出按编号留存，让每一次练习都可追溯。
+          </p>
+          <a class="at-link" href="/about/">查看完整档案 <span aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<style>
+  /* 首页路由：整页沉浸背景由全站 Particles 层承担 —— 隐藏页脚/进度条 */
+  :global(body.home-route .site-footer) { display: none; }
+  :global(body.home-route .prog) { display: none; }
+
+  .hero {
+    position: relative;
+    min-height: calc(100vh - 76px);
+    overflow: hidden;
+    /* 关键：整个 hero 区域放行指针事件，让底层 Particles 的鼠标悬浮能生效
+       （否则透明全屏层会吃掉所有光标移动，粒子 hover 效果不触发） */
+    pointer-events: none;
+  }
+
+  /* 文字层浮于背景上：仅真实可交互/标题视差元素恢复指针 */
+  .hero .wrap {
+    position: relative;
+    z-index: 2;
+  }
+  .hero .wrap :is(.display-tilt, a, button) {
+    pointer-events: auto;
+  }
+
+  .home .display { color: var(--ink); }
+  .home .display .line1 { opacity: 0.94; }
+  .home .display .stroke {
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18));
+  }
+  :global(.home .typed-hero) { color: var(--ink-2); }
+  :global(.home .typed-hero .typed-caret) { color: var(--accent-deep); }
+
+  /* —— 首页下方占位板块（三屏可滚动内容） —— */
+  .home-block {
+    position: relative;
+    padding: clamp(2.6rem, 7vw, 5rem) 0;
+  }
+  /* 板块文字区：01 靠左、02 靠右、03 靠左（左右交错排版，替代统一居中） */
+  .home-block .wrap { text-align: center; }
+  .works-block .wrap,
+  .about-home .wrap {
+    text-align: left;
+  }
+  .gallery-block .wrap {
+    text-align: right;
+  }
+  .works-block .kicker,
+  .about-home .kicker {
+    justify-content: flex-start;
+  }
+  .gallery-block .kicker {
+    justify-content: flex-end;
+  }
+  .home-block .kicker::after { display: none; }
+  .home-block h2 {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: clamp(1.7rem, 4.6vw, 3rem);
+    letter-spacing: -0.01em;
+    margin: 0 0 0.4em;
+  }
+  .hb-desc {
+    margin: 0 auto;
+    max-width: 40em;
+    color: var(--ink-2);
+    font-size: 1rem;
+    line-height: 1.9;
+  }
+  .works-block .hb-desc,
+  .about-home .hb-desc {
+    margin-left: 0;   /* 靠左：文本左缘对齐 */
+    margin-right: auto;
+  }
+  .gallery-block .hb-desc {
+    margin-left: auto; /* 靠右：文本右缘对齐 */
+    margin-right: 0;
+  }
+  .gallery-block .acc-holder { text-align: left; } /* 手风琴组件本身仍从左开始铺排 */
+  .hb-desc a {
+    color: var(--accent-deep);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .hb-desc a:hover { text-decoration-thickness: 2px; }
+
+  /* —— 02 板块：AccordionGallery 手风琴画廊（标题下方全宽展示） —— */
+  .gallery-block { padding-bottom: clamp(3.2rem, 8vw, 6rem); }
+  .acc-holder { margin-top: clamp(1.6rem, 3.5vw, 2.6rem); }
+  .acc-holder :global(.accordion-gallery) {
+    /* 让手风琴在浅色主题下更醒目：面板自带深底，无需额外适配 */
+    text-align: left;
+  }
+  .ph-card {
+    margin: 1.6rem auto 0;
+    min-height: min(44vh, 340px);
+    max-width: var(--w-max);
+    border-radius: var(--r-l);
+    background: var(--glass);
+    border: 1px dashed var(--line-2);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+  }
+  .ph-note {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  /* 03 板块：关于本站简介卡（靠左排版，与板块文字同侧） */
+  .about-teaser {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    text-align: left;
+    gap: 1.1rem;
+    padding: clamp(1.6rem, 3.4vw, 2.4rem);
+    min-height: auto;
+  }
+  .about-teaser .at-txt { margin: 0; color: var(--ink-2); font-size: 1rem; line-height: 1.9; }
+  .about-teaser .at-txt b { color: var(--ink); font-weight: 700; }
+  .at-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    color: var(--on-accent);
+    background: var(--accent);
+    border-radius: 999px;
+    padding: 0.55rem 1.15rem;
+    transition: transform 0.16s var(--ease), box-shadow 0.16s ease, background 0.16s ease;
+  }
+  .at-link span { transition: transform 0.16s var(--ease); }
+  .at-link:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .at-link:hover span { transform: translateX(3px); }
+
+  /* —— 01 板块：标题居上；CardSwap 锚定板块右下部。
+     板块间无分界线（V48），卡片底部不再贴死下缘，留出与下一板块自然衔接的空隙 —— */
+  .works-block {
+    position: relative;
+    min-height: min(96vh, 860px);
+    overflow: clip; /* 卡片掉落动画不溢出到 02 板块 */
+    padding-bottom: clamp(3.5rem, 9vh, 6.5rem); /* 卡片下方到下一板块的缓冲留白 */
+  }
+  .works-block .wrap { position: relative; z-index: 2; }
+  .works-block :global(.card-swap-container) {
+    position: absolute;
+    top: auto;
+    right: clamp(6px, 2vw, 24px);
+    bottom: clamp(3rem, 7vh, 5rem); /* 距板块底留出过渡空隙，卡片悬于板块内、不顶到 02 */
+    left: auto;
+    transform: translateY(30px);
+    opacity: 0;              /* 未进入视口前隐藏，滚动触发显示 */
+    transform-origin: 100% 100%;
+    z-index: 3;
+    will-change: opacity, transform;
+  }
+  /* 磨砂玻璃卡片材质（去分界线后取消大外投影，避免在留白上投出突兀暗影） */
+  .works-block :global(.card) {
+    background: var(--glass-strong);
+    backdrop-filter: blur(28px) saturate(1.7);
+    -webkit-backdrop-filter: blur(28px) saturate(1.7);
+    border: 1px solid color-mix(in srgb, var(--line-2) 70%, rgba(255, 255, 255, 0.25));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 1px 3px rgba(0, 0, 0, 0.08); /* 仅贴边细影，无大范围外投影 */
+    color: var(--ink);
+  }
+</style>
+
+<script>
+  // 01 板块 CardSwap 滚动显隐：进入板块时整体上浮弹出，滚向 02 板块时整体淡出。
+  // 用“实时查询容器 + 全局单次监听”实现：软导航切走再切回时容器重建也能立即接管。
+  const getDeck = () => document.querySelector('.works-block .card-swap-container');
+
+  let raf = 0;
+  let wired = false;
+
+  const step = () => {
+    raf = 0;
+    const deck = getDeck();
+    if (!deck) return; // 不在首页时跳过
+    const r = deck.getBoundingClientRect();
+    const v = window.innerHeight;
+    const H = r.height || 480;
+
+    // 进入（从下方滑入视口时弹出）
+    const inStart = v * 0.98;
+    const inEnd = v * 0.55;
+    const pIn = Math.min(1, Math.max(0, (inStart - r.top) / (inStart - inEnd)));
+    // 淡出（滚过 01、接近顶部时消失，到完全离屏结束）
+    const outStart = v * 0.12;
+    const outEnd = -H - 40;
+    const pOut = Math.min(1, Math.max(0, (r.top - outEnd) / (outStart - outEnd)));
+
+    const o = pIn * pOut;
+    const lift = (1 - o) * 34;
+    const sc = window.innerWidth <= 520 ? 0.6 : window.innerWidth <= 900 ? 0.82 : 1;
+    deck.style.opacity = o.toFixed(3);
+    deck.style.transform = `translateY(${lift.toFixed(1)}px) scale(${sc})`;
+    deck.style.pointerEvents = o > 0.05 ? 'auto' : 'none';
+  };
+
+  const tick = () => {
+    if (!raf) raf = requestAnimationFrame(step);
+  };
+
+  function wireDeck() {
+    if (wired) return;
+    wired = true;
+    window.addEventListener('scroll', tick, { passive: true });
+    window.addEventListener('resize', tick);
+    // 每次软导航完成（含切回首页）后，多次延迟重算，覆盖 React 岛水合晚于 page-load 的情况
+    window.addEventListener('astro:page-load', () => {
+      [0, 120, 400, 900].forEach((ms) => setTimeout(tick, ms));
+    });
+    document.addEventListener('DOMContentLoaded', tick);
+    window.addEventListener('load', () => {
+      tick();
+      setTimeout(tick, 300);
+      setTimeout(tick, 900);
+    });
+    tick();
+  }
+  wireDeck();
+</script>

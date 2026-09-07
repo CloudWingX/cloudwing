@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6f8ff"/>
+      <stop offset="1" stop-color="#e9ecfb"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="40" y="40" width="1520" height="820" fill="none" stroke="#c7d2fe" stroke-width="2"/>
+  <rect x="52" y="52" width="1496" height="796" fill="none" stroke="#dbe3fb" stroke-width="1"/>
+  <text x="72" y="108" font-family="Arial, sans-serif" font-size="30" letter-spacing="6" fill="#212a3e" font-weight="bold">RECORD / W-001</text>
+  <text x="72" y="156" font-family="Arial, sans-serif" font-size="22" letter-spacing="4" fill="#8f99b5">SOLAR GATE — 晨昏边境</text>
+  <text x="72" y="760" font-family="Arial, Helvetica, sans-serif" font-size="420" font-weight="900" fill="#c7d2fe">001</text>
+  <g stroke="#b7c3f5" fill="none">
+    <circle cx="1180" cy="430" r="330" stroke-width="3"/>
+    <circle cx="1180" cy="430" r="246" stroke-width="1.5"/>
+    <circle cx="1180" cy="430" r="164" stroke-width="1.5"/>
+    <circle cx="1180" cy="430" r="82" stroke-width="1.5"/>
+  </g>
+  <rect x="1164" y="620" width="150" height="40" rx="20" fill="url(#bar)"/>
+  <circle cx="1284" cy="640" r="8" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,15 @@
+---
+import { SITE } from '../site';
+const year = new Date().getFullYear();
+---
+<footer class="site-footer">
+  <div class="wrap">
+    <span>© {SITE.since}–{year} {SITE.author} · {SITE.title}</span>
+    <span>
+      {SITE.email && <a href={`mailto:${SITE.email}`}>E-MAIL</a>}
+      {SITE.github && <>&nbsp;·&nbsp;<a href={SITE.github} target="_blank" rel="noreferrer">GITHUB</a></>}
+      {SITE.bilibili && <>&nbsp;·&nbsp;<a href={SITE.bilibili} target="_blank" rel="noreferrer">BILIBILI</a></>}
+    </span>
+    <span title={SITE.notice}>{SITE.notice}</span>
+  </div>
+</footer>

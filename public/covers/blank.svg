@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6f8ff"/>
+      <stop offset="1" stop-color="#eaeeff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect x="40" y="40" width="1520" height="820" rx="24" fill="none" stroke="#c7d2fe" stroke-width="2"/>
+  <g transform="translate(800 430)" stroke="#a5b4fc" fill="none">
+    <path d="M0 -190 L165 -95 L165 95 L0 190 L-165 95 L-165 -95 Z" stroke-width="3"/>
+    <circle cx="0" cy="0" r="26" stroke-width="3"/>
+  </g>
+  <text x="0" y="760" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" letter-spacing="8" fill="#98a2b8">NO COVER — 请替换封面图片</text>
+</svg>

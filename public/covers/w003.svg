@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0f9ff"/>
+      <stop offset="1" stop-color="#e0f2fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g stroke="#bae6fd" stroke-width="1">
+    <path d="M0 150 H1600 M0 300 H1600 M0 450 H1600 M0 600 H1600 M0 750 H1600"/>
+    <path d="M200 0 V900 M400 0 V900 M600 0 V900 M800 0 V900 M1000 0 V900 M1200 0 V900 M1400 0 V900"/>
+  </g>
+  <text x="72" y="110" font-family="Arial, sans-serif" font-size="30" letter-spacing="6" fill="#1e3a5f" font-weight="bold">RECORD / W-003</text>
+  <text x="72" y="158" font-family="Arial, sans-serif" font-size="22" letter-spacing="4" fill="#5b86ad">STAR CHART — 星轨测算表</text>
+  <polyline points="200,620 300,560 400,600 500,480 600,520 700,380 800,440 900,300 1000,360 1100,220 1200,300 1300,180 1400,240"
+            fill="none" stroke="#6366f1" stroke-width="4"/>
+  <polyline points="200,680 300,640 400,660 500,580 600,610 700,500 800,540 900,420 1000,470 1100,340 1200,400 1300,300 1400,350"
+            fill="none" stroke="#93a8d8" stroke-width="2"/>
+  <g fill="#8b5cf6" stroke="#ffffff" stroke-width="2">
+    <circle cx="300" cy="560" r="10"/><circle cx="500" cy="480" r="10"/>
+    <circle cx="700" cy="380" r="10"/><circle cx="900" cy="300" r="10"/>
+    <circle cx="1100" cy="220" r="10"/><circle cx="1300" cy="180" r="10"/>
+  </g>
+  <rect x="1270" y="720" width="250" height="110" rx="14" fill="#ffffff" stroke="#c7d2fe" stroke-width="2"/>
+  <text x="1295" y="760" font-family="Arial, sans-serif" font-size="20" fill="#212a3e">TRACK: 3</text>
+  <text x="1295" y="796" font-family="Arial, sans-serif" font-size="20" fill="#5b6578">DRIFT: 0.15</text>
+</svg>

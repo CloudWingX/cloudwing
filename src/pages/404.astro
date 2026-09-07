@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/Base.astro';
+import HexMark from '../components/HexMark.astro';
+import { SITE } from '../site';
+---
+<Base title="404 · 档案不存在" description="未找到该档案。" center>
+  <div class="wrap">
+    <div class="e404">
+      <p class="kicker center"><b>ERR</b> / RECORD NOT FOUND</p>
+      <div class="code">4<b>0</b>4</div>
+      <p>你要找的档案不存在、已被移除，或从未归档。</p>
+      <div style="display:flex;gap:0.9rem;justify-content:center;flex-wrap:wrap">
+        <a class="btn" href="/"><span>返回索引首页</span></a>
+        <a class="btn ghost" href="/works/"><span>浏览作品库</span></a>
+      </div>
+      <p style="margin-top:3rem;font-family:var(--font-mono);font-size:0.74rem;letter-spacing:0.14em">
+        <HexMark size={22} fill="var(--ink-3)" />&nbsp;{SITE.title} · 档案编号校验失败
+      </p>
+    </div>
+  </div>
+</Base>

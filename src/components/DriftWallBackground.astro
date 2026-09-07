@@ -1,0 +1,66 @@
+---
+// DriftWallBackground —— 3D 漂移墙背景（React Bits <DriftWall /> 原生移植）
+// 仅渲染骨架：DOM/动画由 ui.js 的 startDriftWall() 驱动；
+// 全局样式在 motion.css（动态创建的节点无法命中 scoped 样式，故必须全局）。
+interface Props {
+  images: string[];            // 背景瓦片图片路径
+  columns?: number;            // 列数
+  tileWidth?: number;
+  tileHeight?: number;
+  gap?: number;
+  speed?: number;              // 基础漂移速度 px/s
+  direction?: 'up' | 'down';
+  variance?: number;           // 列间速度差异
+  parallax?: number;           // 指针视差强度
+  tilt?: number;               // 平面俯仰角
+  turn?: number;               // 平面偏转角
+  perspective?: number;
+  dim?: number;                // 静止瓦片不透明度
+  fade?: number;               // 边缘淡出强度
+  radius?: number;
+}
+
+const {
+  images,
+  columns = 5,
+  tileWidth = 220,
+  tileHeight = 148,
+  gap = 16,
+  speed = 46,
+  direction = 'up',
+  variance = 0.45,
+  parallax = 0.6,
+  tilt = 15,
+  turn = -10,
+  perspective = 1300,
+  dim = 0.5,
+  fade = 0.55,
+  radius = 14,
+} = Astro.props;
+
+const cfg = JSON.stringify({
+  columns,
+  tileWidth,
+  tileHeight,
+  gap,
+  speed,
+  direction,
+  variance,
+  parallax,
+  tilt,
+  turn,
+  perspective,
+  dim,
+  fade,
+  radius,
+});
+---
+<div
+  class="dw-bg"
+  data-drift-bg
+  aria-hidden="true"
+  data-cfg={cfg}
+  data-images={JSON.stringify(images)}
+>
+  <div class="dw-plane" data-plane></div>
+</div>

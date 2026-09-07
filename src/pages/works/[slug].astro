@@ -1,0 +1,19 @@
+---
+// 作品详情页：/works/<id>/
+import { getCollection, render } from 'astro:content';
+import WorkLayout from '../../layouts/WorkLayout.astro';
+
+export async function getStaticPaths() {
+  const works = await getCollection('works');
+  return works.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+<WorkLayout data={entry.data}>
+  <Content />
+</WorkLayout>
