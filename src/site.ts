@@ -1,9 +1,10 @@
 // 站点全局信息 —— 所有页面统一从这里读取，改这里即可全站生效。
 // TODO: 把下面的占位内容换成你自己的真实信息。
 
-// 图片图床开关：'' = 走本地相对路径（public/ 随站点部署，Cloudflare Pages 自带 CDN）；
-// 已启用 GitHub + jsDelivr 图床（仓库 CloudWingX/cloudwing，需 push 且为公开后生效）：
-export const IMG_CDN = 'https://cdn.jsdelivr.net/gh/CloudWingX/cloudwing@main/public';
+// 图片图床开关：'' = 走本地相对路径（图片随 dist 打包，由 Cloudflare Pages 自带 CDN 服务，最稳）；
+// 若要改用 GitHub + jsDelivr 图床（仓库 CloudWingX/cloudwing，需 push 且为公开后生效），填：
+//   'https://cdn.jsdelivr.net/gh/CloudWingX/cloudwing@main/public'
+export const IMG_CDN = '';
 export const imgUrl = (p: string) => (p && p.startsWith('/') && IMG_CDN ? IMG_CDN + p : p);
 
 export const SITE = {
