@@ -43,9 +43,9 @@ const allTags = [...tagCounts.entries()].sort(
 
     <section class="section" style="padding-top:2rem">
       <div class="filterbar rv" id="filterbar" role="group" aria-label="分类筛选">
-        <button type="button" class="chip on" data-tag="*">全部</button>
+        <button type="button" class="chip on" data-tag="*" aria-pressed="true">全部</button>
         {allTags.map(([t, n]) => (
-          <button type="button" class="chip" data-tag={t}>
+          <button type="button" class="chip" data-tag={t} aria-pressed="false">
             <span class="fl">{t}</span>
             <i class="fc">{n}</i>
           </button>
@@ -64,61 +64,161 @@ const allTags = [...tagCounts.entries()].sort(
 </Base>
 
 <style>
-  .filterbar .chip { display: inline-flex; align-items: center; gap: 0.45em; }
-  .filterbar .chip .fl { line-height: 1.2; }
-  .filterbar .fc {
-    font-style: normal; font-family: var(--font-mono);
-    font-size: 0.68em; color: var(--ink-3);
-    min-width: 1.5em; text-align: center;
-    border-radius: 999px; padding: 0.05em 0.2em;
-    background: var(--accent-soft);
-    font-variant-numeric: tabular-nums;
-    transition: color 0.15s ease, background 0.15s ease;
+  /* —— 筛选条：玻璃胶囊标签 —— */
+  .filterbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
   }
-  .filterbar .chip:hover .fc { color: var(--accent-deep); }
-  .filterbar .chip.on .fc { color: var(--on-accent); background: rgba(255, 255, 255, 0.35); }
+  .filterbar .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.42em 1em;
+    border-radius: 999px;
+    border: 1px solid var(--line-2);
+    background: var(--glass-soft);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: var(--shadow-sm);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-2);
+    cursor: pointer;
+    font: inherit;
+    line-height: 1.2;
+    transition:
+      background 0.18s ease,
+      color 0.18s ease,
+      border-color 0.18s ease,
+      transform 0.18s var(--ease),
+      box-shadow 0.18s ease;
+  }
+  .filterbar .chip:hover {
+    color: var(--accent-deep);
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+  .filterbar .chip:active { transform: translateY(0); }
+  .filterbar .chip.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+    box-shadow: 0 4px 14px -6px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  .filterbar .fc {
+    font-style: normal;
+    font-family: var(--font-mono);
+    font-size: 0.68em;
+    line-height: 1;
+    min-width: 1.35em;
+    text-align: center;
+    border-radius: 999px;
+    padding: 0.18em 0.32em;
+    background: var(--accent-soft);
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    transition: background 0.18s ease, color 0.18s ease;
+  }
+  .filterbar .chip:hover .fc { color: var(--accent-deep); background: rgba(255, 255, 255, 0.7); }
+  .filterbar .chip.on .fc { color: var(--on-accent); background: color-mix(in srgb, var(--on-accent) 22%, transparent); }
+  .filterbar .count {
+    margin-left: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    padding-left: 1rem;
+    border-left: 1px solid var(--line-2);
+  }
+  /* 深色主题微调：胶囊底色更深 */
+  :global(html[data-theme='dark']) .filterbar .chip {
+    background: rgba(20, 20, 23, 0.55);
+    box-shadow: none;
+  }
+  :global(html[data-theme='dark']) .filterbar .chip:hover .fc {
+    background: rgba(40, 40, 46, 0.8);
+  }
+  @media (max-width: 560px) {
+    .filterbar { gap: 0.4rem; }
+    .filterbar .chip { padding: 0.38em 0.85em; font-size: 0.74rem; }
+    .filterbar .count { margin-left: 0.4rem; padding-left: 0.6rem; }
+  }
 </style>
 
 <script>
-  // 分类多选筛选（任一命中即显示）+ 实时数量
-  const bar = document.getElementById('filterbar');
-  const grid = document.getElementById('grid');
-  const countEl = document.getElementById('count');
-  const emptyEl = document.getElementById('empty');
-  if (bar && grid && countEl) {
-    const items = Array.from(grid.querySelectorAll('.wk-item')) as HTMLElement[];
-    const chips = Array.from(bar.querySelectorAll('button.chip')) as HTMLButtonElement[];
-    const allBtn = bar.querySelector('button[data-tag="*"]') as HTMLButtonElement | null;
-    const sel = new Set<string>();
+  // 分类筛选（多选，任一命中即显示）+ 实时数量。
+  // 用 document 级事件委托 + DOM 状态驱动：
+  // 软导航（ClientRouter）重建列表后无需重新绑定，点击永远有效。
+  const toggleChip = (chipEl) => {
+    const bar = chipEl.closest('.filterbar');
+    if (!bar) return;
+    const tag = chipEl.dataset.tag ?? '*';
+    const chips = Array.from(bar.querySelectorAll('button.chip'));
+    const isAll = tag === '*';
 
-    const apply = () => {
-      const active = [...sel];
-      let n = 0;
-      for (const it of items) {
-        const tags = (it.dataset.tags ?? '').split(' ').filter(Boolean);
-        const show = active.length === 0 || active.some((t) => tags.includes(t));
-        it.hidden = !show;
-        if (show) n++;
-      }
-      countEl.textContent = `${n} / ${items.length} 条档案`;
-      if (emptyEl) emptyEl.hidden = n !== 0;
-    };
+    let state;
+    if (isAll) {
+      // 点“全部”：仅当已有选择时清空；否则保持（可视为空操作）
+      const anySel = chips.some((c) => c.dataset.tag !== '*' && c.classList.contains('on'));
+      state = anySel ? [] : [];
+    } else {
+      const sel = chips.filter((c) => c.dataset.tag !== '*' && c.classList.contains('on')).map((c) => c.dataset.tag);
+      state = sel.includes(tag) ? sel.filter((t) => t !== tag) : [...sel, tag];
+    }
 
-    chips.forEach((chip) => {
-      chip.addEventListener('click', () => {
-        const tag = chip.dataset.tag ?? '*';
-        if (tag === '*') {
-          sel.clear();
-        } else if (sel.has(tag)) {
-          sel.delete(tag);
-        } else {
-          sel.add(tag);
-        }
-        // 高亮：全部 只在无选择时点亮；其余按选中态
-        chips.forEach((c) => c.classList.toggle('on', c.dataset.tag === '*' ? sel.size === 0 : sel.has(c.dataset.tag ?? '')));
-        apply();
-      });
+    chips.forEach((c) => {
+      const on = c.dataset.tag === '*' ? state.length === 0 : state.includes(c.dataset.tag);
+      c.classList.toggle('on', on);
+      c.setAttribute('aria-pressed', String(on));
     });
-    apply();
+    applyFilter(bar, state);
+  };
+
+  const applyFilter = (bar, sel) => {
+    const grid = document.getElementById('grid');
+    const countEl = document.getElementById('count');
+    const emptyEl = document.getElementById('empty');
+    if (!grid) return;
+    const items = Array.from(grid.querySelectorAll('.wk-item'));
+    let n = 0;
+    for (const it of items) {
+      const tags = (it.dataset.tags ?? '').split(' ').filter(Boolean);
+      const show = sel.length === 0 || sel.some((t) => tags.includes(t));
+      it.hidden = !show;
+      if (show) n++;
+    }
+    if (countEl) countEl.textContent = `${n} / ${items.length} 条档案`;
+    if (emptyEl) emptyEl.hidden = n !== 0;
+  };
+
+  const onFilterClick = (e) => {
+    const chipEl = e.target.closest('button.chip[data-tag]');
+    if (!chipEl) return;
+    e.preventDefault();
+    toggleChip(chipEl);
+  };
+
+  if (!window.__cwWorksFilterWired) {
+    window.__cwWorksFilterWired = true;
+    document.addEventListener('click', onFilterClick);
+    // 软导航完成后，若当前就在作品库且筛选状态非默认，恢复统计（幂等，安全重复执行）
+    window.addEventListener('astro:page-load', () => {
+      const bar = document.getElementById('filterbar');
+      const grid = document.getElementById('grid');
+      if (!bar || !grid) return;
+      const sel = Array.from(bar.querySelectorAll('button.chip.on'))
+        .filter((c) => c.dataset.tag !== '*')
+        .map((c) => c.dataset.tag);
+      applyFilter(bar, sel);
+    });
   }
 </script>
