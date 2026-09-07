@@ -13,6 +13,7 @@ const works = defineCollection({
     tools: z.array(z.string()).default([]),
     state: z.string().default('已公开'),
     cover: z.string().default('/covers/blank.svg'),
+    link: z.string().optional(), // 外部链接（如 GitHub 仓库）
   }),
 });
 

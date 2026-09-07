@@ -457,6 +457,16 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
 .work-head .meta-grid > div:last-child { border-right: 0; }
 .work-head .meta-grid dt { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); }
 .work-head .meta-grid dd { margin: 0.2rem 0 0; font-size: 0.92rem; }
+/* 详情页外部链接（如仓库）胶囊按钮 */
+.work-head .meta-grid dd .ext-link {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.04em;
+  color: var(--on-accent); background: var(--accent);
+  text-decoration: none; border-radius: 999px; padding: 0.28rem 0.8rem;
+  transition: transform 0.16s var(--ease), box-shadow 0.16s ease;
+}
+.work-head .meta-grid dd .ext-link:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.work-head .meta-grid dd .ext-link:active { transform: none; }
 .work-cover { width: 100%; border-radius: var(--r-l); margin-bottom: 2.6rem; box-shadow: var(--shadow-lg); cursor: zoom-in; }
 .pager { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--line-2); margin-top: 3.5rem; padding-top: 1.4rem; }
 .pager a { font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.08em; text-decoration: none; text-transform: uppercase; color: var(--ink-2); }

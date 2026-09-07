@@ -14,6 +14,7 @@ interface Props {
     tools?: string[];
     state?: string;
     cover?: string;
+    link?: string;
   };
 }
 const { data } = Astro.props;
@@ -51,6 +52,12 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
           )}
           <div><dt>分类</dt><dd>{tags.join(' / ')}</dd></div>
           {tools.length > 0 && <div><dt>工具链</dt><dd class="num">{tools.join(' · ')}</dd></div>}
+          {data.link && (
+            <div>
+              <dt>链接</dt>
+              <dd><a class="ext-link" href={data.link} target="_blank" rel="noreferrer">仓库 / 地址 ↗</a></dd>
+            </div>
+          )}
         </dl>
       </header>
       {cover && <img class="work-cover" src={cover} alt={`${no} ${title}`} width="1600" height="900" />}      <div class="prose">
