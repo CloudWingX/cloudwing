@@ -4,6 +4,9 @@ dist/
 .astro/
 # dependencies
 node_modules/
+# package-lock: Cloudflare Pages 检测到 lock 会用 npm ci，会因平台差异失败；
+# 有意不提交 —— 让云端用 npm install 按 Linux 动态解析
+package-lock.json
 # logs
 npm-debug.log*
 # environment
