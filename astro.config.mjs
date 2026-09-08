@@ -5,7 +5,7 @@ import cjsInlineShim from './plugins/vite-cjs-inline-shim.mjs';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://example.com', // TODO: 换成你的正式域名，如 https://yourname.com
+  site: 'https://cloudwing.pages.dev', // 线上地址（Cloudflare Pages）
   output: 'static',
   integrations: [react()],
   build: {

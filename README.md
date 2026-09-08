@@ -3,9 +3,13 @@
 个人学习与作品档案站 —— Astro 静态站，磨砂玻璃扁平化 UI（浅色通透、黑白灰强调）。
 记录代码、图集与学习轨迹，按编号留存、过程可追溯。
 
+> 🔧 **给接手开发者（Codex）的首读文件：见 [`CODEX.md`](./CODEX.md)** —— 含硬规则、
+> 路由、主题机制、图床策略、构建/部署坑与下一步建议。下面的 README 只是概览。
+
 - 技术栈：Astro 7.3（静态输出）、React 岛、gsap、React Bits 组件原码（`src/components/ReactBits/`）
-- 页面：首页（hero + 三板块交错）、作品库（卡 → 详情）、画廊（玻璃网格 + 大图）、关于（履历 + MagicBento + Lanyard）、互动（giscus 留言板）
+- 页面：首页（hero + 三板块交错）、作品库（卡 → 详情 + 玻璃分段分类）、画廊（玻璃网格 + 大图）、关于（履历 + MagicBento + Lanyard）、互动（giscus 留言板）
 - 背景：全站 Particles（`/account/` 用 GridScan）
+- 部署：GitHub `CloudWingX/cloudwing`（公开）→ Cloudflare Pages 自动构建 → `https://cloudwing.pages.dev`
 
 ## 本地运行
 
@@ -42,34 +46,26 @@ public/
 
 - 影集原图已从 PNG（共 180MB）压缩为 **webp**（1600w q78，共 ~3MB），存于 `public/shots/mc/`；
   原 PNG 备份在工作区外 `mc-originals-backup/`，不进仓库。
-- 页面图片统一经 `src/site.ts` 的 `imgUrl()` 输出：
-  - `IMG_CDN = ''`（默认）：走本地相对路径（Cloudflare Pages 自带 CDN，直接可用）；
-  - `IMG_CDN = 'https://cdn.jsdelivr.net/gh/<user>/<repo>@main/public'`：切到 GitHub + jsDelivr 图床。
+- 页面图片统一经 `src/site.ts` 的 `imgUrl()` 输出；当前 `IMG_CDN = ''`，走本地相对路径
+  （图片随 `dist` 由 Cloudflare Pages 自带 CDN 服务）。**不要改回 jsDelivr 图床**——国内访问不稳，已踩坑回退。
 - 只影响 `/shots/…` 等静态图；ReactBits 组件原码不动，仅宿主/页面拼前缀。
 
 ## 内容怎么加
 
-- **作品**：复制 `src/content/works/w001-lib.md` → 改 frontmatter（title/summary/date/order/tags/tools/state/cover）与正文；封面放 `public/covers/`。
+- **作品**：复制 `src/content/works/w001-lib.md` → 改 frontmatter（title/summary/date/order/tags/tools/state/cover/link）与正文；封面放 `public/covers/`。`link` 可选，详情页会显示仓库/地址按钮。
 - **影集**：webp 放 `public/shots/mc/`，在 `src/content/shots/` 加一条 md（image 指向 `/shots/mc/mc-xxx.webp`）。
 - **留言板**：`site.ts` 的 `GISCUS` 填 repo/repoId/categoryId 后重建。
 
 ## 发布到 GitHub + Cloudflare Pages
 
-1. 在 GitHub 新建公开仓库（如 `CloudWingX/cloudwing`），本地推上去：
-   ```bash
-   git init && git add -A && git commit -m "init"
-   git branch -M main
-   git remote add origin https://github.com/<user>/<repo>.git
-   git push -u origin main
-   ```
-2. Cloudflare Pages → Create → Connect to Git → 选该仓库；
-   Framework preset 选 **Astro**（build `npm run build`，输出 `dist`），保存即自动部署；
-   也可用 Upload assets 手动传 `dist/`。
-3. 若要让图片走 jsDelivr 图床，把 `site.ts` 的 `IMG_CDN` 填上 jsDelivr 地址后再 build。
-   （注意：jsDelivr 只在仓库 push 后可用；国内部分地区访问 jsDelivr 不稳定，可保持 `''` 用 Pages 自带 CDN。）
+- 仓库已配置：origin = `https://github.com/CloudWingX/cloudwing.git`（公开，分支 `main`）。
+- 每次 `git push origin main` → Cloudflare Pages 自动构建部署（build `npm run build`，产物 `dist`）。
+- 线上地址：`https://cloudwing.pages.dev`
+- ⚠️ **不要提交 `package-lock.json`**（已在 .gitignore）：Windows 生成的 lock 会让云端 Linux `npm ci` 报错，仓库无 lock 时 Cloudflare 自动用 `npm install`。
 
 ## 上线前清单
 
-- [ ] `src/site.ts`：邮箱 / GitHub / Bilibili 换成真实信息（当前为占位）
-- [ ] `astro.config.mjs`：`site` 填正式域名
-- [ ] 隐私确认：About 页与 README 不出现真实姓名 / 学校 / 企业（当前已规避）
+- [x] 站点信息 / NAV 已配置；GitHub 已填 `CloudWingX`
+- [ ] `site.ts` 邮箱 / Bilibili 仍为占位（可后补）
+- [ ] `astro.config.mjs`：`site` 目前是 `https://example.com` 占位，可改为 `https://cloudwing.pages.dev`（SEO/canonical）
+- [x] 隐私确认：About 页与 README 不出现真实姓名 / 学校 / 企业
