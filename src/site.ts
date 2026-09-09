@@ -1,5 +1,4 @@
 // 站点全局信息 —— 所有页面统一从这里读取，改这里即可全站生效。
-// TODO: 把下面的占位内容换成你自己的真实信息。
 
 // 图片图床开关：'' = 走本地相对路径（图片随 dist 打包，由 Cloudflare Pages 自带 CDN 服务，最稳）；
 // 若要改用 GitHub + jsDelivr 图床（仓库 CloudWingX/cloudwing，需 push 且为公开后生效），填：
@@ -15,9 +14,9 @@ export const SITE = {
   // 一句话定位（hero 副标题）
   tagline: 'CloudWing（云翼）—— 个人学习与作品档案空间 · 磨砂玻璃扁平化设计',
   author: 'CloudWing_X',
-  email: 'you@example.com',
+  email: '246459267@qq.com',
   github: 'https://github.com/CloudWingX',
-  bilibili: 'https://space.bilibili.com/yourid',
+  bilibili: 'https://space.bilibili.com/470179349',
   // 关于页与 footer 使用的备注
   notice:
     '本站为个人学习与作品档案空间，采用磨砂玻璃扁平化 UI（浅色通透），设计、文案与素材均为本人产出。',
