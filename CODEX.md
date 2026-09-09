@@ -75,7 +75,7 @@ title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cov
 
 ## 下一步建议（按需）
 - `site.ts` `GISCUS` 还是空的：互动页留言板要启用需填 repo/repoId/categoryId 后重建。
-- `site.ts` 邮箱/Bilibili 还是占位（GitHub 已填 CloudWingX）。
+- 联系方式已填：邮箱 `246459267@qq.com`、GitHub `CloudWingX`、Bilibili `https://space.bilibili.com/470179349`。
 - 首页 01「作品库」板块仍是 CardSwap 示例卡（W-001..003 演示文案），可改成真实最新作品轮播。
 - 03「关于本站」首页块是静态简介卡，可考虑读取 content 或保持文案一致。
 - works 目前 2 篇为「图书管理系统」「本站诞生部署记」，继续补充作品即可。
