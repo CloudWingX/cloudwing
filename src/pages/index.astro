@@ -1,14 +1,27 @@
 --- 
-// 首页 —— hero 大字标题 + 打字机标语 + 下方三个占位板块（可滚动，待填内容）
+// 首页 —— hero 大字标题 + 打字机标语 + 下方三个板块（可滚动）
 // 背景：全站统一 React Bits <Particles /> 粒子背景（Base.astro 渲染，fixed 全页）
 import Base from '../layouts/Base.astro';
 import TextType from '../components/TextType.astro';
 import HomeWorksCardSwap from '../components/HomeWorksCardSwap.jsx';
 import HomeGalleryAccordion from '../components/HomeGalleryAccordion.jsx';
+import { getCollection } from 'astro:content';
 import { SITE } from '../site';
 
 const words = SITE.latin.split(/\s+/).filter(Boolean);
 const lastWord = words.pop() ?? 'CloudWing';
+
+// 01 板块右下角堆叠卡：取作品库最新 3 篇（与 /works/ 联动）
+const latestWorks = (await getCollection('works'))
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
+  .slice(0, 3)
+  .map((w) => ({
+    no: 'W-' + String(w.data.order ?? 0).padStart(3, '0'),
+    title: w.data.title ?? '未命名档案',
+    tags: w.data.tags ?? [],
+    cover: w.data.cover ?? '/covers/blank.svg',
+    url: `/works/${w.id}/`,
+  }));
 ---
 <Base title="首页" bodyClass="home-route">
   <div class="home">
@@ -33,9 +46,10 @@ const lastWord = words.pop() ?? 'CloudWing';
       <div class="wrap">
         <p class="kicker"><b>01</b> / WORKS 作品库</p>
         <h2>作品档案</h2>
-        <p class="hb-desc">这里放编号作品与配方档案：封面、工艺标签、过程说明。当前为空，先用占位展示板块布局（右下角为磨砂玻璃 CardSwap 堆叠卡片演示）。</p>
+        <p class="hb-desc">编号作品与配方档案：封面、工艺标签、过程说明，每件都可追溯。
+          右下角是最新入库，点卡片即可打开对应档案，<a href="/works/">进入作品库 →</a>。</p>
       </div>
-      <HomeWorksCardSwap client:load />
+      <HomeWorksCardSwap client:load items={latestWorks} />
     </section>
 
     <section class="home-block gallery-block" id="sec-gallery" data-ent style="--ad:.3s">
