@@ -83,6 +83,7 @@ title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cov
 - ✅ 联系方式已填（邮箱 / GitHub / Bilibili）。
 - ✅ **sitemap**：`@astrojs/sitemap` 生成 `sitemap-index.xml` / `sitemap-0.xml`（已排除 `/search/`），`public/robots.txt` 已声明 Sitemap 地址。
 - ✅ **og:image**：Base 输出 og:image / twitter:summary_large_image / canonical；默认图 `public/og/default.png`，作品页自动用 `/og/<id>.png`（不存在则回退默认）。新增作品后跑 `npm run og` 重新生成分享图（脚本 `scripts/gen-og.mjs`，基于 sharp）。
+- ✅ **关于页工牌 = 拉绳开关**：桌面端工牌贴在页面右上边缘（`.ly-floater` 绝对定位 `top:0; right:0`，430×720），**向下拖拽 96px 切换白日/夜间主题**，带“灯闪”反馈；手势 pointerdown 限定在工牌内、move/up 挂 window（拖拽可超出容器，不受范围限制）；仅 ≥1025px 启用（避免移动端滚动误触）。
 - 可选后续：画廊二次分类、作品正文图片灯箱、暗色下 giscus 主题微调、评论数展示。
 - works 目前 2 篇（图书管理系统、本站诞生部署记），继续补作品即可；03「关于本站」首页块仍是静态简介卡。
 

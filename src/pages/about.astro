@@ -76,8 +76,8 @@ import { SITE } from '../site';
 
     <p class="note" data-ent style="--ad:.3s">{SITE.notice}</p>
 
-    <!-- 挂绳工牌：桌面端放大置于右上角（正面中心为用户头像，加粗圆角方形边框） -->
-    <div class="ly-floater" aria-label="挂绳工牌">
+    <!-- 挂绳工牌：桌面端贴在页面右上边缘；向下拖拽可切换「白日 / 夜间」（拉绳开关） -->
+    <div class="ly-floater" aria-label="挂绳工牌" data-lanyard>
       <Lanyard
         client:load
         position={[0, 0, 22]}
@@ -85,6 +85,10 @@ import { SITE } from '../site';
         frontImage="/lanyard/avatar-front.svg"
         imageFit="cover"
       />
+      <p class="ly-hint" data-ly-hint aria-hidden="true">
+        <span class="ly-hint-arrow">↓</span>
+        <span class="ly-hint-text" data-ly-hint-text>下拉工牌 · 开灯 / 关灯</span>
+      </p>
     </div>
   </div>
 </Base>
@@ -164,11 +168,76 @@ import { SITE } from '../site';
   }
 
   .ly-floater { position: relative; width: 100%; height: 440px; margin-top: 1rem; }
+
+  /* 下拉提示（拉绳开关的说明；纯装饰，不拦指针） */
+  .ly-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0.34rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-1);
+    background: var(--glass);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0.75;
+    transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    z-index: 3;
+  }
+  .ly-hint-arrow { display: inline-block; transition: transform 0.2s ease; }
+  /* 正在下拉：箭头跟手 + 高亮 */
+  :global(.ly-floater.is-pulling) .ly-hint {
+    opacity: 1;
+    color: var(--accent-deep);
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  :global(.ly-floater.is-pulling) .ly-hint-arrow { transform: translateY(3px); }
+  /* 已触发：提示变结果文案 */
+  :global(.ly-floater.is-triggered) .ly-hint { opacity: 1; color: var(--accent-deep); }
+
+  /* 开关灯的“灯闪”反馈 */
+  :global(html.cw-lights-flash body)::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    background: #fff;
+    animation: cw-lights 0.5s ease-out both;
+  }
+  :global(html[data-theme='dark'].cw-lights-flash body)::after { background: #000; }
+  @keyframes cw-lights {
+    0% { opacity: 0.85; }
+    100% { opacity: 0; }
+  }
+
   @media (min-width: 1025px) {
+    /* 贴页面右上边缘：挂点位于内容区顶边，绳子自然垂到工牌 */
     .ly-floater {
-      position: absolute; top: 4.5rem; right: max(1vw, 14px);
-      width: min(360px, 30vw); height: 560px; margin-top: 0; z-index: 1;
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: min(430px, 36vw);
+      height: min(80vh, 720px);
+      margin-top: 0;
+      z-index: 1;
+      /* 扩大可拖范围：拖拽手势不触发页面滚动/选择 */
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
+    .ly-hint { bottom: 14px; }
     .mb-shell { margin-top: 3rem; }
   }
 
@@ -215,3 +284,100 @@ import { SITE } from '../site';
     background: rgba(40, 42, 50, 0.16);
   }
 </style>
+
+<script>
+  // ============================================================
+  // 工牌 = 拉绳开关：向下拖拽工牌切换「白日 / 夜间」主题
+  // - pointerdown 在工牌容器内启动；move/up 监听挂在 window 上，
+  //   因此拖拽可以超出容器范围（拖到页面任意位置），范围不再受限
+  // - 下拉距离达到阈值即触发一次切换，本次拖拽内不重复触发
+  // - 触发时给 html 加 .cw-lights-flash，做一次“灯闪”反馈
+  // - 主题切换复用既有 .theme-toggle（保证 localStorage / cookie 三通道一致）
+  // ============================================================
+  const PULL_THRESHOLD = 96; // 触发所需的下拉像素
+  const pull = { startY: 0, triggered: false, active: false, pointerId: null, host: null };
+
+  const triggerLights = () => {
+    const toggle = document.querySelector('.theme-toggle');
+    if (toggle instanceof HTMLElement) toggle.click();
+    else {
+      const root = document.documentElement;
+      root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
+    }
+    const root = document.documentElement;
+    root.classList.remove('cw-lights-flash');
+    void root.offsetWidth; // 重启 CSS 动画
+    root.classList.add('cw-lights-flash');
+    setTimeout(() => root.classList.remove('cw-lights-flash'), 620);
+  };
+
+  const hintText = (host) => host?.querySelector('[data-ly-hint-text]');
+
+  const onDown = (e) => {
+    const host = e.currentTarget;
+    if (!(host instanceof HTMLElement)) return;
+    // 仅桌面端（工牌绝对定位在右上角时）启用“下拉开关灯”；
+    // 移动端工牌是文档流中的大块区域，下拉会与页面滚动冲突，故不启用
+    if (!window.matchMedia('(min-width: 1025px)').matches) return;
+    pull.active = true;
+    pull.triggered = false;
+    pull.startY = e.clientY;
+    pull.pointerId = e.pointerId;
+    pull.host = host;
+    host.classList.remove('is-triggered');
+  };
+
+  const onMove = (e) => {
+    if (!pull.active || e.pointerId !== pull.pointerId) return;
+    const host = pull.host;
+    if (!host) return;
+    const dy = e.clientY - pull.startY;
+    if (dy > 12 && !pull.triggered) host.classList.add('is-pulling'); // 向下拉才点亮提示
+    if (dy >= PULL_THRESHOLD && !pull.triggered) {
+      pull.triggered = true;
+      host.classList.remove('is-pulling');
+      host.classList.add('is-triggered');
+      // 用“切换前”的主题判断灯的状态（切换本身走 .theme-toggle）
+      const wasLight = document.documentElement.dataset.theme === 'light';
+      const text = hintText(host);
+      if (text) text.textContent = wasLight ? '已关灯 · 夜间' : '已开灯 · 白日';
+      triggerLights();
+    }
+  };
+
+  const onUp = (e) => {
+    if (!pull.active) return;
+    if (pull.pointerId !== null && e.pointerId !== pull.pointerId) return;
+    const host = pull.host;
+    pull.active = false;
+    pull.pointerId = null;
+    pull.host = null;
+    if (!host) return;
+    host.classList.remove('is-pulling');
+    if (pull.triggered) {
+      setTimeout(() => {
+        host.classList.remove('is-triggered');
+        const text = hintText(host);
+        if (text) text.textContent = '下拉工牌 · 开灯 / 关灯';
+      }, 1400);
+    }
+  };
+
+  const bindLanyard = () => {
+    const host = document.querySelector('[data-lanyard]');
+    if (!(host instanceof HTMLElement) || host.dataset.pullBound === '1') return;
+    host.dataset.pullBound = '1';
+    // 起始手势限制在工牌区域内，避免全页拖拽误触
+    host.addEventListener('pointerdown', onDown, { passive: true });
+  };
+
+  // 全局只挂一次 move/up（软导航后容器重建也无需重绑）
+  if (!window.__cwLanyardPullWired) {
+    window.__cwLanyardPullWired = true;
+    window.addEventListener('pointermove', onMove, { passive: true });
+    window.addEventListener('pointerup', onUp, { passive: true });
+    window.addEventListener('pointercancel', onUp, { passive: true });
+    window.addEventListener('astro:page-load', bindLanyard);
+  }
+  bindLanyard();
+</script>
