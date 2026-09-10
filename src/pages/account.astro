@@ -206,9 +206,23 @@ const title = '互动';
 
 <script>
   // ============================================================
-  // 互动页客户端脚本：giscus 留言板
+  // 互动页客户端脚本：giscus 留言板（含站点主题跟随）
   // ============================================================
-  // ---------- 留言板 giscus ----------
+  const GISCUS_THEME_LIGHT = 'light';
+  const GISCUS_THEME_DARK = 'dark';
+  const currentGiscusTheme = () =>
+    document.documentElement.dataset.theme === 'light' ? GISCUS_THEME_LIGHT : GISCUS_THEME_DARK;
+
+  // 站点切换主题时，把新主题 postMessage 给 giscus iframe（官方支持的换肤方式）
+  function syncGiscusTheme() {
+    const frame = document.querySelector('iframe.giscus-frame');
+    if (!frame || !frame.contentWindow) return;
+    frame.contentWindow.postMessage(
+      { giscus: { setConfig: { theme: currentGiscusTheme() } } },
+      'https://giscus.app'
+    );
+  }
+
   function initGiscus() {
     if (!window.__GISCUS_REPO__ || !window.__GISCUS_REPO_ID__ || !window.__GISCUS_CATEGORY_ID__) {
       return; // 未配置：保留“待配置”提示
@@ -228,13 +242,24 @@ const title = '互动';
       'data-mapping': window.__GISCUS_MAPPING__ || 'pathname',
       'data-reactions-enabled': window.__GISCUS_REACTIONS__ || '1',
       'data-emit-metadata': '0',
-      'data-input-position': window.__GISCUS_INPUT__ || 'top',
-      'data-theme': 'dark',
+      'data-input-position': window.__GISCUS_INPUT__ || 'bottom',
+      'data-theme': currentGiscusTheme(),
       'data-lang': window.__GISCUS_LANG__ || 'zh-CN',
       'data-loading': 'lazy',
     };
     for (const [k, v] of Object.entries(attrs)) if (v) s.setAttribute(k, v);
     box.appendChild(s);
+
+    // giscus 加载完成后同步一次主题（避免首屏主题与站点不一致）
+    const mo = new MutationObserver(() => syncGiscusTheme());
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    // iframe 内部的讨论框状态变化（如切换排序）也会触发 message，这里只在主题变化时回应
+    window.addEventListener('message', (e) => {
+      if (e.origin !== 'https://giscus.app') return;
+      if (!e.data || !e.data.giscus) return;
+      clearTimeout(window.__giscusThemeTimer);
+      window.__giscusThemeTimer = setTimeout(syncGiscusTheme, 700);
+    });
   }
 
   // giscus 配置（取自模板内 data-* 元素，site.ts GISCUS 留空即不启用）
@@ -246,7 +271,7 @@ const title = '互动';
   window.__GISCUS_CATEGORY_ID__ = cfg.categoryId || '';
   window.__GISCUS_MAPPING__ = cfg.mapping || 'pathname';
   window.__GISCUS_REACTIONS__ = cfg.reactions || '1';
-  window.__GISCUS_INPUT__ = cfg.input || 'top';
+  window.__GISCUS_INPUT__ = cfg.input || 'bottom';
   window.__GISCUS_LANG__ = cfg.lang || 'zh-CN';
 
   (async function boot() {

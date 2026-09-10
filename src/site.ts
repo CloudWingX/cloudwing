@@ -31,17 +31,15 @@ export const NAV = [
   { href: '/account/', label: '互动', no: '04' },
 ];
 
-// 互动页留言板（giscus / GitHub Discussions）。启用步骤：
-// 1) 仓库开启 Discussions 并安装 giscus app；
-// 2) 在 https://giscus.app 生成配置，把下面字段填上（repo/repoId/categoryId 等）；
-//    留空时页面显示“待配置”提示，不会加载第三方脚本。
+// 互动页留言板（giscus / GitHub Discussions）。已启用：
+// 仓库需开启 Discussions 并安装 giscus app（CloudWingX/cloudwing 已配置）。
 export const GISCUS = {
-  repo: '', // 例如 'owner/repo'
-  repoId: '',
+  repo: 'CloudWingX/cloudwing',
+  repoId: 'R_kgDOUQ6_uw',
   category: 'Announcements',
-  categoryId: '',
+  categoryId: 'DIC_kwDOUQ6_u84DFQ8u',
   mapping: 'pathname', // 常用：pathname / og:title
   reactionsEnabled: '1',
-  inputPosition: 'top',
+  inputPosition: 'bottom',
   lang: 'zh-CN',
 };
