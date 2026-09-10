@@ -40,9 +40,10 @@ const latestWorks = (await getCollection('works'))
       </div>
     </header>
 
-    <!-- 下方三个占位板块：内容稍后接入，先用占位框撑起多屏滚动 -->
+    <!-- 下方三个板块：进入视口时逐块滚动显现（脚本见 ui.js 的 scrollFade；
+         这里不用 data-ent —— 那是“加载即播放”，下方板块多半在首屏之外） -->
     <!-- 01 板块：卡片锚定右下角；滚动进入时弹出、进入 02 前淡出（见下方脚本） -->
-    <section class="home-block works-block" id="sec-works" data-ent style="--ad:.2s">
+    <section class="home-block works-block" id="sec-works">
       <div class="wrap">
         <p class="kicker"><b>01</b> / WORKS 作品库</p>
         <h2>作品档案</h2>
@@ -52,7 +53,7 @@ const latestWorks = (await getCollection('works'))
       <HomeWorksCardSwap client:load items={latestWorks} />
     </section>
 
-    <section class="home-block gallery-block" id="sec-gallery" data-ent style="--ad:.3s">
+    <section class="home-block gallery-block" id="sec-gallery">
       <div class="wrap">
         <p class="kicker"><b>02</b> / GALLERY 画廊精选</p>
         <h2>影像收藏</h2>
@@ -63,7 +64,7 @@ const latestWorks = (await getCollection('works'))
       </div>
     </section>
 
-    <section class="home-block about-home" id="sec-about" data-ent style="--ad:.4s">
+    <section class="home-block about-home" id="sec-about">
       <div class="wrap">
         <p class="kicker"><b>03</b> / ABOUT 关于</p>
         <h2>关于本站</h2>

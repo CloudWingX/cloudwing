@@ -20,6 +20,15 @@ html.js [data-ent] {
   to   { opacity: 1; transform: none; }
 }
 
+/* ---------- 页面加载入场（每次进入页面：main 整体淡入上浮） ---------- */
+html.js main.page-enter {
+  animation: page-enter 0.6s var(--ease-out) both;
+}
+@keyframes page-enter {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* ---------- 滚动显现（IntersectionObserver 加 .in） ---------- */
 html.js .rv {
   opacity: 0;
@@ -130,7 +139,8 @@ a.u-slide:hover { background-size: 100% 1px; }
 /* ---------- 无障碍：减少动态 ---------- */
 @media (prefers-reduced-motion: reduce) {
   html.js [data-ent],
-  html.js .rv {
+  html.js .rv,
+  html.js main.page-enter {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;

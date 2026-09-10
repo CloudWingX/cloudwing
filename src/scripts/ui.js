@@ -187,6 +187,7 @@ function startTitleTilt() {
 function boot() {
   // 各效果独立容错：单个失败不拖累其他
   [
+    pageEnter,          // 页面加载入场（整页淡入 + 入场元素自动错峰）
     scrollFade,
     scanReveals,
     runCounters,
@@ -207,6 +208,37 @@ function boot() {
   });
 }
 
+/* ---------- 页面加载入场（每页进入时：整页淡入 + 入场元素自动错峰） ---------- */
+function pageEnter() {
+  const main = document.querySelector('main');
+  if (!main) return;
+
+  // Astro 软导航会按新文档的 <html> 覆写属性，客户端加的 'js' 类会丢；
+  // 而所有动效规则（html.js .sli / [data-ent] / main.page-enter）都依赖它，
+  // 所以每次进入页面都补一次。
+  document.documentElement.classList.add('js');
+
+  // 1) 未显式指定 --ad 的 [data-ent] 元素，按 DOM 顺序自动排入场延迟（最多 8 档 × 70ms）
+  document.querySelectorAll('[data-ent]').forEach((el, i) => {
+    if (el.style.getPropertyValue('--ad')) return; // 尊重手写延迟
+    el.style.setProperty('--ad', `${Math.min(i, 7) * 70}ms`);
+  });
+
+  if (reduced) return; // 减少动态：不播放整页动画（元素由 CSS 兜底为可见）
+
+  // 2) 整页入场：软导航/首次加载时给 main 播一次淡入上浮，重启动画以支持重复导航
+  main.classList.remove('page-enter');
+  void main.offsetWidth;
+  main.classList.add('page-enter');
+  window.clearTimeout(pageEnter._t);
+  pageEnter._t = window.setTimeout(() => main.classList.remove('page-enter'), 700);
+}
+
+// 交换 DOM 后立刻补 'js' 类（早于 astro:page-load），尽量减少“先可见后隐藏”的闪烁
+document.addEventListener('astro:after-swap', () => {
+  document.documentElement.classList.add('js');
+});
+
 /* ---------- 滚动显现 ---------- */
 function scanReveals() {
   const els = document.querySelectorAll('.rv:not([data-rv-done])');
@@ -220,13 +252,34 @@ function scanReveals() {
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
-          if (e.isIntersecting) { el.classList.add('in'); io.disconnect(); }
+          // 同 scrollFade：已滚过视口（top < 0）的元素也视为显现，避免漏触发后一直隐藏
+          if (e.isIntersecting || e.boundingClientRect.top < 0) { el.classList.add('in'); io.disconnect(); }
         });
       },
       { threshold: 0.12, rootMargin: '0px 0px -6% 0px' },
     );
     io.observe(el);
   });
+
+  // 兜底：与 scrollFade 同理，一次性跳转可能让 .rv 元素“跳过”阈值而不触发回调
+  const sweepRv = () => {
+    window.__rvSweepRaf = 0;
+    const vh = window.innerHeight || 800;
+    document.querySelectorAll('.rv:not(.in)').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < vh * 0.94 || r.bottom < 0) el.classList.add('in');
+    });
+  };
+  if (!window.__rvSweepWired) {
+    window.__rvSweepWired = true;
+    const onScroll = () => {
+      if (window.__rvSweepRaf) return;
+      window.__rvSweepRaf = requestAnimationFrame(sweepRv);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+  }
+  sweepRv();
 }
 
 /* ---------- 数字滚动（count-up） ---------- */
@@ -478,6 +531,10 @@ function startStarTrails() {
 function scrollFade() {
   if (reduced) return; // 减少动态：元素保持完全可见（CSS 已兜底）
   const SEL = [
+    // 首页：hero 之外的三个板块（01/02/03）逐块滚动显现
+    '.home-block .wrap > *',
+    '.home-block .acc-holder',
+    '.home-block .ph-card',
     '.home .kicker', '.home .md-desc', '.home .feat', '.home .step',
     '.home .wk-card', '.home .outro .wrap > *',
     '.center-page .page-head > *', '.center-page .work-head',
@@ -504,13 +561,41 @@ function scrollFade() {
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
-          if (e.isIntersecting) { el.classList.add('in'); io.disconnect(); }
+          // 进入视口 → 显现；元素已在视口上方（快速跳转/锚点直达，已经“滚过”）也直接显现，
+          // 否则会永久停在 opacity:0
+          if (e.isIntersecting || e.boundingClientRect.top < 0) {
+            el.classList.add('in');
+            io.disconnect();
+          }
         });
       },
       { threshold: 0.1, rootMargin: '0px 0px -6% 0px' },
     );
     io.observe(el);
   });
+
+  // 兜底扫描：IntersectionObserver 只在“跨越阈值”时回调——一次性跳转（End / PageDown /
+  // 锚点直达）会让元素从视口下方直接到视口上方，从未跨越阈值 → 永远不回调。
+  // 这里用滚动/尺寸变化时的节流扫描补齐漏网元素。
+  const sweep = () => {
+    sweep.raf = 0;
+    const vh = window.innerHeight || 800;
+    document.querySelectorAll('.sli:not(.in)').forEach((el) => {
+      const r = el.getBoundingClientRect();
+      // 已进入视口主要区域，或已滚过视口（底部在视口顶之上）→ 显现
+      if (r.top < vh * 0.94 || r.bottom < 0) el.classList.add('in');
+    });
+  };
+  if (!scrollFade._sweepWired) {
+    scrollFade._sweepWired = true;
+    const onScroll = () => {
+      if (sweep.raf) return;
+      sweep.raf = requestAnimationFrame(sweep);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+  }
+  sweep();
 }
 
 /* ---------- 深空星海（迭代版）：层次视差星空 + 十字星芒 + 周期性流星 ----------

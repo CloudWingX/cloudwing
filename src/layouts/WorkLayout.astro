@@ -41,7 +41,7 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
 <Base title={`${no} · ${title}`} description={summary} center ogImage={ogImage}>
   <div class="wrap">
     <article>
-      <header class="work-head">
+      <header class="work-head" data-ent>
         <div class="no-big">RECORD / {no}</div>
         <h1>{title}</h1>
         {summary && <p class="sub">{summary}</p>}
@@ -64,12 +64,12 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
           )}
         </dl>
       </header>
-      {cover && <img class="work-cover" src={cover} alt={`${no} ${title}`} width="1600" height="900" />}      <div class="prose">
+      {cover && <img class="work-cover" src={cover} alt={`${no} ${title}`} width="1600" height="900" data-ent />}      <div class="prose" data-ent>
         <slot />
       </div>
 
       <!-- 上/下篇导航（按归档日期相邻） -->
-      <nav class="worknav" aria-label="相邻作品">
+      <nav class="worknav" aria-label="相邻作品" data-ent>
         {older ? (
           <a class="wn-item wn-prev" href={older.url}>
             <span class="wn-dir">← 上一篇</span>
@@ -96,13 +96,13 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
         )}
       </nav>
 
-      <nav class="pager" aria-label="页面导航">
+      <nav class="pager" aria-label="页面导航" data-ent>
         <a href="/works/">← 返回作品库</a>
         <a href="/">索引首页</a>
       </nav>
 
       <!-- 作品讨论区（giscus，按页面路径独立讨论） -->
-      <section class="work-comments">
+      <section class="work-comments" data-ent>
         <GiscusComments
           title="讨论"
           desc={`关于《${title}》的想法、问题或补充，欢迎在下方留言（GitHub 账号登录）。`}
