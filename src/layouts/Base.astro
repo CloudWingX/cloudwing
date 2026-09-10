@@ -28,6 +28,8 @@ const withParticles = !isAuth;
     <meta name="description" content={description} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" media="(prefers-color-scheme: light)" />
     <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
+    <!-- RSS 订阅（作品档案更新自动发现） -->
+    <link rel="alternate" type="application/rss+xml" title={`${SITE.title} · 作品档案`} href="/rss.xml" />
     <!-- v3 字体：Latin→Outfit（Google），中文→MiSans（jsDelivr）；断网时自动回退系统字体 -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

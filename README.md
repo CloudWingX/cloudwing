@@ -8,6 +8,7 @@
 
 - 技术栈：Astro 7.3（静态输出）、React 岛、gsap、React Bits 组件原码（`src/components/ReactBits/`）
 - 页面：首页（hero + 三板块交错）、作品库（卡 → 详情 + 玻璃分段分类）、画廊（玻璃网格 + 大图）、关于（履历 + MagicBento + Lanyard）、互动（giscus 留言板）
+- 订阅：作品档案 **RSS** → `/rss.xml`（head 自动发现 + 页脚入口）
 - 背景：全站 Particles（`/account/` 用 GridScan）
 - 部署：GitHub `CloudWingX/cloudwing`（公开）→ Cloudflare Pages 自动构建 → `https://cloudwing.pages.dev`
 

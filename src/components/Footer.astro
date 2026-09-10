@@ -9,6 +9,7 @@ const year = new Date().getFullYear();
       {SITE.email && <a href={`mailto:${SITE.email}`}>E-MAIL</a>}
       {SITE.github && <>&nbsp;·&nbsp;<a href={SITE.github} target="_blank" rel="noreferrer">GITHUB</a></>}
       {SITE.bilibili && <>&nbsp;·&nbsp;<a href={SITE.bilibili} target="_blank" rel="noreferrer">BILIBILI</a></>}
+      <>&nbsp;·&nbsp;<a href="/rss.xml">RSS</a></>
     </span>
     <span title={SITE.notice}>{SITE.notice}</span>
   </div>

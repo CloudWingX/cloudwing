@@ -68,17 +68,19 @@ title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cov
 - 列表自动出现 + 分类分段自动统计，无需改代码。
 
 ## 构建 / 部署坑（重要）
-1. **不要在仓库提交 `package-lock.json`**：它是 Windows 生成、会让 Cloudflare Linux `npm ci` 报 `Missing @emnapi/*`。仓库无 lock → 云端自动 `npm install`（已在 .gitignore 排除 lock）。
-2. **构建 shim**：`plugins/vite-cjs-inline-shim.mjs` 修复 Node24+Astro7.3 的 `require is not defined`（picomatch CJS）。不要删，也不要改 node_modules。
-3. 改动后必须 `npm run build`；Cloudflare 检测到 push 到 `main` 自动重建部署（约 1–2 分钟）。
-4. 预览旧进程可能残留：port 4321 已占用时 `astro preview stop` 或复用现有实例；本机无公网时本地截图用 CDP（headless Edge :9222，见 SESSION_HANDOFF 或本地脚本习惯）。
+1. **不要在仓库提交 `package-lock.json`**：Windows 生成的 lock 会让云端 Linux `npm ci` 报 `Missing @emnapi/*`；仓库无 lock 时云端自动 `npm install`（已在 .gitignore 排除）。
+2. **依赖版本要 pin 关键 peer**：`react` / `react-dom` 已固定为精确 `19.2.8`（`@react-three/fiber@9.7` 的 peer 是 `>=19 <19.3`，用 `^` 会解析到 19.3 导致云端 ERESOLVE 构建失败）。另有 `.npmrc` `legacy-peer-deps=true` 兜底。
+3. **构建 shim**：`plugins/vite-cjs-inline-shim.mjs` 修复 Node24+Astro7.3 的 `require is not defined`（picomatch CJS）。不要删，也不要改 node_modules。
+4. 改动后必须 `npm run build`；Cloudflare 检测到 push 到 `main` 自动重建部署（约 1–2 分钟）。
+5. 预览旧进程可能残留：port 4321 被占时 `astro preview stop` 或复用现有实例；本地截图用 CDP（headless Edge :9222）。
 
 ## 下一步建议（按需）
-- `site.ts` `GISCUS` 还是空的：互动页留言板要启用需填 repo/repoId/categoryId 后重建。
-- 联系方式已填：邮箱 `246459267@qq.com`、GitHub `CloudWingX`、Bilibili `https://space.bilibili.com/470179349`。
-- 首页 01「作品库」板块仍是 CardSwap 示例卡（W-001..003 演示文案），可改成真实最新作品轮播。
-- 03「关于本站」首页块是静态简介卡，可考虑读取 content 或保持文案一致。
-- works 目前 2 篇为「图书管理系统」「本站诞生部署记」，继续补充作品即可。
+- ✅ giscus 留言板已启用（`site.ts` GISCUS，主题随站点浅/深）；首条评论由登录用户发出时自动创建 discussion。
+- ✅ RSS 已加：`/rss.xml`（`src/pages/rss.xml.ts`，依赖 `@astrojs/rss`），Base head 有 auto-discovery、Footer 有入口。
+- ✅ 首页 01 板块已接**真实最新 3 篇作品**（读 works 集合，卡片可点进详情）。
+- ✅ 联系方式已填（邮箱 / GitHub / Bilibili）。
+- 可选后续：sitemap + og:image、详情页上/下篇导航、Pagefind 全站搜索、画廊二次分类、作品页 giscus 评论区。
+- works 目前 2 篇（图书管理系统、本站诞生部署记），继续补作品即可；03「关于本站」首页块仍是静态简介卡。
 
 ## 验证方式备忘
 - 上线地址：`https://cloudwing.pages.dev`（Cloudflare Pages 项目名 cloudwing，Git 自动部署）
