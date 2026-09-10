@@ -2,6 +2,8 @@
 // 作品详情页：/works/<id>/
 // 同时计算「上一篇 / 下一篇」（按归档日期倒序的相邻条目，交给 WorkLayout 渲染导航）
 import { getCollection, render } from 'astro:content';
+import fs from 'node:fs';
+import path from 'node:path';
 import WorkLayout from '../../layouts/WorkLayout.astro';
 
 export async function getStaticPaths() {
@@ -28,7 +30,13 @@ export async function getStaticPaths() {
 
 const { entry, newer, older } = Astro.props;
 const { Content } = await render(entry);
+
+// 社交分享图：优先用该作品专属的 /og/<id>.png（由 _shots/gen-og.cjs 从封面生成），否则回退默认图
+const ogCandidate = `/og/${entry.id}.png`;
+const ogImage = fs.existsSync(path.join(process.cwd(), 'public', ogCandidate.replace(/^\//, '')))
+  ? ogCandidate
+  : '/og/default.png';
 ---
-<WorkLayout data={entry.data} newer={newer} older={older}>
+<WorkLayout data={entry.data} newer={newer} older={older} ogImage={ogImage}>
   <Content />
 </WorkLayout>

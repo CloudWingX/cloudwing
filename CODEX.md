@@ -81,7 +81,9 @@ title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cov
 - ✅ **全站搜索**：Pagefind（`npm run build` = `astro build && pagefind --site dist`），UI 在 `/search/`，Header 有搜索入口；`build:fast` 可跳过索引。
 - ✅ 首页 01 板块已接**真实最新 3 篇作品**（读 works 集合，卡片可点进详情）。
 - ✅ 联系方式已填（邮箱 / GitHub / Bilibili）。
-- 可选后续：sitemap + og:image、画廊二次分类、作品正文图片灯箱、暗色下 giscus 主题微调。
+- ✅ **sitemap**：`@astrojs/sitemap` 生成 `sitemap-index.xml` / `sitemap-0.xml`（已排除 `/search/`），`public/robots.txt` 已声明 Sitemap 地址。
+- ✅ **og:image**：Base 输出 og:image / twitter:summary_large_image / canonical；默认图 `public/og/default.png`，作品页自动用 `/og/<id>.png`（不存在则回退默认）。新增作品后跑 `npm run og` 重新生成分享图（脚本 `scripts/gen-og.mjs`，基于 sharp）。
+- 可选后续：画廊二次分类、作品正文图片灯箱、暗色下 giscus 主题微调、评论数展示。
 - works 目前 2 篇（图书管理系统、本站诞生部署记），继续补作品即可；03「关于本站」首页块仍是静态简介卡。
 
 ## 验证方式备忘

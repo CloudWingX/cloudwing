@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 
-# TODO: 绑定正式域名后，可改用 https://你的域名/sitemap.xml
+# 站点地图（由 @astrojs/sitemap 构建生成）
+Sitemap: https://cloudwing.pages.dev/sitemap-index.xml

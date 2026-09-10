@@ -19,8 +19,9 @@ interface Props {
   };
   newer?: { no: string; title: string; url: string } | null;
   older?: { no: string; title: string; url: string } | null;
+  ogImage?: string;
 }
-const { data, newer = null, older = null } = Astro.props;
+const { data, newer = null, older = null, ogImage = '/og/default.png' } = Astro.props;
 const title: string = data.title ?? SITE.title;
 const summary: string = data.summary ?? '';
 const date: string = data.date ? new Date(data.date).toISOString().slice(0, 10) : '';
@@ -37,7 +38,7 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
     ? 'err'
     : '';
 ---
-<Base title={`${no} · ${title}`} description={summary} center>
+<Base title={`${no} · ${title}`} description={summary} center ogImage={ogImage}>
   <div class="wrap">
     <article>
       <header class="work-head">

@@ -12,9 +12,12 @@ interface Props {
   description?: string;
   center?: boolean; // 居中版式（列表/详情/关于等页面用）
   bodyClass?: string; // 追加到 <body> 的路由级类名（页面级全局样式定位用）
+  ogImage?: string; // 社交分享图（站内绝对路径，默认 /og/default.png）
 }
-const { title = SITE.title, description = SITE.tagline, center = false, bodyClass } = Astro.props;
+const { title = SITE.title, description = SITE.tagline, center = false, bodyClass, ogImage = '/og/default.png' } = Astro.props;
 const path = Astro.url.pathname;
+// 社交分享图统一转绝对 URL（OG 规范要求）
+const ogImageAbs = new URL(ogImage, Astro.site ?? Astro.url).href;
 // Particles 全页背景：除 /account/（auth-route，固定 GridScan 背景）外全站启用
 const isAuth = !!bodyClass && bodyClass.split(/\s+/).includes('auth-route');
 const withParticles = !isAuth;
@@ -40,6 +43,17 @@ const withParticles = !isAuth;
     <meta property="og:title" content={`${title} — ${SITE.latin}`} />
     <meta property="og:description" content={description} />
     <meta property="og:site_name" content={SITE.title} />
+    <meta property="og:url" content={Astro.url.href} />
+    <!-- 社交分享图（og:image / Twitter Card） -->
+    <meta property="og:image" content={ogImageAbs} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`${title} — ${SITE.title}`} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={`${title} — ${SITE.latin}`} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageAbs} />
+    <link rel="canonical" href={Astro.url.href} />
     <meta name="theme-color" content="#f4f4f5" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)" />
     <script is:inline>
