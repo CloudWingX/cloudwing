@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.1.0",
   "private": true,
-  "description": "个人档案站：受《明日方舟：终末地》官网“工业编辑风”启发的 Astro 静态博客，用于展示 AI 作品。",
+  "description": "CloudWing / 云翼 —— 个人学习与作品档案站（Astro 静态站 · 磨砂玻璃扁平化 UI）。",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -22,8 +22,8 @@
     "meshline": "^3.3.1",
     "ogl": "^1.0.11",
     "postprocessing": "^6.39.4",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "three": "^0.185.1"
   }
 }
