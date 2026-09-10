@@ -1,19 +1,34 @@
 ---
 // 作品详情页：/works/<id>/
+// 同时计算「上一篇 / 下一篇」（按归档日期倒序的相邻条目，交给 WorkLayout 渲染导航）
 import { getCollection, render } from 'astro:content';
 import WorkLayout from '../../layouts/WorkLayout.astro';
 
 export async function getStaticPaths() {
   const works = await getCollection('works');
-  return works.map((entry) => ({
+  // 与作品库列表一致的排序：归档日期倒序
+  const sorted = [...works].sort(
+    (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+  );
+  const brief = (e) => ({
+    no: 'W-' + String(e.data.order ?? 0).padStart(3, '0'),
+    title: e.data.title ?? '未命名档案',
+    url: `/works/${e.id}/`,
+  });
+  return sorted.map((entry, i) => ({
     params: { slug: entry.id },
-    props: { entry },
+    props: {
+      entry,
+      // 列表倒序：前一条 = 更新的（下一篇），后一条 = 更早的（上一篇）
+      newer: i > 0 ? brief(sorted[i - 1]) : null,
+      older: i < sorted.length - 1 ? brief(sorted[i + 1]) : null,
+    },
   }));
 }
 
-const { entry } = Astro.props;
+const { entry, newer, older } = Astro.props;
 const { Content } = await render(entry);
 ---
-<WorkLayout data={entry.data}>
+<WorkLayout data={entry.data} newer={newer} older={older}>
   <Content />
 </WorkLayout>

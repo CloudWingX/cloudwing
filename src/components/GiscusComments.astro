@@ -1,0 +1,156 @@
+---
+// 通用 giscus 评论区（互动页留言板 + 作品详情页共用）
+// 配置来自 src/site.ts 的 GISCUS；未配置时显示"待配置"提示且不加载第三方脚本。
+// 主题：初始按站点 html[data-theme]，切换日夜时通过 postMessage 同步 iframe。
+import { GISCUS } from '../site';
+
+interface Props {
+  title?: string;      // 区域标题（如"留言板"/"讨论"）
+  desc?: string;       // 一行说明
+  mapping?: string;    // giscus 映射方式，默认 pathname（按页面路径独立讨论）
+  term?: string;       // mapping=特定 term 时使用
+}
+const {
+  title = '留言板',
+  desc = '基于 GitHub Discussions（giscus）的评论区，登录 GitHub 即可参与。',
+  mapping = GISCUS.mapping,
+} = Astro.props;
+const configured = Boolean(GISCUS.repo && GISCUS.repoId && GISCUS.categoryId);
+---
+
+<div class="giscus-block">
+  <div class="giscus-head">
+    <h2>{title}</h2>
+    <p>{desc}</p>
+  </div>
+
+  <div id="guestbook" data-giscus>
+    {
+      configured ? (
+        <div class="giscus-pending" id="giscusPending">正在加载评论系统…</div>
+      ) : (
+        <div class="giscus-pending">
+          <p>评论系统尚未启用。</p>
+          <ol>
+            <li>仓库开启 GitHub Discussions 并安装 <b>giscus</b> app；</li>
+            <li>在 <a href="https://giscus.app" target="_blank" rel="noreferrer">giscus.app</a> 生成配置；</li>
+            <li>
+              把 <code>repo / repoId / categoryId</code> 等填入 <code>src/site.ts</code> 的 <code>GISCUS</code>
+              后重新构建即可。
+            </li>
+          </ol>
+        </div>
+      )
+    }
+  </div>
+
+  <!-- 配置载体：Astro <script> 不能插值 frontmatter，故用 data-* 传递给客户端 -->
+  <div
+    id="giscusCfg"
+    hidden
+    data-repo={GISCUS.repo}
+    data-repo-id={GISCUS.repoId}
+    data-category={GISCUS.category}
+    data-category-id={GISCUS.categoryId}
+    data-mapping={mapping}
+    data-reactions={GISCUS.reactionsEnabled}
+    data-input={GISCUS.inputPosition}
+    data-lang={GISCUS.lang}
+  >
+  </div>
+</div>
+
+<style>
+  .giscus-block { margin-top: 1.2rem; }
+  .giscus-head h2 { margin: 0 0 0.2rem; color: var(--ink); font-size: 1.5rem; }
+  .giscus-head p { margin: 0 0 1.1rem; color: var(--ink-3); font-size: 0.9rem; line-height: 1.7; }
+  .giscus-pending {
+    padding: 1.2rem 1.3rem;
+    border: 1px dashed var(--line-2);
+    border-radius: 14px;
+    color: var(--ink-2);
+    font-size: 0.9rem;
+    line-height: 1.9;
+    background: var(--glass-soft);
+  }
+  .giscus-pending p { margin: 0 0 0.4rem; color: var(--ink); }
+  .giscus-pending ol { margin: 0.2rem 0 0; padding-left: 1.2em; }
+  .giscus-pending code {
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    padding: 0.05em 0.4em;
+    border-radius: 6px;
+    font-family: var(--font-code);
+    font-size: 0.82em;
+  }
+</style>
+
+<script>
+  // giscus 初始化（幂等 + 主题跟随）。整页只实例化一个评论区时最稳。
+  const giscusTheme = () =>
+    document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+
+  function syncGiscusTheme() {
+    const frame = document.querySelector('iframe.giscus-frame');
+    if (!frame || !frame.contentWindow) return;
+    frame.contentWindow.postMessage(
+      { giscus: { setConfig: { theme: giscusTheme() } } },
+      'https://giscus.app'
+    );
+  }
+
+  function initGiscus() {
+    const cfgEl = document.getElementById('giscusCfg');
+    const box = document.querySelector('[data-giscus]');
+    if (!cfgEl || !box) return;
+    const cfg = cfgEl.dataset || {};
+    if (!cfg.repo || !cfg.repoId || !cfg.categoryId) return; // 未配置：保留提示
+
+    // 幂等：避免软导航后重复插入脚本产生多个 iframe
+    if (box.dataset.giscusLoaded === '1' || box.querySelector('iframe.giscus-frame')) return;
+    box.dataset.giscusLoaded = '1';
+
+    const pending = document.getElementById('giscusPending');
+    if (pending) pending.hidden = true;
+
+    const s = document.createElement('script');
+    s.src = 'https://giscus.app/client.js';
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    const attrs = {
+      'data-repo': cfg.repo,
+      'data-repo-id': cfg.repoId,
+      'data-category': cfg.category,
+      'data-category-id': cfg.categoryId,
+      'data-mapping': cfg.mapping || 'pathname',
+      'data-reactions-enabled': cfg.reactions || '1',
+      'data-emit-metadata': '0',
+      'data-input-position': cfg.input || 'bottom',
+      'data-theme': giscusTheme(),
+      'data-lang': cfg.lang || 'zh-CN',
+      'data-loading': 'lazy',
+    };
+    for (const [k, v] of Object.entries(attrs)) if (v) s.setAttribute(k, v);
+    box.appendChild(s);
+  }
+
+  if (!window.__cwGiscusWired) {
+    window.__cwGiscusWired = true;
+    // 站点主题切换 → 同步 giscus
+    new MutationObserver(() => syncGiscusTheme()).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    // giscus 自身重渲染后也校正一次主题
+    window.addEventListener('message', (e) => {
+      if (e.origin !== 'https://giscus.app') return;
+      if (!e.data || !e.data.giscus) return;
+      clearTimeout(window.__cwGiscusTimer);
+      window.__cwGiscusTimer = setTimeout(syncGiscusTheme, 700);
+    });
+    // 软导航（ClientRouter）后重新初始化，兼容从互动页跳到作品页等场景
+    window.addEventListener('astro:page-load', initGiscus);
+  }
+
+  initGiscus();
+</script>

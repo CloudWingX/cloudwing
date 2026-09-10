@@ -473,6 +473,30 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
 .pager a:hover { color: var(--accent-deep); }
 .pager .none { visibility: hidden; }
 
+/* 详情页 上/下篇导航（按归档日期相邻） */
+.worknav { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-top: 3rem; }
+.worknav .wn-item {
+  display: flex; flex-direction: column; gap: 0.25rem;
+  padding: 0.95rem 1.15rem;
+  border: 1px solid var(--line-2); border-radius: var(--r-m);
+  background: var(--glass);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  text-decoration: none; box-shadow: var(--shadow-sm);
+  transition: transform 0.18s var(--ease), border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.worknav a.wn-item:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-lg); }
+.worknav .wn-next { text-align: right; align-items: flex-end; }
+.worknav .wn-empty { opacity: 0.5; }
+.worknav .wn-dir { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); }
+.worknav .wn-no { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; color: var(--accent-deep); }
+.worknav .wn-title { color: var(--ink); font-weight: 600; font-size: 0.98rem; line-height: 1.5; }
+html[data-theme='dark'] .worknav .wn-item { border-color: rgba(255, 255, 255, 0.22); }
+.work-comments { margin-top: 3.4rem; padding-top: 2.2rem; border-top: 1px solid var(--line-1); }
+@media (max-width: 640px) {
+  .worknav { grid-template-columns: 1fr; }
+  .worknav .wn-next { text-align: left; align-items: flex-start; }
+}
+
 /* 关于 */
 .info-list { margin: 0; padding: 0; list-style: none; }
 .info-list li { display: grid; grid-template-columns: 8.5rem 1fr; gap: 1rem; padding: 0.85rem 0; border-bottom: 1px solid var(--line-1); }

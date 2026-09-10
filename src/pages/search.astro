@@ -1,0 +1,108 @@
+---
+// 全站搜索：基于 Pagefind 的纯静态搜索（构建时生成索引，运行时无后端）
+// 索引范围：站点所有页面（作品库/作品详情/画廊/关于/互动等）
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="搜索" center>
+  <div class="wrap">
+    <header class="page-head" data-ent>
+      <p class="kicker"><b>SEARCH</b> / 全站检索</p>
+      <h1>搜索</h1>
+      <p class="sub">检索作品档案、画廊与页面内容 —— 输入关键词即时过滤，无需回车。</p>
+    </header>
+
+    <section class="section search-shell" style="padding-top:2rem">
+      <div id="search" data-ent></div>
+      <noscript><p class="sub">搜索需要启用 JavaScript。</p></noscript>
+    </section>
+  </div>
+</Base>
+
+<style>
+  /* 搜索容器：与站点玻璃风格统一 */
+  .search-shell :global(.pagefind-ui) {
+    --pagefind-ui-scale: 0.92;
+    --pagefind-ui-primary: var(--accent-deep);
+    --pagefind-ui-text: var(--ink);
+    --pagefind-ui-background: transparent;
+    --pagefind-ui-border: var(--line-2);
+    --pagefind-ui-tag: var(--accent-soft);
+    --pagefind-ui-border-width: 1px;
+    --pagefind-ui-border-radius: 14px;
+    --pagefind-ui-font: var(--font-body);
+    max-width: 46rem;
+    margin: 0 auto;
+  }
+  .search-shell :global(.pagefind-ui__search-input) {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--ink);
+    font-family: var(--font-body);
+    box-shadow: var(--shadow-sm);
+  }
+  .search-shell :global(.pagefind-ui__search-clear) {
+    background: var(--accent-soft);
+    color: var(--ink-2);
+  }
+  .search-shell :global(.pagefind-ui__result) {
+    border-top: 1px solid var(--line-1);
+    padding: 1.1rem 0;
+  }
+  .search-shell :global(.pagefind-ui__result-title),
+  .search-shell :global(.pagefind-ui__result-link) { color: var(--ink); font-weight: 700; }
+  .search-shell :global(.pagefind-ui__result-link:hover) { color: var(--accent-deep); }
+  .search-shell :global(.pagefind-ui__result-excerpt) { color: var(--ink-2); }
+  .search-shell :global(mark) {
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    padding: 0 0.12em;
+    border-radius: 4px;
+  }
+  .search-shell :global(.pagefind-ui__message) { color: var(--ink-3); font-family: var(--font-mono); font-size: 0.82rem; }
+  .search-shell :global(.pagefind-ui__button) {
+    background: var(--glass);
+    border: 1px solid var(--line-2);
+    color: var(--ink-2);
+  }
+  .search-shell :global(.pagefind-ui__button:hover) { border-color: var(--accent); color: var(--accent-deep); }
+  html[data-theme='dark'] .search-shell :global(.pagefind-ui__drawer) { background: transparent; }
+</style>
+
+<!-- Pagefind UI（构建产物位于 /pagefind/，由 `pagefind --site dist` 生成） -->
+<link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+<script is:inline src="/pagefind/pagefind-ui.js" defer></script>
+<script>
+  // 初始化 Pagefind UI（幂等 + 软导航后重新初始化）
+  const mountSearch = () => {
+    const el = document.getElementById('search');
+    if (!el) return;
+    if (el.dataset.pfMounted === '1') return;
+    const PF = /** @type {any} */ (window).PagefindUI;
+    if (typeof PF !== 'function') return; // 脚本尚未就绪
+    el.dataset.pfMounted = '1';
+    new PF({
+      element: '#search',
+      showSubResults: true,
+      showImages: false,
+      translations: {
+        placeholder: '搜索作品、图集与页面…',
+        clear_search: '清空',
+        load_more: '加载更多结果',
+        search_label: '站内搜索',
+        filters_label: '筛选',
+        zero_results: '没有找到与「[SEARCH_TERM]」相关的内容',
+        many_results: '找到 [COUNT] 条与「[SEARCH_TERM]」相关的内容',
+        one_result: '找到 1 条与「[SEARCH_TERM]」相关的内容',
+        alt_search: '未找到「[SEARCH_TERM]」，改为显示「[DIFFERENT_TERM]」的结果',
+        search_suggestion: '没有结果，试试以下关键词：',
+        searching: '搜索「[SEARCH_TERM]」…',
+      },
+    });
+  };
+  // Pagefind 脚本 defer 加载，就绪后再挂载
+  if (document.readyState === 'complete') mountSearch();
+  else window.addEventListener('load', mountSearch);
+  window.addEventListener('astro:page-load', mountSearch);
+</script>

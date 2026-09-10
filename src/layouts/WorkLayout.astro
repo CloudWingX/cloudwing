@@ -3,6 +3,7 @@
 // 作品正文（Markdown 渲染结果 <Content/>）会落入默认 slot。
 import { SITE } from '../site';
 import Base from './Base.astro';
+import GiscusComments from '../components/GiscusComments.astro';
 
 interface Props {
   data: {
@@ -16,8 +17,10 @@ interface Props {
     cover?: string;
     link?: string;
   };
+  newer?: { no: string; title: string; url: string } | null;
+  older?: { no: string; title: string; url: string } | null;
 }
-const { data } = Astro.props;
+const { data, newer = null, older = null } = Astro.props;
 const title: string = data.title ?? SITE.title;
 const summary: string = data.summary ?? '';
 const date: string = data.date ? new Date(data.date).toISOString().slice(0, 10) : '';
@@ -63,10 +66,47 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
       {cover && <img class="work-cover" src={cover} alt={`${no} ${title}`} width="1600" height="900" />}      <div class="prose">
         <slot />
       </div>
+
+      <!-- 上/下篇导航（按归档日期相邻） -->
+      <nav class="worknav" aria-label="相邻作品">
+        {older ? (
+          <a class="wn-item wn-prev" href={older.url}>
+            <span class="wn-dir">← 上一篇</span>
+            <span class="wn-no">{older.no}</span>
+            <span class="wn-title">{older.title}</span>
+          </a>
+        ) : (
+          <span class="wn-item wn-empty" aria-hidden="true">
+            <span class="wn-dir">← 上一篇</span>
+            <span class="wn-title">已经是最早的档案</span>
+          </span>
+        )}
+        {newer ? (
+          <a class="wn-item wn-next" href={newer.url}>
+            <span class="wn-dir">下一篇 →</span>
+            <span class="wn-no">{newer.no}</span>
+            <span class="wn-title">{newer.title}</span>
+          </a>
+        ) : (
+          <span class="wn-item wn-empty" aria-hidden="true">
+            <span class="wn-dir">下一篇 →</span>
+            <span class="wn-title">已经是最新的档案</span>
+          </span>
+        )}
+      </nav>
+
       <nav class="pager" aria-label="页面导航">
         <a href="/works/">← 返回作品库</a>
         <a href="/">索引首页</a>
       </nav>
+
+      <!-- 作品讨论区（giscus，按页面路径独立讨论） -->
+      <section class="work-comments">
+        <GiscusComments
+          title="讨论"
+          desc={`关于《${title}》的想法、问题或补充，欢迎在下方留言（GitHub 账号登录）。`}
+        />
+      </section>
     </article>
     <dialog id="lightbox" class="lightbox" aria-label="作品大图预览">
       <img alt="" />

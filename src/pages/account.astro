@@ -4,6 +4,7 @@
 // 背景：GridScan（React Bits 原版）固定深色全屏，保持原观感不变。
 // bodyClass 沿用 'auth-route'：Base 据此不铺全站粒子层 + 本页自备深色路由令牌。
 import Base from '../layouts/Base.astro';
+import GiscusComments from '../components/GiscusComments.astro';
 import { SITE, GISCUS } from '../site';
 import { GridScan } from '../components/ReactBits/GridScan.jsx';
 
@@ -48,46 +49,15 @@ const title = '互动';
         <p class="sub">把想说的留下。</p>
       </header>
 
-      <!-- ① 留言板（giscus） -->
+      <!-- ① 留言板（giscus，公共组件） -->
       <section class="room-card" data-ent style="--ad:.12s">
-        <div class="card-head">
-          <h2>留言板</h2>
-          <p>基于 GitHub Discussions（giscus）的博客留言板。</p>
-        </div>
-        <div id="guestbook">
-          {GISCUS.repo && GISCUS.repoId ? (
-            <div class="placeholder" id="giscusPending" hidden>
-              正在加载评论系统…
-            </div>
-          ) : (
-            <div class="placeholder" id="giscusPending">
-              <p>评论系统尚未启用。</p>
-              <ol>
-                <li>仓库开启 GitHub Discussions 并安装 <b>giscus</b> app；</li>
-                <li>在 <a href="https://giscus.app" target="_blank" rel="noreferrer">giscus.app</a> 生成配置；</li>
-                <li>把 <code>repo / repoId / categoryId</code> 等填入
-                  <code>src/site.ts</code> 的 <code>GISCUS</code> 后重新构建即可。</li>
-              </ol>
-            </div>
-          )}
-        </div>
+        <GiscusComments
+          title="留言板"
+          desc="把想说的留下 —— 基于 GitHub Discussions（giscus），登录 GitHub 即可参与。"
+        />
       </section>
     </div>
   </div>
-
-  <!-- giscus 配置载体（由 site.ts GISCUS 注入；未配置时为空 → 显示待配置提示） -->
-  <div
-    id="giscusCfg"
-    hidden
-    data-repo={GISCUS.repo}
-    data-repo-id={GISCUS.repoId}
-    data-category={GISCUS.category}
-    data-category-id={GISCUS.categoryId}
-    data-mapping={GISCUS.mapping}
-    data-reactions={GISCUS.reactionsEnabled}
-    data-input={GISCUS.inputPosition}
-    data-lang={GISCUS.lang}
-  ></div>
 </Base>
 
 <style>
@@ -204,77 +174,3 @@ const title = '互动';
   }
 </style>
 
-<script>
-  // ============================================================
-  // 互动页客户端脚本：giscus 留言板（含站点主题跟随）
-  // ============================================================
-  const GISCUS_THEME_LIGHT = 'light';
-  const GISCUS_THEME_DARK = 'dark';
-  const currentGiscusTheme = () =>
-    document.documentElement.dataset.theme === 'light' ? GISCUS_THEME_LIGHT : GISCUS_THEME_DARK;
-
-  // 站点切换主题时，把新主题 postMessage 给 giscus iframe（官方支持的换肤方式）
-  function syncGiscusTheme() {
-    const frame = document.querySelector('iframe.giscus-frame');
-    if (!frame || !frame.contentWindow) return;
-    frame.contentWindow.postMessage(
-      { giscus: { setConfig: { theme: currentGiscusTheme() } } },
-      'https://giscus.app'
-    );
-  }
-
-  function initGiscus() {
-    if (!window.__GISCUS_REPO__ || !window.__GISCUS_REPO_ID__ || !window.__GISCUS_CATEGORY_ID__) {
-      return; // 未配置：保留“待配置”提示
-    }
-    const pending = document.getElementById('giscusPending');
-    if (pending) pending.hidden = true;
-    const box = document.getElementById('guestbook');
-    const s = document.createElement('script');
-    s.src = 'https://giscus.app/client.js';
-    s.async = true;
-    s.crossOrigin = 'anonymous';
-    const attrs = {
-      'data-repo': window.__GISCUS_REPO__,
-      'data-repo-id': window.__GISCUS_REPO_ID__,
-      'data-category': window.__GISCUS_CATEGORY__,
-      'data-category-id': window.__GISCUS_CATEGORY_ID__,
-      'data-mapping': window.__GISCUS_MAPPING__ || 'pathname',
-      'data-reactions-enabled': window.__GISCUS_REACTIONS__ || '1',
-      'data-emit-metadata': '0',
-      'data-input-position': window.__GISCUS_INPUT__ || 'bottom',
-      'data-theme': currentGiscusTheme(),
-      'data-lang': window.__GISCUS_LANG__ || 'zh-CN',
-      'data-loading': 'lazy',
-    };
-    for (const [k, v] of Object.entries(attrs)) if (v) s.setAttribute(k, v);
-    box.appendChild(s);
-
-    // giscus 加载完成后同步一次主题（避免首屏主题与站点不一致）
-    const mo = new MutationObserver(() => syncGiscusTheme());
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    // iframe 内部的讨论框状态变化（如切换排序）也会触发 message，这里只在主题变化时回应
-    window.addEventListener('message', (e) => {
-      if (e.origin !== 'https://giscus.app') return;
-      if (!e.data || !e.data.giscus) return;
-      clearTimeout(window.__giscusThemeTimer);
-      window.__giscusThemeTimer = setTimeout(syncGiscusTheme, 700);
-    });
-  }
-
-  // giscus 配置（取自模板内 data-* 元素，site.ts GISCUS 留空即不启用）
-  const cfgEl = document.getElementById('giscusCfg');
-  const cfg = (cfgEl && cfgEl.dataset) || {};
-  window.__GISCUS_REPO__ = cfg.repo || '';
-  window.__GISCUS_REPO_ID__ = cfg.repoId || '';
-  window.__GISCUS_CATEGORY__ = cfg.category || '';
-  window.__GISCUS_CATEGORY_ID__ = cfg.categoryId || '';
-  window.__GISCUS_MAPPING__ = cfg.mapping || 'pathname';
-  window.__GISCUS_REACTIONS__ = cfg.reactions || '1';
-  window.__GISCUS_INPUT__ = cfg.input || 'bottom';
-  window.__GISCUS_LANG__ = cfg.lang || 'zh-CN';
-
-  (async function boot() {
-    initGiscus();
-  })();
-</script>

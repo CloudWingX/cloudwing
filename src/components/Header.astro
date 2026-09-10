@@ -34,6 +34,13 @@ const isActive = (href: string) =>
           <span>GitHub</span>
         </a>
       )}
+      <a class="pill search-pill" href="/search/" aria-label="站内搜索" title="站内搜索">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m16.2 16.2 4.3 4.3" />
+        </svg>
+        <span>搜索</span>
+      </a>
       <button type="button" class="theme-toggle" aria-label="当前为白日模式，点击切换到夜间模式" aria-pressed="false" title="白日 / 夜间">
         <span class="ico-moon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 13.6A8.6 8.6 0 0 1 10.4 3.8a8.6 8.6 0 1 0 9.8 9.8Z"/></svg>
@@ -54,6 +61,7 @@ const isActive = (href: string) =>
     {NAV.map((item) => (
       <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
     ))}
+    <a href="/search/" aria-current={isActive('/search/') ? 'page' : undefined}>搜索</a>
     {SITE.github && (
       <a class="ext" href={SITE.github} target="_blank" rel="noreferrer">GitHub ↗</a>
     )}
@@ -246,6 +254,12 @@ const isActive = (href: string) =>
   @media (max-width: 520px) {
     .pill.ext span { display: none; }
     .pill.ext { width: 40px; padding: 0; }
+    .pill.search-pill span { display: none; }
+    .pill.search-pill { width: 40px; padding: 0; }
+  }
+  /* 中等宽度（≤960）导航链接隐藏时，搜索胶囊保留文字更易识别 */
+  @media (max-width: 960px) and (min-width: 521px) {
+    .pill.search-pill { padding: 0 0.85rem; }
   }
 </style>
 

@@ -75,11 +75,13 @@ title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cov
 5. 预览旧进程可能残留：port 4321 被占时 `astro preview stop` 或复用现有实例；本地截图用 CDP（headless Edge :9222）。
 
 ## 下一步建议（按需）
-- ✅ giscus 留言板已启用（`site.ts` GISCUS，主题随站点浅/深）；首条评论由登录用户发出时自动创建 discussion。
+- ✅ giscus 留言板已启用（`src/components/GiscusComments.astro` 公共组件，互动页 + **作品详情页**共用；主题随站点浅/深）；首条评论由登录用户发出时自动创建 discussion。
 - ✅ RSS 已加：`/rss.xml`（`src/pages/rss.xml.ts`，依赖 `@astrojs/rss`），Base head 有 auto-discovery、Footer 有入口。
+- ✅ 作品详情页有**上/下篇导航**（`[slug].astro` 计算相邻条目 → WorkLayout `newer`/`older` props）。
+- ✅ **全站搜索**：Pagefind（`npm run build` = `astro build && pagefind --site dist`），UI 在 `/search/`，Header 有搜索入口；`build:fast` 可跳过索引。
 - ✅ 首页 01 板块已接**真实最新 3 篇作品**（读 works 集合，卡片可点进详情）。
 - ✅ 联系方式已填（邮箱 / GitHub / Bilibili）。
-- 可选后续：sitemap + og:image、详情页上/下篇导航、Pagefind 全站搜索、画廊二次分类、作品页 giscus 评论区。
+- 可选后续：sitemap + og:image、画廊二次分类、作品正文图片灯箱、暗色下 giscus 主题微调。
 - works 目前 2 篇（图书管理系统、本站诞生部署记），继续补作品即可；03「关于本站」首页块仍是静态简介卡。
 
 ## 验证方式备忘

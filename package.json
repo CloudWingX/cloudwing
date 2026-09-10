@@ -6,7 +6,8 @@
   "description": "CloudWing / 云翼 —— 个人学习与作品档案站（Astro 静态站 · 磨砂玻璃扁平化 UI）。",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && pagefind --site dist",
+    "build:fast": "astro build",
     "preview": "astro preview"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
     "gsap": "^3.15.0",
     "meshline": "^3.3.1",
     "ogl": "^1.0.11",
+    "pagefind": "^1.5.2",
     "postprocessing": "^6.39.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
