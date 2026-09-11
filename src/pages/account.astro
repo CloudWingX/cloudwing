@@ -172,5 +172,56 @@ const title = '互动';
     font-family: var(--font-code);
     font-size: 0.82em;
   }
+
+  /* GridScan 背景铺满兜底：组件按容器尺寸在挂载时测量一次，
+     若首帧布局未稳定（实测初始 670px < 视口 900px），网格只会覆盖上半部分。
+     除了下面的 resize 重测，这里再兜一层 CSS，确保画布始终铺满整屏。 */
+  .gs-fixed :global(.gridscan),
+  .gs-fixed :global(.gridscan canvas) {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
 </style>
+
+<script>
+  // ============================================================
+  // 互动页：让 GridScan 背景始终铺满整屏
+  // 组件内部只在挂载时按容器测量一次（renderer.setSize(container.client*）），
+  // 之后仅在 window resize 时重测；Astro 岛水合时机早于布局稳定时，
+  // 初始尺寸会偏小（实测 670px vs 视口 900px），导致背景只覆盖上半屏。
+  // 这里：① 水合后主动触发 resize 让其重测；② 容器尺寸变化时再触发。
+  // ============================================================
+  const fitGridScan = () => {
+    const host = document.querySelector('.gs-fixed');
+    if (!host || !host.querySelector('canvas')) return false;
+    window.dispatchEvent(new Event('resize'));
+    return true;
+  };
+
+  const wireGridScanFit = () => {
+    if (!window.__cwGridScanFit) {
+      window.__cwGridScanFit = { timers: [], ro: null };
+      // 水合完成时间不确定：分几档延时各触发一次（幂等，重复触发无副作用）
+      window.__cwGridScanFit.timers = [0, 250, 800, 1600, 2600].map((ms) =>
+        window.setTimeout(fitGridScan, ms)
+      );
+      // 容器尺寸变化（旋转屏幕、地址栏收起、窗口缩放）时再重测
+      if ('ResizeObserver' in window) {
+        const host = document.querySelector('.gs-fixed');
+        if (host) {
+          window.__cwGridScanFit.ro = new ResizeObserver(() => fitGridScan());
+          window.__cwGridScanFit.ro.observe(host);
+        }
+      }
+      window.addEventListener('astro:page-load', () => {
+        [0, 250, 800, 1600].forEach((ms) => window.setTimeout(fitGridScan, ms));
+      });
+    } else {
+      fitGridScan();
+    }
+  };
+
+  wireGridScanFit();
+</script>
 

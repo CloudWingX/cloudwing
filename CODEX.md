@@ -87,6 +87,7 @@ title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cov
 - ✅ **动效系统（V51）**：
   - 首页：hero 用 `[data-ent]`（加载入场）；**下方三个板块改为滚动显现**（`.sli`，进入视口时上滑 56px 淡入，逐项错峰 70ms）——由 `ui.js` 的 `scrollFade()` 驱动，选择器含 `.home-block .wrap > * / .acc-holder / .ph-card`。
   - 其他页面：进入时 `main` 整体淡入上浮（`main.page-enter`），`[data-ent]` 元素**自动按 DOM 顺序排入场延迟**（未手写 `--ad` 时，最多 8 档 × 70ms），作品详情页也已补齐入场。
+- ⚠️ **互动页 GridScan 背景铺满（V52 已修）**：GridScan 只在挂载时按 `container.clientHeight` 测量一次、之后仅 `window.resize` 重测；Astro 岛水合早于布局稳定时会测得偏小（实测 670px vs 视口 900px）→ 网格只覆盖上半屏。`account.astro` 已加：水合后分档延时触发 `resize` 重测 + `ResizeObserver` 监听容器 + CSS 兜底（`.gs-fixed .gridscan/canvas { width/height:100% !important }`）。同类 fixed 全屏 canvas 组件如有此问题可复用该模式。
   - ⚠️ 两个已修坑：① Astro 软导航会按新文档 `<html>` 覆写属性，**客户端加的 `js` 类会丢**（所有 `html.js .sli/[data-ent]` 规则随之失效）→ 在 `astro:after-swap` 与 `pageEnter()` 里补回；② `IntersectionObserver` 只在跨阈值时回调，**一次性跳转滚动**（End/PageDown/锚点）会让元素从下方直接到上方而不回调 → 加滚动节流兜底扫描（`r` top < 94%vh 或 bottom < 0 即显现）。
 - 可选后续：画廊二次分类、作品正文图片灯箱、暗色下 giscus 主题微调、评论数展示。
 - works 目前 2 篇（图书管理系统、本站诞生部署记），继续补作品即可；03「关于本站」首页块仍是静态简介卡。
