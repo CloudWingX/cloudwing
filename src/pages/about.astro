@@ -232,6 +232,16 @@ import { SITE } from '../site';
   /* 已触发：提示变结果文案 */
   :global(.ly-floater.is-triggered) .ly-hint { opacity: 1; color: var(--accent-deep); }
 
+  /* 正文拉丁词：光标邻近可变字重（原生实现，与标题的 VariableProximity 参数一致）
+     逐字符 inline-block 但不插入空白，所以词内不断行、词间/中文排版不受影响。
+     注意：这里不设 font-variation-settings 初值，远离指针时清空内联样式即回落到
+     元素自身字重（粗体文本不会被拉细）。 */
+  .about-root :global(.cw-pxw),
+  .about-root :global(.cw-pxc) {
+    display: inline-block;
+    white-space: nowrap;
+  }
+
   /* 开关灯的“灯闪”反馈 */
   :global(html.cw-lights-flash body)::after {
     content: "";
@@ -438,4 +448,187 @@ import { SITE } from '../site';
     window.addEventListener('pointercancel', onUp, { passive: true });
   }
   bindLanyard();
+</script>
+
+<script>
+  // ============================================================
+  // 正文拉丁词的「光标邻近可变字重」——中文/标点保持普通文本，排版无损
+  // 与标题用的 React Bits <VariableProximity /> 同一视觉参数（wght 400 → 900）。
+  // 做法：把段落文本节点里的拉丁词包成 span（逐字符），按指针距离插值字重。
+  // 只为静态 HTML 服务，不引入额外 React 岛；标题仍用组件原码。
+  // ============================================================
+  const PX = { radius: 110, from: 400, to: 900, falloff: 'gaussian' };
+  // 拉丁词/数字串：Java、Spring、Boot、MySQL、CET-4、2023.09、16:9 …
+  const LATIN_RE = /[A-Za-z0-9][A-Za-z0-9._+#/:%\-\u2013]*/g;
+  const PX_SKIP = '.variable-proximity, .sr-only, .ly-floater, .gs-fixed, script, style, noscript';
+
+  // 状态挂在 window 上做全局单例：软导航会重新执行本脚本，若状态留在闭包里，
+  // 首次注册的指针监听会一直读到旧状态（旧 DOM 元素），效果看起来「死掉」。
+  const pxState = (window.__cwLatinPX = window.__cwLatinPX || {
+    words: [],
+    raf: 0,
+    pointer: { x: -9999, y: -9999 },
+    dirty: true,
+    schedule: null,
+  });
+
+  // 把文本节点拆成「普通文本 + 拉丁词 span（逐字符 span）」
+  const wrapLatin = (textNode) => {
+    const text = textNode.nodeValue;
+    if (!text || !/[A-Za-z0-9]/.test(text)) return;
+    LATIN_RE.lastIndex = 0;
+    const frag = document.createDocumentFragment();
+    let last = 0;
+    let m;
+    while ((m = LATIN_RE.exec(text))) {
+      const word = m[0];
+      if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+      const wordEl = document.createElement('span');
+      wordEl.className = 'cw-pxw';
+      for (const ch of word) {
+        const chEl = document.createElement('span');
+        chEl.className = 'cw-pxc';
+        chEl.textContent = ch;
+        wordEl.appendChild(chEl);
+      }
+      frag.appendChild(wordEl);
+      last = m.index + word.length;
+    }
+    if (!last) return;
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+    textNode.parentNode.replaceChild(frag, textNode);
+  };
+
+  const collectLatin = (root) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (!node.nodeValue || !/[A-Za-z0-9]/.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
+        const p = node.parentElement;
+        if (!p || p.closest(PX_SKIP)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(wrapLatin);
+  };
+
+  // 缓存字符的页面坐标（指针移动时不做布局查询，保证流畅）
+  const measureLatin = () => {
+    const sx = window.scrollX;
+    const sy = window.scrollY;
+    pxState.words = Array.from(document.querySelectorAll('.cw-pxw')).map((wordEl) => {
+      const wr = wordEl.getBoundingClientRect();
+      return {
+        left: wr.left + sx,
+        top: wr.top + sy,
+        right: wr.right + sx,
+        bottom: wr.bottom + sy,
+        chars: Array.from(wordEl.querySelectorAll('.cw-pxc')).map((chEl) => {
+          const r = chEl.getBoundingClientRect();
+          // 基准字重取元素自身计算值（400 正文 / 700 粗体），避免把粗体拉细
+          const base = parseInt(getComputedStyle(chEl).fontWeight, 10) || PX.from;
+          return {
+            el: chEl,
+            base,
+            to: Math.max(PX.to, base),
+            x: r.left + sx + r.width / 2,
+            y: r.top + sy + r.height / 2,
+          };
+        }),
+      };
+    });
+    pxState.dirty = false;
+  };
+
+  const pxFalloff = (distance) => {
+    const norm = Math.min(Math.max(1 - distance / PX.radius, 0), 1);
+    if (PX.falloff === 'exponential') return norm * norm;
+    if (PX.falloff === 'gaussian') return Math.exp(-Math.pow(distance / (PX.radius / 2), 2) / 2);
+    return norm;
+  };
+
+  const renderProximity = () => {
+    pxState.raf = 0;
+    if (pxState.dirty) measureLatin();
+    const { x, y } = pxState.pointer;
+    const r = PX.radius;
+    for (const word of pxState.words) {
+      // 词级粗筛：远离指针的词直接归位（清空内联字重）
+      const near = x > word.left - r && x < word.right + r && y > word.top - r && y < word.bottom + r;
+      if (!near) {
+        for (const ch of word.chars) {
+          if (ch.el.style.fontVariationSettings) ch.el.style.fontVariationSettings = '';
+        }
+        continue;
+      }
+      for (const ch of word.chars) {
+        const dx = ch.x - x;
+        const dy = ch.y - y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance >= r) {
+          if (ch.el.style.fontVariationSettings) ch.el.style.fontVariationSettings = '';
+          continue;
+        }
+        const weight = ch.base + (ch.to - ch.base) * pxFalloff(distance);
+        ch.el.style.fontVariationSettings = `'wght' ${weight.toFixed(1)}`;
+      }
+    }
+  };
+
+  const scheduleProximity = () => {
+    if (!pxState.raf) pxState.raf = requestAnimationFrame(renderProximity);
+  };
+  // 每次执行都把自己的调度函数登记到共享状态，保证旧监听调用的是最新闭包
+  pxState.schedule = scheduleProximity;
+
+  const initLatinProximity = () => {
+    const root = document.querySelector('.about-root');
+    if (!root) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; // 减少动态：不做该效果
+    // 用 DOM 实际结果判断是否已包装：软导航后 body 上的标记会残留而内容已重建，
+    // 只看标记会漏掉重新包装（曾导致从关于页离开再返回时效果整体消失）。
+    if (!root.querySelector('.cw-pxw')) collectLatin(root);
+    pxState.dirty = true;
+    measureLatin();
+
+    if (!window.__cwLatinProximityWired) {
+      window.__cwLatinProximityWired = true;
+      // 全部通过 window 单例回调，避免软导航后旧闭包继续持有旧 DOM
+      const rerun = () => window.__cwLatinPX && window.__cwLatinPX.schedule && window.__cwLatinPX.schedule();
+      const reset = () => {
+        if (window.__cwLatinPX) window.__cwLatinPX.pointer = { x: -9999, y: -9999 };
+        rerun();
+      };
+      window.addEventListener(
+        'pointermove',
+        (e) => {
+          pxState.pointer = { x: e.clientX + window.scrollX, y: e.clientY + window.scrollY };
+          rerun();
+        },
+        { passive: true },
+      );
+      // 指针离开窗口 → 全部归位
+      document.addEventListener('pointerleave', reset);
+      // 尺寸变化 / 字体加载完成后重算坐标
+      window.addEventListener('resize', () => {
+        if (window.__cwLatinPX) window.__cwLatinPX.dirty = true;
+        rerun();
+      });
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          if (window.__cwLatinPX) window.__cwLatinPX.dirty = true;
+          rerun();
+        });
+      }
+      // 必须挂在 document 上：astro:page-load 由路由器在 document 上派发且不冒泡，
+      // 挂 window 永远收不到（软导航二次进入关于页时效果不初始化的原因）。
+      document.addEventListener('astro:page-load', () => {
+        if (window.__cwLatinPX && window.__cwLatinPX.init) window.__cwLatinPX.init();
+      });
+    }
+  };
+  pxState.init = initLatinProximity;
+
+  initLatinProximity();
 </script>
