@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Lanyard from '../components/ReactBits/Lanyard.jsx';
 import AboutMagicBento from '../components/AboutMagicBento.jsx';
+import ProximityText from '../components/ProximityText.jsx';
 import { SITE } from '../site';
 ---
 <Base title="关于" center bodyClass="about-route">
@@ -9,7 +10,7 @@ import { SITE } from '../site';
     <div class="wrap about">
       <header class="page-head" data-ent>
         <p class="kicker"><b>PROFILE</b> / ABOUT · 关于</p>
-        <h1>{SITE.author}</h1>
+        <h1><ProximityText client:load label={SITE.author} radius={190} /></h1>
         <p class="sub">计算机科学与技术（本科在读）· 后端与质量保障方向 —— 用网站记录学习、代码与走过的每一步。</p>
       </header>
 
@@ -25,7 +26,7 @@ import { SITE } from '../site';
 
       <!-- 履历：教育 · 实训 · 项目（内容来自本人简历） -->
       <section class="track" data-ent style="--ad:.16s">
-        <h2 class="track-title">Education &amp; Practice</h2>
+        <h2 class="track-title"><ProximityText client:load label="Education & Practice" radius={150} /></h2>
         <div class="tl">
           <article class="tl-row">
             <span class="tl-time">2023.09 – 2027.06</span>
@@ -57,7 +58,7 @@ import { SITE } from '../site';
 
       <!-- 技能与证书 -->
       <section class="skills" data-ent style="--ad:.2s">
-        <h2 class="track-title">Stack &amp; Cert</h2>
+        <h2 class="track-title"><ProximityText client:load label="Stack & Cert" radius={150} /></h2>
         <ul class="skill-groups">
           <li><b>后端</b><span>Java · Spring Boot · MyBatis · RESTful API · 多线程入门</span></li>
           <li><b>前端</b><span>HTML/CSS/JavaScript · Vue · Axios</span></li>
@@ -96,6 +97,31 @@ import { SITE } from '../site';
 <style>
   .about-root { position: relative; }
   .about { padding-bottom: 1rem; max-width: 720px; }
+
+  /* ============================================================
+     VariableProximity（光标邻近可变字重）宿主适配
+     —— 组件 CSS 默认用 Roboto Flex；这里覆盖为站点字体，
+        并保证块级排版（组件本体零改动）
+     ============================================================ */
+  .px-host {
+    display: block;
+    font-family: var(--font-display);
+    line-height: inherit;
+  }
+  .px-host :global(.variable-proximity) {
+    font-family: var(--font-display);
+    line-height: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+  }
+  /* h1 内：字号/字重继承 h1，可变轴在 Outfit 上生效（wght 400→900） */
+  .page-head h1 .px-host { font-size: inherit; font-weight: inherit; }
+  /* 小节标题（等宽风格标签）保持原字距 */
+  .track-title .px-host { font-size: inherit; letter-spacing: inherit; }
+  @media (prefers-reduced-motion: reduce) {
+    /* 减少动态时不播动画，组件本身是 hover 驱动，无需额外处理 */
+  }
 
   .who .txt { color: var(--ink-2); font-size: 1.05rem; line-height: 1.95; }
   .who .txt a { color: var(--accent-deep); text-decoration: underline; text-underline-offset: 3px; }

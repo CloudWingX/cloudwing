@@ -24,6 +24,7 @@
     "face-api.js": "^0.22.2",
     "gsap": "^3.15.0",
     "meshline": "^3.3.1",
+    "motion": "^13.2.0",
     "ogl": "^1.0.11",
     "pagefind": "^1.5.2",
     "postprocessing": "^6.39.4",

@@ -40,7 +40,7 @@ plugins/vite-cjs-inline-shim.mjs ← 构建 shim（勿删，见“构建坑”�
 | `/works/` | pages/works/index.astro | — | 卡片网格 + 玻璃分段单选分类（01/02 板块数据源）|
 | `/works/[slug]/` | pages/works/[slug].astro | — | 详情（WorkLayout + Markdown）|
 | `/gallery/` | pages/gallery/index.astro | — | 40 图玻璃卡网格 + `<dialog>` 大图 |
-| `/about/` | pages/about.astro | `about-route` | 履历时间线 + MagicBento + Lanyard 工牌 |
+| `/about/` | pages/about.astro | `about-route` | 履历时间线 + MagicBento + Lanyard 工牌 + **VariableProximity 文字**（h1 与两个小节标题：光标邻近可变字重） |
 | `/account/` | pages/account.astro | — | 互动：giscus 留言板（配置为空时占位）+ **全站粒子背景**（V53 起与其它页统一，GridScan/深色令牌已移除） |
 | `/404` | pages/404.astro | — | — |
 
@@ -48,6 +48,7 @@ plugins/vite-cjs-inline-shim.mjs ← 构建 shim（勿删，见“构建坑”�
 1. **ReactBits 原码不动**：`src/components/ReactBits/*` 是官方 JS/CSS 原版。只允许：宿主组件（`src/components/*.jsx`）改 props / 包尺寸 / 定位 / 主题适配。改核心前先确认。
 2. **隐私红线**：About / README / 作品正文不得出现真实姓名、学校、企业名（用户明确要求）。
 3. **软导航陷阱**：站内用 Astro `<ClientRouter/>`。任何「点按钮/标签要生效」的交互**不要**把监听绑到首屏 DOM 元素上，要绑 `document` + 幂等标记（参考 `Header.astro` 汉堡菜单、`works/index.astro` 分类，均用 `window.__cw…Wired` + document 委托，并在 `astro:page-load` 兜底）。
+4. **ReactBits 组件用法限制（VariableProximity）**：`/about/` 的标题文字用了 `VariableProximity`（宿主 `src/components/ProximityText.jsx`，依赖 `motion`）。它把文本按**空格**分词、每个词 `nowrap` → **中文长句会被当成一个不可换行的词导致溢出，切勿用于中文长段落**，只适合短文本 / 拉丁标题。宿主已用内联 `fontFamily: var(--font-display)` 覆盖组件默认的 Roboto Flex，保持全站字体一致（Outfit 支持 wght 可变轴，效果照常）。
 
 ## 主题机制（浅/深）
 - Base 内联脚本首屏读 `cw-theme-pref`（localStorage→session→cookie）设 `html[data-theme]`。
