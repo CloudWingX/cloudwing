@@ -1,46 +1,15 @@
 ---
 // 互动页（原 /account/，V38 起删除登录/账号系统；V40 起删除音乐电台）
-// 内容：个人博客留言板（giscus / GitHub Discussions，site.ts GISCUS 配置后启用）
-// 背景：GridScan（React Bits 原版）固定深色全屏，保持原观感不变。
-// bodyClass 沿用 'auth-route'：Base 据此不铺全站粒子层 + 本页自备深色路由令牌。
+// 内容：个人博客留言板（giscus / GitHub Discussions，site.ts GISCUS 配置）
+// 背景：与全站统一 —— React Bits <Particles /> 粒子层（Base.astro 渲染，跟随浅/深主题）。
+// 说明：V53 起去掉 GridScan 固定深色背景与 'auth-route' 深色令牌，改为与其他页面一致的粒子背景。
 import Base from '../layouts/Base.astro';
 import GiscusComments from '../components/GiscusComments.astro';
-import { SITE, GISCUS } from '../site';
-import { GridScan } from '../components/ReactBits/GridScan.jsx';
+import { SITE } from '../site';
 
 const title = '互动';
 ---
-<Base title={title} bodyClass="auth-route">
-  <div class="gs-fixed" aria-hidden="true">
-    <GridScan
-      client:load
-      enableWebcam={false}
-      showPreview={false}
-      sensitivity={0.6}
-      lineThickness={1.4}
-      linesColor="#d7d8dc"
-      scanColor="#ffffff"
-      gridScale={0.075}
-      lineStyle="solid"
-      lineJitter={0.08}
-      scanDirection="pingpong"
-      scanOpacity={0.8}
-      scanGlow={0.75}
-      scanSoftness={2.2}
-      scanDuration={2.6}
-      scanDelay={1.1}
-      enablePost={true}
-      bloomIntensity={0.45}
-      bloomThreshold={0}
-      bloomSmoothing={0.95}
-      chromaticAberration={0.0015}
-      noiseIntensity={0.012}
-      scanOnClick={false}
-      lightMode={false}
-    />
-    <div class="gs-shade"></div>
-  </div>
-
+<Base title={title}>
   <div class="room-stage">
     <div class="wrap room">
       <header class="page-head" data-ent>
@@ -49,7 +18,6 @@ const title = '互动';
         <p class="sub">把想说的留下。</p>
       </header>
 
-      <!-- ① 留言板（giscus，公共组件） -->
       <section class="room-card" data-ent style="--ad:.12s">
         <GiscusComments
           title="留言板"
@@ -62,166 +30,30 @@ const title = '互动';
 
 <style>
   /* ============================================================
-     互动路由（body.auth-route 沿用旧名：Base 据此不铺全站粒子层）
-     —— 恒定深色，让 GridScan 固定背景从导航铺到页脚
+     互动页（V53：背景与其他页面统一为全站粒子层）
+     这里只负责内容排版与玻璃卡质感，全部使用全站 token，跟随浅/深主题。
      ============================================================ */
-
-  :global(body.auth-route) {
-    --bg: #0b0b0d;
-    --bg-deep: #050506;
-    --ink: #f2f2f3;
-    --ink-2: #b8babf;
-    --ink-3: #818389;
-    --on-accent: #0a0a0c;
-    --line-1: rgba(255, 255, 255, 0.14);
-    --line-2: rgba(255, 255, 255, 0.28);
-    --accent: #f4f4f5;
-    --accent-deep: #ffffff;
-    --accent-ink: #ffffff;
-    --accent-soft: rgba(255, 255, 255, 0.15);
-    --accent-grad: linear-gradient(135deg, #f7f7f8 0%, #b9babf 100%);
-    --glass: linear-gradient(160deg, rgba(38, 38, 41, 0.66), rgba(13, 13, 15, 0.42));
-    --glass-strong: linear-gradient(160deg, rgba(46, 46, 50, 0.8), rgba(18, 18, 20, 0.55));
-    --glass-soft: linear-gradient(160deg, rgba(38, 38, 41, 0.44), rgba(13, 13, 15, 0.22));
-    color: #f2f2f3;
-    min-height: 100vh;
-  }
-  :global(body.auth-route)::before { background-image: none; }
-  :global(body.auth-route .grid-bg) { display: none; }
-
-  /* 顶栏 / 页脚强制夜色玻璃 */
-  :global(body.auth-route .topbar) {
-    background: linear-gradient(160deg, rgba(38, 38, 42, 0.84), rgba(12, 12, 14, 0.52));
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  }
-  :global(body.auth-route .nav a:hover) { background: rgba(255, 255, 255, 0.13); color: var(--ink); }
-  :global(body.auth-route .nav a[aria-current='page']) {
-    background: rgba(255, 255, 255, 0.2);
-    color: var(--accent-ink);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-  }
-  :global(body.auth-route .theme-toggle) { color: var(--ink-2); }
-  :global(body.auth-route .btn) { border-color: rgba(255, 255, 255, 0.3); }
-  :global(body.auth-route .site-footer) {
-    background: rgba(10, 10, 12, 0.42);
-    border-top-color: rgba(255, 255, 255, 0.14);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-  }
-
-  /* GridScan 固定铺满视口（不透明背景层），内容浮于其上 */
-  .gs-fixed {
-    position: fixed; inset: 0; z-index: 0; overflow: hidden;
-    background:
-      radial-gradient(70rem 46rem at 78% -10%, rgba(255, 255, 255, 0.07), transparent 60%),
-      radial-gradient(58rem 40rem at -8% 26%, rgba(255, 255, 255, 0.05), transparent 55%),
-      radial-gradient(52rem 40rem at 30% 112%, rgba(255, 255, 255, 0.06), transparent 62%),
-      linear-gradient(180deg, #1c1c1f 0%, #121214 42%, #0b0b0d 74%, #050506 100%);
-  }
-  .gs-shade {
-    position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    background:
-      radial-gradient(120% 70% at 50% 34%, rgba(3, 5, 12, 0) 58%, rgba(3, 5, 12, 0.42) 100%),
-      linear-gradient(90deg, rgba(3, 5, 12, 0.42), rgba(3, 5, 12, 0) 15%, rgba(3, 5, 12, 0) 85%, rgba(3, 5, 12, 0.42));
-  }
-
   .room-stage {
-    position: relative; z-index: 1;
+    position: relative;
+    z-index: 1; /* 浮于 .pparticles-layer（z-index:-1）之上 */
     padding: clamp(2rem, 5vw, 4rem) 0 clamp(2.4rem, 6vh, 4.6rem);
   }
-  .wrap.room { max-width: var(--w-max); margin: 0 auto; padding: 0 var(--gutter); display: flex; flex-direction: column; gap: 1.2rem; }
-
-  .page-head { padding: 0.4rem 0 0.2rem; }
-  .page-head h1 { color: #ffffff; }
-  .page-head .sub { color: #b8babf; }
-  .kicker { color: #8a8c92; margin-bottom: 1.2rem; }
-  .kicker b { color: #ffffff; }
+  .wrap.room {
+    max-width: var(--w-max);
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
 
   .room-card {
     padding: 1.5rem 1.7rem 1.7rem;
     border-radius: 20px;
-    background: linear-gradient(165deg, rgba(42, 42, 46, 0.6), rgba(12, 12, 14, 0.66));
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    box-shadow:
-      0 26px 64px rgba(0, 0, 0, 0.55),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(20px) saturate(1.5);
-    -webkit-backdrop-filter: blur(20px) saturate(1.5);
-  }
-  .card-head h2 { margin: 0 0 0.2rem; color: #ffffff; font-size: 1.5rem; }
-  .card-head p { margin: 0; color: #9b9da3; font-size: 0.9rem; line-height: 1.7; }
-  .card-head { margin-bottom: 1.1rem; }
-
-  .placeholder {
-    padding: 1.2rem 1.3rem;
-    border: 1px dashed rgba(255, 255, 255, 0.2);
-    border-radius: 14px;
-    color: #b8babf;
-    font-size: 0.9rem;
-    line-height: 1.9;
-    background: rgba(6, 6, 8, 0.35);
-  }
-  .placeholder p { margin: 0 0 0.4rem; color: #e6e7ea; }
-  .placeholder ol { margin: 0.2rem 0 0; padding-left: 1.2em; }
-  .placeholder a { color: #ffffff; }
-  .placeholder code {
-    background: rgba(255, 255, 255, 0.12);
-    padding: 0.05em 0.4em;
-    border-radius: 6px;
-    font-family: var(--font-code);
-    font-size: 0.82em;
-  }
-
-  /* GridScan 背景铺满兜底：组件按容器尺寸在挂载时测量一次，
-     若首帧布局未稳定（实测初始 670px < 视口 900px），网格只会覆盖上半部分。
-     除了下面的 resize 重测，这里再兜一层 CSS，确保画布始终铺满整屏。 */
-  .gs-fixed :global(.gridscan),
-  .gs-fixed :global(.gridscan canvas) {
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
+    background: var(--glass);
+    border: 1px solid color-mix(in srgb, var(--line-2) 70%, rgba(255, 255, 255, 0.35));
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(16px) saturate(1.35);
+    -webkit-backdrop-filter: blur(16px) saturate(1.35);
   }
 </style>
-
-<script>
-  // ============================================================
-  // 互动页：让 GridScan 背景始终铺满整屏
-  // 组件内部只在挂载时按容器测量一次（renderer.setSize(container.client*）），
-  // 之后仅在 window resize 时重测；Astro 岛水合时机早于布局稳定时，
-  // 初始尺寸会偏小（实测 670px vs 视口 900px），导致背景只覆盖上半屏。
-  // 这里：① 水合后主动触发 resize 让其重测；② 容器尺寸变化时再触发。
-  // ============================================================
-  const fitGridScan = () => {
-    const host = document.querySelector('.gs-fixed');
-    if (!host || !host.querySelector('canvas')) return false;
-    window.dispatchEvent(new Event('resize'));
-    return true;
-  };
-
-  const wireGridScanFit = () => {
-    if (!window.__cwGridScanFit) {
-      window.__cwGridScanFit = { timers: [], ro: null };
-      // 水合完成时间不确定：分几档延时各触发一次（幂等，重复触发无副作用）
-      window.__cwGridScanFit.timers = [0, 250, 800, 1600, 2600].map((ms) =>
-        window.setTimeout(fitGridScan, ms)
-      );
-      // 容器尺寸变化（旋转屏幕、地址栏收起、窗口缩放）时再重测
-      if ('ResizeObserver' in window) {
-        const host = document.querySelector('.gs-fixed');
-        if (host) {
-          window.__cwGridScanFit.ro = new ResizeObserver(() => fitGridScan());
-          window.__cwGridScanFit.ro.observe(host);
-        }
-      }
-      window.addEventListener('astro:page-load', () => {
-        [0, 250, 800, 1600].forEach((ms) => window.setTimeout(fitGridScan, ms));
-      });
-    } else {
-      fitGridScan();
-    }
-  };
-
-  wireGridScanFit();
-</script>
-

@@ -18,9 +18,9 @@ const { title = SITE.title, description = SITE.tagline, center = false, bodyClas
 const path = Astro.url.pathname;
 // 社交分享图统一转绝对 URL（OG 规范要求）
 const ogImageAbs = new URL(ogImage, Astro.site ?? Astro.url).href;
-// Particles 全页背景：除 /account/（auth-route，固定 GridScan 背景）外全站启用
-const isAuth = !!bodyClass && bodyClass.split(/\s+/).includes('auth-route');
-const withParticles = !isAuth;
+// 全站统一背景：React Bits <Particles /> 粒子层（fixed 全页），跟随浅/深主题。
+// V53 起互动页也用该层（原先 /account/ 单独用 GridScan 深色背景），故不再有页面级例外。
+const withParticles = true;
 ---
 <!doctype html>
 <html lang="zh-CN">

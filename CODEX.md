@@ -41,7 +41,7 @@ plugins/vite-cjs-inline-shim.mjs ← 构建 shim（勿删，见“构建坑”�
 | `/works/[slug]/` | pages/works/[slug].astro | — | 详情（WorkLayout + Markdown）|
 | `/gallery/` | pages/gallery/index.astro | — | 40 图玻璃卡网格 + `<dialog>` 大图 |
 | `/about/` | pages/about.astro | `about-route` | 履历时间线 + MagicBento + Lanyard 工牌 |
-| `/account/` | pages/account.astro | `auth-route` | 互动：giscus 留言板（配置为空时占位）+ GridScan 背景 |
+| `/account/` | pages/account.astro | — | 互动：giscus 留言板（配置为空时占位）+ **全站粒子背景**（V53 起与其它页统一，GridScan/深色令牌已移除） |
 | `/404` | pages/404.astro | — | — |
 
 ## 三条硬规则
@@ -53,6 +53,7 @@ plugins/vite-cjs-inline-shim.mjs ← 构建 shim（勿删，见“构建坑”�
 - Base 内联脚本首屏读 `cw-theme-pref`（localStorage→session→cookie）设 `html[data-theme]`。
 - `ui.js` `.theme-toggle` 事件委托：白日/夜间两态，落盘三通道。
 - 组件适配看 `html[data-theme]`（全局 CSS 或宿主 JS 里 MutationObserver）。
+- **背景已全站统一**（V53）：所有页面（含 `/account/`、`/search/`）都用 `PageParticlesBackground` 粒子层，`Base.astro` 的 `withParticles` 恒为 `true`；页面级 `auth-route` 深色令牌与其判断逻辑已删除。新增页面无需再处理背景。
 
 ## 图片与图床
 - 图片统一经 `src/site.ts` 的 `imgUrl()`：`IMG_CDN=''`（当前）走本地相对路径，图片随 `dist` 由 Cloudflare Pages CDN 服务——**稳定，勿改回 jsDelivr**（国内不稳踩过坑）。
