@@ -427,54 +427,6 @@
 }
 
 /* ---------- 右栏挂件：统计 / 日历 / 名言 ---------- */
-.sw-profile .sw-name {
-  margin: 0 0 0.3rem;
-  font-family: var(--font-display);
-  font-size: 1.12rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--ink);
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-}
-.sw-profile .sw-name span {
-  font-family: var(--font-body);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--ink-3);
-  letter-spacing: 0.06em;
-}
-.sw-profile .sw-bio {
-  margin: 0 0 0.7rem;
-  font-size: 0.8rem;
-  line-height: 1.55;
-  color: var(--ink-2);
-}
-.sw-profile .sw-links {
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.55rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-}
-.sw-profile .sw-links a {
-  padding: 0.16rem 0.5rem;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  color: var(--ink-2);
-  text-decoration: none;
-  transition: color 0.16s var(--ease), border-color 0.16s var(--ease), background 0.16s var(--ease);
-}
-.sw-profile .sw-links a:hover {
-  color: var(--accent-deep);
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
 .sw-stats {
   list-style: none;
   margin: 0 0 0.6rem;
