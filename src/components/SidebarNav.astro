@@ -3,7 +3,13 @@
 //   作品库（全部作品 + 每件作品）/ 分类（可直接筛列表）/ 画廊（全部截图 + 每张）/ 站点页面
 // 只按 pathname 决定「哪个条目高亮」和「哪个分组默认展开」，其余完全一致。
 import { getCollection } from 'astro:content';
+import { SITE } from '../site';
 import '../styles/shell.css';
+
+// 个人信息卡（侧栏左上角）——顶部背景图待定：
+//   留空 '' = 使用主题渐变（浅/深各自一套，见 shell.css 的 .pf-bg）；
+//   填站内路径（如 '/lanyard/banner.webp'）= 自动改用该图片当横幅。
+const PROFILE_BANNER = '';
 
 const pathname = Astro.url.pathname;
 
@@ -38,6 +44,26 @@ const SITES = [
 const cur = (url: string) => (url === pathname ? 'page' : undefined);
 ---
 <aside class="shell-left">
+  <!-- 个人信息卡：结构对齐参考站（横幅 + 压在横幅上的圆形头像 + 名字 + 简介 + 链接） -->
+  <section class="sidecard pf-card">
+    <div class="pf-bg" style={PROFILE_BANNER ? `--pf-banner: url('${PROFILE_BANNER}')` : undefined} aria-hidden="true"></div>
+    <div class="pf-avatar-wrap">
+      <a class="pf-avatar" href="/about/" aria-label="关于我">
+        <img src="/lanyard/avatar-card.320.webp" srcset="/lanyard/avatar-card.160.webp 160w, /lanyard/avatar-card.320.webp 320w" sizes="76px" width="76" height="76" alt={SITE.author} loading="eager" decoding="async" />
+      </a>
+    </div>
+    <div class="pf-body">
+      <p class="pf-name">{SITE.author}<span>{SITE.title}</span></p>
+      <p class="pf-bio">{SITE.tagline.replace(/^[^—]*——\s*/, '')}</p>
+      <p class="pf-links">
+        <a href={SITE.github} target="_blank" rel="noreferrer">GitHub</a>
+        <a href={SITE.bilibili} target="_blank" rel="noreferrer">Bilibili</a>
+        <a href={`mailto:${SITE.email}`}>邮箱</a>
+        <a href="/about/">关于 →</a>
+      </p>
+    </div>
+  </section>
+
   <nav class="sidecard sidetree" aria-label="站点导航树">
     <h2>INDEX / 档案索引</h2>
 

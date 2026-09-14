@@ -81,18 +81,6 @@ const quote = QUOTES[dayIndex % QUOTES.length];
 ---
 
 <aside class="shell-right">
-  <!-- 简介卡 -->
-  <section class="sidecard sw-profile">
-    <p class="sw-name">{SITE.latin}<span>{SITE.title}</span></p>
-    <p class="sw-bio">{SITE.tagline.replace(/^[^—]*——\s*/, '')}</p>
-    <p class="sw-links">
-      <a href={SITE.github} target="_blank" rel="noreferrer">GitHub</a>
-      <a href={SITE.bilibili} target="_blank" rel="noreferrer">Bilibili</a>
-      <a href={`mailto:${SITE.email}`}>邮箱</a>
-      <a href="/about/">关于 →</a>
-    </p>
-  </section>
-
   <!-- 站点统计 -->
   <section class="sidecard">
     <h2>STATS / 站点统计</h2>

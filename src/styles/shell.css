@@ -287,7 +287,121 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- 右栏挂件：简介卡 / 统计 / 日历 / 名言 ---------- */
+/* ---------- 个人信息卡（侧栏左上角）：横幅 + 压在横幅上的圆形头像 ----------
+   结构对齐参考站（横幅约 112px、头像 76px 圆形上移 40px、名字 + 简介 + 链接），
+   配色套用本站 token / 磨砂玻璃，浅深主题各一套。 */
+.pf-card {
+  padding: 0;
+  overflow: hidden;
+}
+.pf-bg {
+  position: relative;
+  height: 104px;
+  border-bottom: 1px solid var(--line-2);
+  /* 背景图待定：组件里 PROFILE_BANNER 填路径后会用 --pf-banner 覆盖这里。
+     默认用站点自己的黑白渐变令牌（浅色=炭黑条，深色=银灰条），并加一道斜向高光，
+     不引入新配色。 */
+  background-image: var(
+    --pf-banner,
+    radial-gradient(120% 110% at 84% -10%, rgba(255, 255, 255, 0.24) 0%, transparent 58%),
+    var(--accent-grad)
+  );
+  background-size: cover;
+  background-position: center;
+}
+/* 横幅下沿向卡片底色淡出，头像跨接处不显生硬（对应参考站的 bg-fade） */
+.pf-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 54%, color-mix(in srgb, var(--paper-1) 72%, transparent) 100%);
+  pointer-events: none;
+}
+.pf-avatar-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: -38px; /* 头像压在横幅下沿 */
+  position: relative;
+}
+.pf-avatar {
+  display: block;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: var(--paper-1);
+  /* 3px 环用卡片底色（参考站同样做法）+ 一圈发丝线，浅深主题都清晰 */
+  box-shadow: 0 0 0 1px var(--line-2), 0 0 0 4px var(--paper-1), var(--shadow-sm);
+  transition: transform 0.18s var(--ease), box-shadow 0.18s ease;
+}
+.pf-avatar:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+.pf-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  /* 内缩 1px 让发丝线与照片之间留一点缝 */
+  transform: scale(0.985);
+}
+.pf-body {
+  padding: 0.55rem 0.95rem 0.95rem;
+  text-align: center;
+}
+.pf-name {
+  margin: 0 0 0.28rem;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.pf-name span {
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--ink-3);
+}
+.pf-bio {
+  margin: 0 0 0.7rem;
+  font-size: 0.79rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.pf-links {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+.pf-links a {
+  padding: 0.16rem 0.5rem;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 0.16s var(--ease), border-color 0.16s var(--ease), background 0.16s var(--ease);
+}
+.pf-links a:hover {
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ---------- 右栏挂件：统计 / 日历 / 名言 ---------- */
 .sw-profile .sw-name {
   margin: 0 0 0.3rem;
   font-family: var(--font-display);
