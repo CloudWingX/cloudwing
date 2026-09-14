@@ -33,11 +33,13 @@ const withParticles = true;
     <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
     <!-- RSS 订阅（作品档案更新自动发现） -->
     <link rel="alternate" type="application/rss+xml" title={`${SITE.title} · 作品档案`} href="/rss.xml" />
-    <!-- v3 字体：Latin→Outfit（Google），中文→MiSans（jsDelivr）；断网时自动回退系统字体 -->
+    <!-- v3 字体：Latin→Outfit（Google），中文走系统字体（PingFang SC / 微软雅黑 等）
+         这里原本还引一行第三方中文 webfont「MiSans」（jsDelivr 上的一个 GitHub 仓库）：
+         该仓库已 404，jsDelivr 上不论 @latest 还是 @main 都取不到内容，字体从未生效过，
+         却是一个阻塞渲染的跨域请求 —— 移除后中文排版与之前完全一致，首屏少等一个请求。 -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400..900&display=swap" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/gh/TPCTang/MiSans-Webfont@latest/fonts.css" rel="stylesheet" />
     <meta name="generator" content={Astro.generator} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={`${title} — ${SITE.latin}`} />
