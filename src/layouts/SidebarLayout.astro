@@ -1,0 +1,28 @@
+---
+// 子页面三栏壳层：左导航树 / 中内容 / 右（本页目录 + 最近入库）。
+// 只用于作品库、作品详情、画廊这类「内容型」子页面；首页与关于/互动页保持原版式。
+// 断点：≥1025px 显示左右栏（sticky + 栏内滚动），更窄则单列、侧栏隐藏。
+import Base from './Base.astro';
+import SideTree from '../components/SideTree.astro';
+import SideToc from '../components/SideToc.astro';
+import '../styles/shell.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  /** 本页目录（通常来自 render() 的 headings）；列表页不传即隐藏目录卡 */
+  toc?: { depth: number; slug: string; text: string }[];
+  center?: boolean;
+}
+const { title, description, ogImage, toc, center = true } = Astro.props;
+---
+<Base title={title} description={description} ogImage={ogImage} center={center}>
+  <div class="shell">
+    <SideTree />
+    <div class="shell-main">
+      <slot />
+    </div>
+    <SideToc toc={toc} />
+  </div>
+</Base>

@@ -199,6 +199,7 @@ function boot() {
     initThemeToggle,    // 夜晚/白天切换（切页后仍可用）
     typedEffects,       // 打字机（TextType 移植）
     startDriftWall,     // 影集页漂移墙背景
+    tocSpy,             // 右侧栏「本页目录」滚动高亮（子页面三栏壳层）
   ].forEach((fn) => {
     try {
       fn();
@@ -1184,6 +1185,75 @@ function typedEffects() {
       start();
     }
   });
+}
+
+/* ---------- 右侧栏「本页目录」：滚动高亮 + 平滑跳转 ----------
+   子页面三栏壳层用。软导航会重建 DOM，所以每次 page-load 都重新绑定；
+   观察器句柄存 window 上，避免切页后旧观察器继续持有已移除的标题。 */
+function tocSpy() {
+  if (window.__cwTocIO) {
+    window.__cwTocIO.disconnect();
+    window.__cwTocIO = null;
+  }
+  // 点击监听也要去重：首次加载时 boot() 会被 DOMContentLoaded 与 astro:page-load
+  // 各调一次，重复绑定会让同一次点击滚两遍（实测表现为滚动打架、停在半路）。
+  if (window.__cwTocClick) {
+    window.__cwTocClick.el.removeEventListener('click', window.__cwTocClick.fn);
+    window.__cwTocClick = null;
+  }
+  const box = document.querySelector('[data-toc]');
+  if (!box) return;
+
+  const links = [...box.querySelectorAll('a[href^="#"]')];
+  const map = new Map(); // 标题元素 → 目录链接
+  links.forEach((a) => {
+    const id = decodeURIComponent(a.getAttribute('href').slice(1));
+    const el = id && document.getElementById(id);
+    if (el) map.set(el, a);
+  });
+  if (!map.size) return;
+
+  const setOn = (active) => links.forEach((a) => a.classList.toggle('on', a === active));
+
+  // 点击：平滑滚到标题（让开吸顶头部，见 shell.css 的 scroll-margin-top）
+  // 注意目标是 map 的「键」（标题元素），不是链接本身；stopPropagation 挡住
+  // Astro ClientRouter 在 document 上的同页锚点接管，避免滚动被它打断。
+  const onClick = (ev) => {
+    const a = ev.target.closest('a[href^="#"]');
+    if (!a) return;
+    const target = document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)));
+    if (!target) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    setOn(a);
+    if (window.history && history.replaceState) history.replaceState(null, '', a.getAttribute('href'));
+  };
+  box.addEventListener('click', onClick);
+  window.__cwTocClick = { el: box, fn: onClick };
+
+  if (!('IntersectionObserver' in window)) return;
+  const visible = new Map();
+  window.__cwTocIO = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((en) => visible.set(en.target, en.isIntersecting));
+      // 取「当前可见、且位置最靠上」的标题作为高亮项
+      let best = null;
+      let bestTop = Infinity;
+      visible.forEach((isIn, el) => {
+        if (!isIn) return;
+        const top = el.getBoundingClientRect().top;
+        if (top < bestTop) {
+          bestTop = top;
+          best = el;
+        }
+      });
+      if (best) setOn(map.get(best));
+    },
+    // 头部 64px + 呼吸位以下算「进入阅读区」，视口下 60% 之外不算
+    { rootMargin: '-84px 0px -55% 0px', threshold: 0 },
+  );
+  map.forEach((_, el) => window.__cwTocIO.observe(el));
 }
 
 // 首次加载与每次导航后都执行（函数内部有守卫，可安全重复调用）

@@ -1,0 +1,296 @@
+/* ============================================================
+   子页面三栏壳层（SidebarLayout 用）
+   ------------------------------------------------------------
+   左 260px 导航树 / 中间自适应内容 / 右 280px（本页目录 + 最近入库），
+   整壳最大宽度 100rem 居中；≥1025px 才出现左右栏，移动端单列。
+   侧栏 sticky 吸顶（顶部让开 64px 的站点头部），内容超高时栏内滚动。
+   首页不使用该壳层，保持原全宽版式。
+   ============================================================ */
+
+.shell {
+  --shell-max: 100rem;
+  --shell-l: 260px;
+  --shell-r: 280px;
+  --shell-gap: 1.9rem;
+  --header-h: 64px; /* 站点头部高度（Header.astro 实测） */
+  --shell-top: calc(var(--header-h) + 1.15rem);
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* 移动端：单列 */
+  gap: var(--shell-gap);
+  align-items: start;
+}
+
+/* 移动端/窄屏：侧栏整体隐藏 */
+.shell-left,
+.shell-right {
+  display: none;
+  min-width: 0;
+}
+
+/* 壳层内部原本的 .wrap 不再自己限宽留白，交给栅格列控制 */
+.shell .wrap {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.shell-main {
+  min-width: 0;
+}
+
+/* 三栏断点取 1200px：把 260 + 280 两条定宽栏和 52px 单侧留白扣掉后，
+   中间正文在 1200px 时仍有约 485px（可读），再窄就会把正文挤成窄条，
+   所以 1199px 以下直接回到单列、侧栏隐藏（与「移动端隐藏」一致）。 */
+@media (min-width: 1200px) {
+  .shell {
+    grid-template-columns: var(--shell-l) minmax(0, 1fr) var(--shell-r);
+  }
+  .shell-left,
+  .shell-right {
+    display: block;
+    position: sticky;
+    top: var(--shell-top);
+    max-height: calc(100vh - var(--shell-top) - 1.2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-2) transparent;
+    padding-right: 0.28rem;
+    padding-bottom: 0.3rem;
+  }
+  .shell-left::-webkit-scrollbar,
+  .shell-right::-webkit-scrollbar {
+    width: 6px;
+  }
+  .shell-left::-webkit-scrollbar-thumb,
+  .shell-right::-webkit-scrollbar-thumb {
+    background: var(--line-2);
+    border-radius: 99px;
+  }
+  .shell-left::-webkit-scrollbar-track,
+  .shell-right::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* ---------- 侧栏玻璃卡（沿用全站磨砂玻璃风格） ---------- */
+.sidecard {
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-l);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
+  padding: 0.85rem 0.9rem 0.95rem;
+}
+.sidecard + .sidecard {
+  margin-top: 1rem;
+}
+.sidecard > h2 {
+  margin: 0 0 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sidecard > h2::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line-2);
+}
+
+/* ---------- 左侧：导航树 ---------- */
+.sidetree .st-group + .st-group {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--line-2);
+}
+.st-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.45rem;
+  border-radius: var(--r-s);
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  transition: background 0.16s var(--ease);
+}
+.st-group > summary::-webkit-details-marker {
+  display: none;
+}
+.st-group > summary:hover {
+  background: var(--accent-soft);
+}
+.st-group > summary .st-caret {
+  flex: 0 0 auto;
+  width: 0.6em;
+  font-size: 0.72em;
+  color: var(--ink-3);
+  transition: transform 0.18s var(--ease);
+}
+.st-group[open] > summary .st-caret {
+  transform: rotate(90deg);
+}
+.st-group > summary .st-n {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.st-list {
+  list-style: none;
+  margin: 0.2rem 0 0.15rem 0.45rem;
+  padding: 0 0 0 0.55rem;
+  border-left: 1px solid var(--line-2);
+}
+.st-list a {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.34rem 0.45rem;
+  border-radius: var(--r-s);
+  text-decoration: none;
+  color: var(--ink-2);
+  font-size: 0.84rem;
+  line-height: 1.35;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+.st-list a:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.st-list a .st-no {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.st-list a .st-txt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.st-list a[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-weight: 700;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.st-list a[aria-current='page'] .st-no {
+  color: var(--accent-deep);
+}
+
+/* ---------- 右侧：本页目录 ---------- */
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.84rem;
+}
+.toc-list a {
+  display: block;
+  padding: 0.3rem 0.5rem;
+  margin-left: -0.1rem;
+  border-left: 2px solid var(--line-2);
+  color: var(--ink-2);
+  text-decoration: none;
+  line-height: 1.4;
+  transition: color 0.16s var(--ease), border-color 0.16s var(--ease), background 0.16s var(--ease);
+}
+.toc-list a:hover {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+.toc-list a.on {
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+.toc-list li.d3 a {
+  padding-left: 1.15rem;
+  font-size: 0.79rem;
+  color: var(--ink-3);
+}
+.toc-list li.d3 a.on {
+  color: var(--accent-deep);
+}
+
+/* ---------- 右侧：最近入库 ---------- */
+.recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.recent-list li + li {
+  margin-top: 0.15rem;
+}
+.recent-list a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.1rem 0.5rem;
+  padding: 0.42rem 0.45rem;
+  border-radius: var(--r-s);
+  text-decoration: none;
+  color: var(--ink-2);
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+.recent-list a:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.recent-list .rc-no {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: var(--accent-deep);
+  font-variant-numeric: tabular-nums;
+  padding-top: 0.1rem;
+}
+.recent-list .rc-title {
+  font-size: 0.85rem;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.recent-list .rc-date {
+  grid-column: 2;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 目录锚点跳转时让开吸顶的头部 */
+.prose :is(h2, h3, h4)[id] {
+  scroll-margin-top: calc(var(--header-h, 64px) + 1.2rem);
+}
+/* 左侧树里点画廊截图（/gallery/#MC-0xx）落到卡片时同样别被头部压住 */
+.gal-item[id] {
+  scroll-margin-top: calc(var(--header-h, 64px) + 1.2rem);
+}

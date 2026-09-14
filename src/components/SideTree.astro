@@ -1,0 +1,80 @@
+---
+// 左侧导航树：作品库（含每件作品）/ 画廊（含每张截图），当前页高亮。
+// 数据直接取自内容集合，新增作品或截图后无需改这里。
+// 桌面端（≥1025px）显示，移动端由 shell.css 隐藏。
+import { getCollection } from 'astro:content';
+
+const pathname = Astro.url.pathname;
+
+const works = (await getCollection('works'))
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
+  .map((e) => ({
+    no: 'W-' + String(e.data.order ?? 0).padStart(3, '0'),
+    title: e.data.title ?? '未命名档案',
+    url: `/works/${e.id}/`,
+  }));
+
+const shots = (await getCollection('shots'))
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
+  .map((e) => ({
+    no: String(e.id).toUpperCase(),
+    title: e.data.title ?? '未命名截图',
+    url: `/gallery/#${String(e.id).toUpperCase()}`,
+  }));
+
+const onWorks = pathname === '/works/' || pathname.startsWith('/works/');
+const onGallery = pathname === '/gallery/' || pathname.startsWith('/gallery/');
+const cur = (url: string) => (url === pathname ? 'page' : undefined);
+---
+
+<aside class="shell-left">
+  <nav class="sidecard sidetree" aria-label="站点导航树">
+    <h2>INDEX / 档案索引</h2>
+
+    <details class="st-group" open={onWorks}>
+      <summary>
+        <span class="st-caret">▶</span>
+        <span>作品库</span>
+        <span class="st-n">{works.length}</span>
+      </summary>
+      <ul class="st-list">
+        <li>
+          <a href="/works/" aria-current={cur('/works/')}>
+            <span class="st-txt">全部作品</span>
+          </a>
+        </li>
+        {works.map((w) => (
+          <li>
+            <a href={w.url} aria-current={cur(w.url)} title={`${w.no} · ${w.title}`}>
+              <span class="st-no">{w.no}</span>
+              <span class="st-txt">{w.title}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+
+    <details class="st-group" open={onGallery}>
+      <summary>
+        <span class="st-caret">▶</span>
+        <span>画廊</span>
+        <span class="st-n">{shots.length}</span>
+      </summary>
+      <ul class="st-list">
+        <li>
+          <a href="/gallery/" aria-current={cur('/gallery/')}>
+            <span class="st-txt">全部截图</span>
+          </a>
+        </li>
+        {shots.map((s) => (
+          <li>
+            <a href={s.url} title={`${s.no} · ${s.title}`}>
+              <span class="st-no">{s.no}</span>
+              <span class="st-txt">{s.title}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  </nav>
+</aside>

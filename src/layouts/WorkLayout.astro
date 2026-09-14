@@ -2,7 +2,7 @@
 // 作品详情页布局：由 src/pages/works/[slug].astro 传入 entry.data 渲染。
 // 作品正文（Markdown 渲染结果 <Content/>）会落入默认 slot。
 import { SITE } from '../site';
-import Base from './Base.astro';
+import SidebarLayout from './SidebarLayout.astro';
 import GiscusComments from '../components/GiscusComments.astro';
 
 interface Props {
@@ -20,8 +20,10 @@ interface Props {
   newer?: { no: string; title: string; url: string } | null;
   older?: { no: string; title: string; url: string } | null;
   ogImage?: string;
+  /** 正文标题（render() 的 headings），供右侧栏目录使用 */
+  toc?: { depth: number; slug: string; text: string }[];
 }
-const { data, newer = null, older = null, ogImage = '/og/default.png' } = Astro.props;
+const { data, newer = null, older = null, ogImage = '/og/default.png', toc = [] } = Astro.props;
 const title: string = data.title ?? SITE.title;
 const summary: string = data.summary ?? '';
 const date: string = data.date ? new Date(data.date).toISOString().slice(0, 10) : '';
@@ -38,7 +40,7 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
     ? 'err'
     : '';
 ---
-<Base title={`${no} · ${title}`} description={summary} center ogImage={ogImage}>
+<SidebarLayout title={`${no} · ${title}`} description={summary} center ogImage={ogImage} toc={toc}>
   <div class="wrap">
     <article>
       <header class="work-head" data-ent>
@@ -117,4 +119,4 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
       </div>
     </dialog>
   </div>
-</Base>
+</SidebarLayout>

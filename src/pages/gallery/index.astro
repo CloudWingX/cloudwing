@@ -1,7 +1,7 @@
 ---
 // 画廊（原“影集”，V44 重做）：去掉沉浸式 DomeGallery 球幕，
 // 改为与全站风格统一的玻璃卡片网格 + 点击大图浏览；背景沿用全站 Particles。
-import Base from '../../layouts/Base.astro';
+import SidebarLayout from '../../layouts/SidebarLayout.astro';
 import { getCollection } from 'astro:content';
 import { imgUrl } from '../../site';
 
@@ -20,7 +20,7 @@ const shots = all
   }));
 const count = String(shots.length);
 ---
-<Base title="画廊" center>
+<SidebarLayout title="画廊" center>
   <div class="wrap">
     <header class="page-head" data-ent>
       <p class="kicker"><b>02</b> / GALLERY 画廊</p>
@@ -32,7 +32,7 @@ const count = String(shots.length);
       <ul class="gal-grid">
         {
           shots.map((s, i) => (
-            <li class="gal-item" data-ent style={`--ad:${(i % 10) * 70}ms`}>
+            <li class="gal-item" id={s.no} data-ent style={`--ad:${(i % 10) * 70}ms`}>
               <button class="gal-card" type="button" data-gal-open
                 data-title={s.title}
                 data-meta={`${s.no} · ${s.date} · ${s.game}`}
@@ -72,7 +72,7 @@ const count = String(shots.length);
       </figcaption>
     </figure>
   </dialog>
-</Base>
+</SidebarLayout>
 
 <style>
   /* 画廊页样式：玻璃卡网格，跟随浅/深主题 */

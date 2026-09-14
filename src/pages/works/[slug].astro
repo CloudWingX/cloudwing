@@ -29,7 +29,7 @@ export async function getStaticPaths() {
 }
 
 const { entry, newer, older } = Astro.props;
-const { Content } = await render(entry);
+const { Content, headings } = await render(entry);
 
 // 社交分享图：优先用该作品专属的 /og/<id>.png（由 _shots/gen-og.cjs 从封面生成），否则回退默认图
 const ogCandidate = `/og/${entry.id}.png`;
@@ -37,6 +37,6 @@ const ogImage = fs.existsSync(path.join(process.cwd(), 'public', ogCandidate.rep
   ? ogCandidate
   : '/og/default.png';
 ---
-<WorkLayout data={entry.data} newer={newer} older={older} ogImage={ogImage}>
+<WorkLayout data={entry.data} newer={newer} older={older} ogImage={ogImage} toc={headings}>
   <Content />
 </WorkLayout>

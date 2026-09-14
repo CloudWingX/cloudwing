@@ -1,5 +1,5 @@
 ---
-import Base from '../../layouts/Base.astro';
+import SidebarLayout from '../../layouts/SidebarLayout.astro';
 import WorkCard from '../../components/WorkCard.astro';
 import { getCollection } from 'astro:content';
 
@@ -33,7 +33,7 @@ const allTags = [...tagCounts.entries()].sort(
   (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'),
 );
 ---
-<Base title="作品库" center>
+<SidebarLayout title="作品库" center>
   <div class="wrap">
     <header class="page-head" data-ent>
       <p class="kicker"><b>01</b> / INDEX OF WORKS</p>
@@ -67,7 +67,7 @@ const allTags = [...tagCounts.entries()].sort(
       )}
     </section>
   </div>
-</Base>
+</SidebarLayout>
 
 <style>
   /* —— 分类分段控件：单条磨砂玻璃条 —— */
