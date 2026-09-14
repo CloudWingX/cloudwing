@@ -26,9 +26,13 @@ export default function PageParticlesBackground() {
 
   // 窗口级指针转发：容器 pointer-events:none 后收不到真实事件，
   // 把全局 mousemove 以合成事件投递到内部粒子容器，驱动 hover 视差。
+  // 必须跳过自己合成的（isTrusted=false）事件：合成事件会冒泡回 window，
+  // 又触发本监听器再投递一遍 → 无限递归（实测鼠标一动就抛
+  // RangeError: Maximum call stack size exceeded）。
   useEffect(() => {
     const findTarget = () => layerRef.current?.querySelector('.particles-container');
     const onMove = (e) => {
+      if (!e.isTrusted) return; // 只转发真实指针事件
       const target = findTarget();
       if (!target) return;
       target.dispatchEvent(
