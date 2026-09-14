@@ -114,7 +114,7 @@
   padding: 0.85rem 0.9rem 0.95rem;
 }
 .sidecard + .sidecard {
-  margin-top: 1rem;
+  margin-top: 0.8rem;
 }
 .sidecard > h2 {
   margin: 0 0 0.7rem;
@@ -263,20 +263,20 @@
   color: var(--accent-deep);
 }
 
-/* ---------- 右侧：最近入库 ---------- */
+/* ---------- 右侧：最近更新（单行：类型 + 标题 + 日期尾随） ---------- */
 .recent-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .recent-list li + li {
-  margin-top: 0.15rem;
+  margin-top: 0.1rem;
 }
 .recent-list a {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.1rem 0.5rem;
-  padding: 0.42rem 0.45rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.34rem 0.45rem;
   border-radius: var(--r-s);
   text-decoration: none;
   color: var(--ink-2);
@@ -286,28 +286,20 @@
   background: var(--accent-soft);
   color: var(--ink);
 }
-.recent-list .rc-no {
-  font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.06em;
-  color: var(--accent-deep);
-  font-variant-numeric: tabular-nums;
-  padding-top: 0.1rem;
-}
 .recent-list .rc-title {
-  font-size: 0.85rem;
-  line-height: 1.35;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.83rem;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
 }
 .recent-list .rc-date {
-  grid-column: 2;
+  flex: 0 0 auto;
   font-family: var(--font-mono);
-  font-size: 0.64rem;
-  letter-spacing: 0.06em;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -487,7 +479,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  aspect-ratio: 1;
+  /* 略扁的格子（不是为了好看，是为了让右栏总高在常见视口里不超屏，
+     左右两栏才能共用同一个吸顶值、齐步停住） */
+  aspect-ratio: 1.12;
   border-radius: 7px;
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -535,6 +529,7 @@
 
 /* 最近更新里的类型标签（作品 / 截图） */
 .recent-list .rc-kind {
+  flex: 0 0 auto;
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.06em;
@@ -542,14 +537,7 @@
   border: 1px solid var(--line-2);
   border-radius: 999px;
   padding: 0.05rem 0.36rem;
-  align-self: start;
   white-space: nowrap;
-}
-.recent-list .rc-title {
-  grid-column: 2;
-}
-.recent-list .rc-kind + .rc-title {
-  grid-column: 2;
 }
 
 /* ---------- 正文顶部的「本文目录」（右栏保持全站统一，目录移进正文） ---------- */

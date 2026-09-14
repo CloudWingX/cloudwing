@@ -1257,11 +1257,13 @@ function tocSpy() {
   map.forEach((_, el) => window.__cwTocIO.observe(el));
 }
 
-/* ---------- 侧栏吸顶：随页面滚，滚到底就停 ----------
-   侧栏不再自己滚动（无内部滚动条）。这里按「栏高 vs 视口高」算 sticky 的 top：
-     · 栏比视口矮 → top = 头部下方（46px + 64px），行为和普通吸顶一致；
-     · 栏比视口高 → top 取负值（视口高 - 栏高 - 余量），于是栏先随页面往下滚，
-       栏底顶到视口下沿后就停住，页面继续向下滚（正是「到底即停」的效果）。
+/* ---------- 侧栏吸顶：随页面滚，滚到底就停（左右两栏同一套规则、同一个值）----------
+   侧栏不自己滚动（无内部滚动条）。这里按「栏高 vs 视口高」算 sticky 的 top：
+     · 栏比视口矮 → top = 头部下方（64px + 18px），行为与普通吸顶一致；
+     · 栏比视口高 → top 取负值（视口高 - 栏高 - 余量），栏先随页面往下滚，
+       栏底顶到视口下沿后停住，页面继续向下滚。
+   关键：两栏取**同一个 top**（用较高的那栏算），这样左右两栏齐步移动、同一时刻停住，
+   不会出现「右边早停了、左边还在滑」的错位感。
    软导航会重建 DOM，故每次 page-load 与 resize 都重算。 */
 function sideSticky() {
   const sides = [...document.querySelectorAll('.shell-left, .shell-right')];
@@ -1269,16 +1271,21 @@ function sideSticky() {
 
   const HEADER = 64; // 站点头部高度
   const GAP = 18; // 吸顶时与头部/视口边缘的呼吸位
+  const MIN_VISIBLE = 360; // 任何一栏至少留这么多像素可见（防止共用值把矮栏挤出屏幕）
 
   const apply = () => {
     const vh = window.innerHeight;
-    sides.forEach((el) => {
-      el.style.removeProperty('--side-top');
-      const h = el.getBoundingClientRect().height;
-      if (!h) return;
-      const top = Math.min(HEADER + GAP, vh - h - GAP);
-      el.style.setProperty('--side-top', Math.round(top) + 'px');
-    });
+    sides.forEach((el) => el.style.removeProperty('--side-top'));
+    const info = sides
+      .map((el) => el.getBoundingClientRect().height)
+      .filter((h) => h > 0)
+      .map((h) => ({ own: Math.min(HEADER + GAP, vh - h - GAP), floor: MIN_VISIBLE - h }));
+    if (!info.length) return;
+    // 基准：由最高的那栏决定（保证它能滚到底）；下限：不让矮栏被切到只剩 MIN_VISIBLE
+    const base = Math.min(...info.map((i) => i.own));
+    const floor = Math.max(...info.map((i) => i.floor));
+    const shared = Math.round(Math.max(base, Math.min(floor, HEADER + GAP)));
+    sides.forEach((el) => el.style.setProperty('--side-top', shared + 'px'));
   };
 
   apply();

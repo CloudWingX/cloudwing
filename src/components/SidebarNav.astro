@@ -1,4 +1,4 @@
----
+﻿---
 // 左侧栏（全站子页面通用，内容固定不随页面变化）：
 //   作品库（全部作品 + 每件作品）/ 分类（可直接筛列表）/ 画廊（全部截图 + 每张）/ 站点页面
 // 只按 pathname 决定「哪个条目高亮」和「哪个分组默认展开」，其余完全一致。
@@ -67,7 +67,7 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
   <nav class="sidecard sidetree" aria-label="站点导航树">
     <h2>INDEX / 档案索引</h2>
 
-    <details class="st-group" open>
+    <details class="st-group">
       <summary>
         <span class="st-caret">▶</span>
         <span>作品库</span>
@@ -90,7 +90,7 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
       </ul>
     </details>
 
-    <details class="st-group" open>
+    <details class="st-group">
       <summary>
         <span class="st-caret">▶</span>
         <span>分类</span>
@@ -108,7 +108,7 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
       </ul>
     </details>
 
-    <details class="st-group" open>
+    <details class="st-group">
       <summary>
         <span class="st-caret">▶</span>
         <span>站点</span>
@@ -125,7 +125,7 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
       </ul>
     </details>
 
-    <details class="st-group" open>
+    <details class="st-group">
       <summary>
         <span class="st-caret">▶</span>
         <span>画廊</span>
