@@ -94,12 +94,19 @@
   .shell-right {
     display: block;
     /* 不做栏内滚动：整栏跟着页面一起走；
-       --side-top 由 ui.js 的 sideSticky() 按「栏高 vs 视口高」算出来——
-       栏比视口矮 → 贴在头部下方；栏比视口高 → 取负值，于是先随页面下滑，
-       滑到栏底顶住视口下沿就停住，页面继续滚。 */
+       --side-top 由 ui.js 的 sideSticky() 算：导航栏展开时固定贴在它下方（82px），
+       导航栏收起时改用「栏高 vs 视口高」的滚动规则（可负值，于是长栏能一路滚到底）。
+       过渡比导航栏的 0.28s 更短，导航栏滑回时侧栏已让开，不会压在一起。 */
     position: sticky;
     top: var(--side-top, var(--shell-top));
     align-self: start;
+    transition: top 0.16s var(--ease);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .shell-left,
+    .shell-right {
+      transition: none;
+    }
   }
 }
 

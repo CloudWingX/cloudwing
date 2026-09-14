@@ -78,6 +78,20 @@ const isActive = (href: string) =>
     top: 0;
     z-index: 70;
     padding: 0; /* 抵消旧版顶栏全局留白 */
+    /* 下滑自动收起（ui.js 的 autoHideHeader 切 .hd-hidden）；上滑滑回。
+       侧栏的吸顶位移用更短的时长（见 shell.css），保证导航栏滑回时
+       侧栏已经让开，两者任何时刻都不重叠。 */
+    transition: transform 0.28s var(--ease), opacity 0.28s var(--ease);
+    will-change: transform, opacity;
+  }
+  .site-header.hd-hidden {
+    transform: translateY(-102%);
+    opacity: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .site-header {
+      transition: none;
+    }
   }
 
   .hd {

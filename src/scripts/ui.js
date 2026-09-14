@@ -200,7 +200,8 @@ function boot() {
     typedEffects,       // 打字机（TextType 移植）
     startDriftWall,     // 影集页漂移墙背景
     tocSpy,             // 右侧栏「本页目录」滚动高亮（子页面三栏壳层）
-    sideSticky,         // 侧栏吸顶：随页面滚，滚到底停住（无内部滚动条）
+    sideSticky,         // 侧栏吸顶：导航栏可见时贴其下方，收起时随页面滚
+    autoHideHeader,     // 导航栏下滑收起 / 上滑滑回
   ].forEach((fn) => {
     try {
       fn();
@@ -1257,17 +1258,91 @@ function tocSpy() {
   map.forEach((_, el) => window.__cwTocIO.observe(el));
 }
 
-/* ---------- 侧栏吸顶：随页面滚，滚到底就停（左右两栏同一套规则、同一个值）----------
-   侧栏不自己滚动（无内部滚动条）。这里按「栏高 vs 视口高」算 sticky 的 top：
-     · 栏比视口矮 → top = 头部下方（64px + 18px），行为与普通吸顶一致；
-     · 栏比视口高 → top 取负值（视口高 - 栏高 - 余量），栏先随页面往下滚，
-       栏底顶到视口下沿后停住，页面继续向下滚。
-   关键：两栏取**同一个 top**（用较高的那栏算），这样左右两栏齐步移动、同一时刻停住，
-   不会出现「右边早停了、左边还在滑」的错位感。
+/* ---------- 导航栏下滑自动收起 / 上滑滑回 ----------
+   下滑超过阈值就收起来（.hd-hidden，CSS 里带 0.28s 位移过渡），上滑立刻滑回。
+   手机端抽屉菜单打开时不收，避免刚点开菜单就消失。
+   状态写在 <html data-hd="hidden|shown"> 上，供 sideSticky() 决定侧栏让位多少。 */
+function autoHideHeader() {
+  const setHidden = (hidden) => {
+    const header = document.querySelector('.site-header');
+    const root = document.documentElement;
+    if (!header) return;
+    if (hidden && header.classList.contains('menu-open')) return;
+    const now = root.dataset.hd === 'hidden';
+    if (now === hidden) return;
+    header.classList.toggle('hd-hidden', hidden);
+    root.dataset.hd = hidden ? 'hidden' : 'shown';
+    window.clearTimeout(window.__cwSideDelay);
+    if (hidden) {
+      // 收起时先等导航栏滑走（0.28s）再让侧栏占位，
+      // 否则侧栏会在导航栏还在屏幕上时往上挤，出现 1~2px 的贴合
+      window.__cwSideDelay = window.setTimeout(() => {
+        root.dataset.hdSide = 'free';
+        if (typeof window.__cwSideRefresh === 'function') window.__cwSideRefresh();
+      }, 280);
+    } else {
+      // 滑回时立刻把侧栏推回导航栏下方（侧栏过渡更快，导航栏到位前已让开）
+      root.dataset.hdSide = 'nav';
+      if (typeof window.__cwSideRefresh === 'function') window.__cwSideRefresh();
+    }
+  };
+
+  if (window.__cwHeaderWired) {
+    // 软导航后沿用同一套监听，但按新页面的滚动位置重置状态
+    window.__cwHeaderReset && window.__cwHeaderReset();
+    return;
+  }
+  window.__cwHeaderWired = true;
+
+  const THRESHOLD = 140; // 过了这个位置才允许收起（顶部附近始终显示）
+  const DELTA = 6; // 小于这个位移量不动，避免抖动
+  let last = window.scrollY;
+  let ticking = false;
+
+  const onScroll = () => {
+    const y = window.scrollY;
+    if (Math.abs(y - last) < DELTA) return;
+    if (y <= THRESHOLD) setHidden(false);
+    else if (y > last) setHidden(true);
+    else setHidden(false);
+    last = y;
+  };
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        onScroll();
+      });
+    },
+    { passive: true },
+  );
+  window.__cwHeaderReset = () => {
+    window.clearTimeout(window.__cwSideDelay);
+    last = window.scrollY;
+    // 进新页面先按「导航栏在场」布局并显示它；若新页停在深处，随后的滚动事件会再收起
+    document.documentElement.dataset.hdSide = 'nav';
+    setHidden(false);
+  };
+  setHidden(false);
+}
+
+/* ---------- 侧栏吸顶：导航栏展开时贴它下方，收起时随页面滚 ----------
+   侧栏不自己滚动（无内部滚动条）。两栏共用同一个 sticky top，齐步移动、同一时刻停住。
+     · 导航栏可见 → top 恒为 82px（64px 头部 + 18px 呼吸位），绝不取负值，
+       这样侧栏内容不会钻到导航栏底下被半透明玻璃盖住；
+     · 导航栏收起后 → 按「栏高 vs 视口高」算（可为负值），长栏就能随页面滚到底再停住，
+       此时屏幕上没有导航栏，不存在重叠。
    软导航会重建 DOM，故每次 page-load 与 resize 都重算。 */
 function sideSticky() {
   const sides = [...document.querySelectorAll('.shell-left, .shell-right')];
-  if (!sides.length) return;
+  if (!sides.length) {
+    window.__cwSideRefresh = null;
+    return;
+  }
 
   const HEADER = 64; // 站点头部高度
   const GAP = 18; // 吸顶时与头部/视口边缘的呼吸位
@@ -1275,18 +1350,23 @@ function sideSticky() {
 
   const apply = () => {
     const vh = window.innerHeight;
+    // hdSide 由 autoHideHeader 控制：'nav' = 导航栏在（侧栏贴它下方），
+    // 'free' = 导航栏已收起（侧栏可用整屏，长栏可滚到底）
+    const navHidden = document.documentElement.dataset.hdSide === 'free';
+    const navTop = navHidden ? 10 : HEADER + GAP;
     sides.forEach((el) => el.style.removeProperty('--side-top'));
     const info = sides
       .map((el) => el.getBoundingClientRect().height)
       .filter((h) => h > 0)
-      .map((h) => ({ own: Math.min(HEADER + GAP, vh - h - GAP), floor: MIN_VISIBLE - h }));
+      .map((h) => ({ own: Math.min(navTop, vh - h - GAP), floor: MIN_VISIBLE - h }));
     if (!info.length) return;
-    // 基准：由最高的那栏决定（保证它能滚到底）；下限：不让矮栏被切到只剩 MIN_VISIBLE
-    const base = Math.min(...info.map((i) => i.own));
-    const floor = Math.max(...info.map((i) => i.floor));
-    const shared = Math.round(Math.max(base, Math.min(floor, HEADER + GAP)));
+    // 导航栏可见时不允许负值（负值=内容压到导航栏下面）；收起时才放开滚动范围
+    const base = navHidden ? Math.min(...info.map((i) => i.own)) : navTop;
+    const floor = navHidden ? Math.max(...info.map((i) => i.floor)) : navTop;
+    const shared = Math.round(Math.max(base, Math.min(floor, navTop)));
     sides.forEach((el) => el.style.setProperty('--side-top', shared + 'px'));
   };
+  window.__cwSideRefresh = apply;
 
   apply();
   // 字体/图片加载完高度会变，稍后再量一次
