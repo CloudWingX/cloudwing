@@ -200,6 +200,7 @@ function boot() {
     typedEffects,       // 打字机（TextType 移植）
     startDriftWall,     // 影集页漂移墙背景
     tocSpy,             // 右侧栏「本页目录」滚动高亮（子页面三栏壳层）
+    sideSticky,         // 侧栏吸顶：随页面滚，滚到底停住（无内部滚动条）
   ].forEach((fn) => {
     try {
       fn();
@@ -1254,6 +1255,50 @@ function tocSpy() {
     { rootMargin: '-84px 0px -55% 0px', threshold: 0 },
   );
   map.forEach((_, el) => window.__cwTocIO.observe(el));
+}
+
+/* ---------- 侧栏吸顶：随页面滚，滚到底就停 ----------
+   侧栏不再自己滚动（无内部滚动条）。这里按「栏高 vs 视口高」算 sticky 的 top：
+     · 栏比视口矮 → top = 头部下方（46px + 64px），行为和普通吸顶一致；
+     · 栏比视口高 → top 取负值（视口高 - 栏高 - 余量），于是栏先随页面往下滚，
+       栏底顶到视口下沿后就停住，页面继续向下滚（正是「到底即停」的效果）。
+   软导航会重建 DOM，故每次 page-load 与 resize 都重算。 */
+function sideSticky() {
+  const sides = [...document.querySelectorAll('.shell-left, .shell-right')];
+  if (!sides.length) return;
+
+  const HEADER = 64; // 站点头部高度
+  const GAP = 18; // 吸顶时与头部/视口边缘的呼吸位
+
+  const apply = () => {
+    const vh = window.innerHeight;
+    sides.forEach((el) => {
+      el.style.removeProperty('--side-top');
+      const h = el.getBoundingClientRect().height;
+      if (!h) return;
+      const top = Math.min(HEADER + GAP, vh - h - GAP);
+      el.style.setProperty('--side-top', Math.round(top) + 'px');
+    });
+  };
+
+  apply();
+  // 字体/图片加载完高度会变，稍后再量一次
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(apply);
+  window.setTimeout(apply, 600);
+
+  if (!window.__cwSideStickyWired) {
+    window.__cwSideStickyWired = true;
+    window.addEventListener('resize', () => window.setTimeout(apply, 80));
+    if ('ResizeObserver' in window) {
+      const ro = new ResizeObserver(() => apply());
+      window.__cwSideRO = ro;
+    }
+  }
+  // 观察当前页面的两栏（跨页时 DOM 重建，重新观察）
+  if (window.__cwSideRO) {
+    window.__cwSideRO.disconnect();
+    sides.forEach((el) => window.__cwSideRO.observe(el));
+  }
 }
 
 // 首次加载与每次导航后都执行（函数内部有守卫，可安全重复调用）

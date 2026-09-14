@@ -17,11 +17,51 @@
   width: 100%;
   max-width: var(--shell-max);
   margin: 0 auto;
-  padding: 0 var(--gutter);
+  /* 顶部留出和 --shell-top 相同的呼吸位：这样滚动 0 时侧栏的自然位置
+     正好等于它的吸顶位置，起滚不跳。 */
+  padding: var(--shell-gap-top, 1.15rem) var(--gutter) 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* 移动端：单列 */
   gap: var(--shell-gap);
   align-items: start;
+}
+
+/* ---------- 标题与侧栏对齐（仅三栏生效；移动端侧栏隐藏，保持原来的居中版式） ---------- */
+@media (min-width: 1200px) {
+  /* 壳层里不再用居中版式：三栏并排时居中标题会显得和左栏脱节，
+     改成与中栏左边缘对齐，并把标题块顶部压到与侧栏首块同一水平线。 */
+  .shell .center-page .page-head,
+  .shell .center-page .work-head {
+    text-align: left;
+  }
+  .shell .center-page .kicker {
+    justify-content: flex-start;
+  }
+  /* 左对齐后恢复 kicker 后面那条细线（居中版式是隐藏的） */
+  .shell .center-page .kicker::after {
+    display: block;
+  }
+  .shell .center-page .page-head .sub,
+  .shell .center-page .work-head .sub {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .shell .center-page .prose {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .shell .center-page .work-cover {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  /* 列表页头部原本有 clamp(2.2rem,6vw,4rem) 的大留白（为整页居中版式服务），
+     三栏里由壳层提供顶部留白即可，这里收紧到 1rem。 */
+  .shell .page-head {
+    padding-top: 1rem;
+  }
+  .shell .work-head {
+    padding-top: 1rem;
+  }
 }
 
 /* 移动端/窄屏：侧栏整体隐藏 */
@@ -53,28 +93,13 @@
   .shell-left,
   .shell-right {
     display: block;
+    /* 不做栏内滚动：整栏跟着页面一起走；
+       --side-top 由 ui.js 的 sideSticky() 按「栏高 vs 视口高」算出来——
+       栏比视口矮 → 贴在头部下方；栏比视口高 → 取负值，于是先随页面下滑，
+       滑到栏底顶住视口下沿就停住，页面继续滚。 */
     position: sticky;
-    top: var(--shell-top);
-    max-height: calc(100vh - var(--shell-top) - 1.2rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: var(--line-2) transparent;
-    padding-right: 0.28rem;
-    padding-bottom: 0.3rem;
-  }
-  .shell-left::-webkit-scrollbar,
-  .shell-right::-webkit-scrollbar {
-    width: 6px;
-  }
-  .shell-left::-webkit-scrollbar-thumb,
-  .shell-right::-webkit-scrollbar-thumb {
-    background: var(--line-2);
-    border-radius: 99px;
-  }
-  .shell-left::-webkit-scrollbar-track,
-  .shell-right::-webkit-scrollbar-track {
-    background: transparent;
+    top: var(--side-top, var(--shell-top));
+    align-self: start;
   }
 }
 
