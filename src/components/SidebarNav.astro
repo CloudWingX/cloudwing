@@ -1,8 +1,9 @@
 ---
-// 左侧导航树：作品库（含每件作品）/ 画廊（含每张截图），当前页高亮。
-// 数据直接取自内容集合，新增作品或截图后无需改这里。
-// 桌面端（≥1025px）显示，移动端由 shell.css 隐藏。
+// 左侧栏（全站子页面通用，内容固定不随页面变化）：
+//   作品库（全部作品 + 每件作品）/ 分类（可直接筛列表）/ 画廊（全部截图 + 每张）/ 站点页面
+// 只按 pathname 决定「哪个条目高亮」和「哪个分组默认展开」，其余完全一致。
 import { getCollection } from 'astro:content';
+import '../styles/shell.css';
 
 const pathname = Astro.url.pathname;
 
@@ -12,6 +13,7 @@ const works = (await getCollection('works'))
     no: 'W-' + String(e.data.order ?? 0).padStart(3, '0'),
     title: e.data.title ?? '未命名档案',
     url: `/works/${e.id}/`,
+    tags: e.data.tags ?? [],
   }));
 
 const shots = (await getCollection('shots'))
@@ -22,16 +24,24 @@ const shots = (await getCollection('shots'))
     url: `/gallery/#${String(e.id).toUpperCase()}`,
   }));
 
-const onWorks = pathname === '/works/' || pathname.startsWith('/works/');
-const onGallery = pathname === '/gallery/' || pathname.startsWith('/gallery/');
+// 分类：按出现次数降序
+const tagCounts = new Map<string, number>();
+works.forEach((w) => w.tags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
+const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
+
+const SITES = [
+  { href: '/about/', label: '关于' },
+  { href: '/account/', label: '互动' },
+  { href: '/search/', label: '搜索' },
+];
+
 const cur = (url: string) => (url === pathname ? 'page' : undefined);
 ---
-
 <aside class="shell-left">
   <nav class="sidecard sidetree" aria-label="站点导航树">
     <h2>INDEX / 档案索引</h2>
 
-    <details class="st-group" open={onWorks}>
+    <details class="st-group" open>
       <summary>
         <span class="st-caret">▶</span>
         <span>作品库</span>
@@ -54,7 +64,42 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
       </ul>
     </details>
 
-    <details class="st-group" open={onGallery}>
+    <details class="st-group" open>
+      <summary>
+        <span class="st-caret">▶</span>
+        <span>分类</span>
+        <span class="st-n">{tags.length}</span>
+      </summary>
+      <ul class="st-list">
+        {tags.map(([t, n]) => (
+          <li>
+            <a href={`/works/?tag=${encodeURIComponent(t)}`} title={`按分类筛选：${t}`}>
+              <span class="st-txt">{t}</span>
+              <span class="st-n">{n}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+
+    <details class="st-group" open>
+      <summary>
+        <span class="st-caret">▶</span>
+        <span>站点</span>
+        <span class="st-n">{SITES.length}</span>
+      </summary>
+      <ul class="st-list">
+        {SITES.map((s) => (
+          <li>
+            <a href={s.href} aria-current={cur(s.href)}>
+              <span class="st-txt">{s.label}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+
+    <details class="st-group" open>
       <summary>
         <span class="st-caret">▶</span>
         <span>画廊</span>

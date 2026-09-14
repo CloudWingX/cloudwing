@@ -1,10 +1,10 @@
 ---
 // 全站搜索：基于 Pagefind 的纯静态搜索（构建时生成索引，运行时无后端）
 // 索引范围：站点所有页面（作品库/作品详情/画廊/关于/互动等）
-import Base from '../layouts/Base.astro';
+import SidebarLayout from '../layouts/SidebarLayout.astro';
 ---
 
-<Base title="搜索" center>
+<SidebarLayout title="搜索" center>
   <div class="wrap">
     <header class="page-head" data-ent>
       <p class="kicker"><b>SEARCH</b> / 全站检索</p>
@@ -17,7 +17,7 @@ import Base from '../layouts/Base.astro';
       <noscript><p class="sub">搜索需要启用 JavaScript。</p></noscript>
     </section>
   </div>
-</Base>
+</SidebarLayout>
 
 <style>
   /* 搜索容器：与站点玻璃风格统一 */

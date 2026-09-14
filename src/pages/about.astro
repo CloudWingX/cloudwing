@@ -1,11 +1,11 @@
 ---
-import Base from '../layouts/Base.astro';
+import SidebarLayout from '../layouts/SidebarLayout.astro';
 import Lanyard from '../components/ReactBits/Lanyard.jsx';
 import AboutMagicBento from '../components/AboutMagicBento.jsx';
 import ProximityText from '../components/ProximityText.jsx';
 import { SITE } from '../site';
 ---
-<Base title="关于" center bodyClass="about-route">
+<SidebarLayout title="关于" center bodyClass="about-route">
   <div class="about-root">
     <div class="wrap about">
       <header class="page-head" data-ent>
@@ -92,7 +92,7 @@ import { SITE } from '../site';
       </p>
     </div>
   </div>
-</Base>
+</SidebarLayout>
 
 <style>
   .about-root { position: relative; }
@@ -275,6 +275,24 @@ import { SITE } from '../site';
     }
     .ly-hint { bottom: 14px; }
     .mb-shell { margin-top: 3rem; }
+  }
+
+  /* 三栏壳层下（≥1200px）：中栏只有几百 px，工牌再贴右上角就会压住标题与正文，
+     改为「挂在正文上方居中」——绳子从工牌自身顶部垂下，仍然可拖拽开关灯。 */
+  @media (min-width: 1200px) {
+    .about-root {
+      display: flex;
+      flex-direction: column;
+    }
+    .about-root .ly-floater {
+      order: -1;
+      position: relative;
+      width: min(420px, 100%);
+      height: 470px;
+      margin: 0 auto 1.2rem;
+    }
+    .about-root > .wrap.about { order: 0; }
+    .ly-hint { bottom: 10px; }
   }
 
   /* 灵感导航卡已删除 → bento 现为 5 卡；

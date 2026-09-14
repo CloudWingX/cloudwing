@@ -40,7 +40,7 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
     ? 'err'
     : '';
 ---
-<SidebarLayout title={`${no} · ${title}`} description={summary} center ogImage={ogImage} toc={toc}>
+<SidebarLayout title={`${no} · ${title}`} description={summary} center ogImage={ogImage}>
   <div class="wrap">
     <article>
       <header class="work-head" data-ent>
@@ -66,7 +66,21 @@ const stateAttr = state.includes('进行') || state.includes('WIP') || state.inc
           )}
         </dl>
       </header>
-      {cover && <img class="work-cover" src={cover} alt={`${no} ${title}`} width="1600" height="900" data-ent />}      <div class="prose" data-ent>
+      {cover && <img class="work-cover" src={cover} alt={`${no} ${title}`} width="1600" height="900" data-ent />}
+      {toc.length > 0 && (
+        // 右侧栏全站统一后，本文目录移到正文顶部（可折叠）；滚动高亮仍由 ui.js 的 tocSpy() 负责
+        <details class="art-toc" data-toc open data-ent>
+          <summary>ON THIS PAGE / 本文目录</summary>
+          <ul class="toc-list">
+            {toc.map((h) => (
+              <li class={h.depth >= 3 ? 'd3' : 'd2'}>
+                <a href={`#${h.slug}`}>{h.text}</a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <div class="prose" data-ent>
         <slot />
       </div>
 

@@ -1,9 +1,9 @@
 ---
-import Base from '../layouts/Base.astro';
+import SidebarLayout from '../layouts/SidebarLayout.astro';
 import HexMark from '../components/HexMark.astro';
 import { SITE } from '../site';
 ---
-<Base title="404 · 档案不存在" description="未找到该档案。" center>
+<SidebarLayout title="404 · 档案不存在" description="未找到该档案。" center>
   <div class="wrap">
     <div class="e404">
       <p class="kicker center"><b>ERR</b> / RECORD NOT FOUND</p>
@@ -18,4 +18,4 @@ import { SITE } from '../site';
       </p>
     </div>
   </div>
-</Base>
+</SidebarLayout>

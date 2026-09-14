@@ -1,0 +1,152 @@
+---
+// 右侧栏（全站子页面通用，内容固定不随页面变化）：
+//   简介卡 / 站点统计 / 活跃日历 / 最近更新 / 今日一言
+// 数据全部来自站内内容集合与 site.ts，不依赖任何外部接口，所以任何子页面看到的都一样。
+import { getCollection } from 'astro:content';
+import { SITE } from '../site';
+
+const works = (await getCollection('works')).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
+);
+const shots = (await getCollection('shots')).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
+);
+
+/* ---------- 站点统计 ---------- */
+const tagSet = new Set<string>();
+works.forEach((w) => (w.data.tags ?? []).forEach((t: string) => tagSet.add(t)));
+const wordCount = works.reduce((n, w) => n + (w.body ?? '').replace(/\s/g, '').length, 0);
+const sinceDate = new Date(`${SITE.since}-01-01T00:00:00`);
+const runningDays = Math.max(1, Math.round((Date.now() - sinceDate.getTime()) / 86400000));
+const stats = [
+  { k: '作品', v: String(works.length) },
+  { k: '截图', v: String(shots.length) },
+  { k: '分类', v: String(tagSet.size) },
+  { k: '字数', v: wordCount > 999 ? (wordCount / 1000).toFixed(1) + 'k' : String(wordCount) },
+  { k: '运行', v: runningDays + ' 天' },
+];
+const lastActive = [...works, ...shots]
+  .map((e) => new Date(e.data.date).getTime())
+  .sort((a, b) => b - a)[0];
+const lastActiveStr = lastActive ? new Date(lastActive).toISOString().slice(0, 10) : '—';
+
+/* ---------- 活跃日历（当月，有归档的日期打点）---------- */
+const now = new Date();
+const y = now.getFullYear();
+const m = now.getMonth();
+const firstWeekday = new Date(y, m, 1).getDay(); // 0 = 周日
+const daysInMonth = new Date(y, m + 1, 0).getDate();
+const activeDays = new Set<number>();
+[...works, ...shots].forEach((e) => {
+  const d = new Date(e.data.date);
+  if (d.getFullYear() === y && d.getMonth() === m) activeDays.add(d.getDate());
+});
+const cells: (number | null)[] = [
+  ...Array.from({ length: firstWeekday }, () => null),
+  ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+];
+const monthLabel = `${y} 年 ${m + 1} 月`;
+const today = now.getDate();
+
+/* ---------- 最近更新（作品 + 截图混排）---------- */
+const recent = [
+  ...works.map((e) => ({
+    kind: '作品',
+    title: e.data.title ?? '未命名档案',
+    date: new Date(e.data.date).toISOString().slice(0, 10),
+    url: `/works/${e.id}/`,
+  })),
+  ...shots.map((e) => ({
+    kind: '截图',
+    title: e.data.title ?? '未命名截图',
+    date: new Date(e.data.date).toISOString().slice(0, 10),
+    url: `/gallery/#${String(e.id).toUpperCase()}`,
+  })),
+]
+  .sort((a, b) => (a.date < b.date ? 1 : -1))
+  .slice(0, 5);
+
+/* ---------- 今日一言（本地静态，按日期轮换）---------- */
+const QUOTES = [
+  { t: '学而不思则罔，思而不学则殆。', by: '《论语》' },
+  { t: '不积跬步，无以至千里。', by: '《荀子》' },
+  { t: '把每一次练习，都变成一条可追溯的档案。', by: SITE.title },
+  { t: '知不足，然后能自反也。', by: '《礼记》' },
+  { t: '纸上得来终觉浅，绝知此事要躬行。', by: '陆游' },
+  { t: '工欲善其事，必先利其器。', by: '《论语》' },
+  { t: '博观而约取，厚积而薄发。', by: '苏轼' },
+];
+const dayIndex = Math.floor(Date.now() / 86400000);
+const quote = QUOTES[dayIndex % QUOTES.length];
+---
+
+<aside class="shell-right">
+  <!-- 简介卡 -->
+  <section class="sidecard sw-profile">
+    <p class="sw-name">{SITE.latin}<span>{SITE.title}</span></p>
+    <p class="sw-bio">{SITE.tagline.replace(/^[^—]*——\s*/, '')}</p>
+    <p class="sw-links">
+      <a href={SITE.github} target="_blank" rel="noreferrer">GitHub</a>
+      <a href={SITE.bilibili} target="_blank" rel="noreferrer">Bilibili</a>
+      <a href={`mailto:${SITE.email}`}>邮箱</a>
+      <a href="/about/">关于 →</a>
+    </p>
+  </section>
+
+  <!-- 站点统计 -->
+  <section class="sidecard">
+    <h2>STATS / 站点统计</h2>
+    <ul class="sw-stats">
+      {stats.map((s) => (
+        <li>
+          <span class="k">{s.k}</span>
+          <span class="v">{s.v}</span>
+        </li>
+      ))}
+    </ul>
+    <p class="sw-last">最后更新 · {lastActiveStr}</p>
+  </section>
+
+  <!-- 活跃日历 -->
+  <section class="sidecard">
+    <h2>CALENDAR / 活跃日历</h2>
+    <p class="sw-month">{monthLabel}</p>
+    <div class="sw-cal" role="presentation">
+      {['日', '一', '二', '三', '四', '五', '六'].map((d) => (
+        <span class="wd">{d}</span>
+      ))}
+      {cells.map((d) =>
+        d === null ? (
+          <span class="cell empty" />
+        ) : (
+          <span class:list={['cell', { on: activeDays.has(d), today: d === today }]} title={activeDays.has(d) ? `${m + 1} 月 ${d} 日有归档` : undefined}>
+            {d}
+          </span>
+        ),
+      )}
+    </div>
+  </section>
+
+  <!-- 最近更新 -->
+  <nav class="sidecard" aria-label="最近更新">
+    <h2>RECENT / 最近更新</h2>
+    <ul class="recent-list">
+      {recent.map((r) => (
+        <li>
+          <a href={r.url} aria-current={r.url === Astro.url.pathname ? 'page' : undefined} title={`${r.kind} · ${r.title}`}>
+            <span class="rc-kind">{r.kind}</span>
+            <span class="rc-title">{r.title}</span>
+            <span class="rc-date">{r.date}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+
+  <!-- 今日一言 -->
+  <section class="sidecard sw-quote">
+    <h2>QUOTE / 今日一言</h2>
+    <blockquote>{quote.t}</blockquote>
+    <p class="sw-by">—— {quote.by}</p>
+  </section>
+</aside>

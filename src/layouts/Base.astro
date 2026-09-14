@@ -4,6 +4,8 @@ import ClientRouter from 'astro/components/ClientRouter.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import PageParticlesBackground from '../components/PageParticlesBackground.jsx';
+import SidebarNav from '../components/SidebarNav.astro';
+import SidebarWidgets from '../components/SidebarWidgets.astro';
 import '../styles/global.css';
 import '../styles/motion.css';
 
@@ -13,8 +15,9 @@ interface Props {
   center?: boolean; // 居中版式（列表/详情/关于等页面用）
   bodyClass?: string; // 追加到 <body> 的路由级类名（页面级全局样式定位用）
   ogImage?: string; // 社交分享图（站内绝对路径，默认 /og/default.png）
+  sidebar?: boolean; // 子页面三栏壳层：左导航树 + 内容 + 右挂件（首页不传）
 }
-const { title = SITE.title, description = SITE.tagline, center = false, bodyClass, ogImage = '/og/default.png' } = Astro.props;
+const { title = SITE.title, description = SITE.tagline, center = false, bodyClass, ogImage = '/og/default.png', sidebar = false } = Astro.props;
 const path = Astro.url.pathname;
 // 社交分享图统一转绝对 URL（OG 规范要求）
 const ogImageAbs = new URL(ogImage, Astro.site ?? Astro.url).href;
@@ -97,9 +100,21 @@ const withParticles = true;
     <!-- 全局阅读进度（纯装饰，reduced-motion 下停用） -->
     <div class="prog" aria-hidden="true"></div>
     <Header current={path} />
-    <main id="main" class:list={['main-content', { 'center-page': center }]}>
-      <slot />
-    </main>
+    {sidebar ? (
+      // 子页面三栏壳层：左右侧栏在 <main> 之外，切页时不会被 main 的入场动画带着闪，
+      // 内容也完全一致（同一套导航树 + 同一套挂件），切子页面时侧栏视觉不变。
+      <div class="shell">
+        <SidebarNav />
+        <main id="main" class:list={['main-content', { 'center-page': center }]}>
+          <slot />
+        </main>
+        <SidebarWidgets />
+      </div>
+    ) : (
+      <main id="main" class:list={['main-content', { 'center-page': center }]}>
+        <slot />
+      </main>
+    )}
     <Footer />
   </body>
   <script>

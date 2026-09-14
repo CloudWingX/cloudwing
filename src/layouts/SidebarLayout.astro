@@ -1,28 +1,18 @@
 ---
-// 子页面三栏壳层：左导航树 / 中内容 / 右（本页目录 + 最近入库）。
-// 只用于作品库、作品详情、画廊这类「内容型」子页面；首页与关于/互动页保持原版式。
-// 断点：≥1025px 显示左右栏（sticky + 栏内滚动），更窄则单列、侧栏隐藏。
+// 子页面三栏壳层：左导航树 / 中内容 / 右挂件（左右侧栏内容全站统一，切页不变）。
+// 壳层本体在 Base.astro 里渲染（侧栏放在 <main> 之外，避免被整页入场动画带着闪）；
+// 这里只是一层语义化包装，页面用 <SidebarLayout> 而不是 <Base sidebar>。
 import Base from './Base.astro';
-import SideTree from '../components/SideTree.astro';
-import SideToc from '../components/SideToc.astro';
-import '../styles/shell.css';
 
 interface Props {
   title?: string;
   description?: string;
   ogImage?: string;
-  /** 本页目录（通常来自 render() 的 headings）；列表页不传即隐藏目录卡 */
-  toc?: { depth: number; slug: string; text: string }[];
   center?: boolean;
+  bodyClass?: string;
 }
-const { title, description, ogImage, toc, center = true } = Astro.props;
+const { title, description, ogImage, center = true, bodyClass } = Astro.props;
 ---
-<Base title={title} description={description} ogImage={ogImage} center={center}>
-  <div class="shell">
-    <SideTree />
-    <div class="shell-main">
-      <slot />
-    </div>
-    <SideToc toc={toc} />
-  </div>
+<Base title={title} description={description} ogImage={ogImage} center={center} bodyClass={bodyClass} sidebar>
+  <slot />
 </Base>

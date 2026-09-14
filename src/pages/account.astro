@@ -3,13 +3,13 @@
 // 内容：个人博客留言板（giscus / GitHub Discussions，site.ts GISCUS 配置）
 // 背景：与全站统一 —— React Bits <Particles /> 粒子层（Base.astro 渲染，跟随浅/深主题）。
 // 说明：V53 起去掉 GridScan 固定深色背景与 'auth-route' 深色令牌，改为与其他页面一致的粒子背景。
-import Base from '../layouts/Base.astro';
+import SidebarLayout from '../layouts/SidebarLayout.astro';
 import GiscusComments from '../components/GiscusComments.astro';
 import { SITE } from '../site';
 
 const title = '互动';
 ---
-<Base title={title}>
+<SidebarLayout title={title}>
   <div class="room-stage">
     <div class="wrap room">
       <header class="page-head" data-ent>
@@ -26,7 +26,7 @@ const title = '互动';
       </section>
     </div>
   </div>
-</Base>
+</SidebarLayout>
 
 <style>
   /* ============================================================

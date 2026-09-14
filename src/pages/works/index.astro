@@ -172,20 +172,22 @@ const allTags = [...tagCounts.entries()].sort(
 <script>
   // 分类单选筛选（点选一个分类查看，点“全部”恢复）+ 实时数量。
   // document 级事件委托 + DOM 状态驱动：软导航重建后无需重绑，永远有效。
-  const selectTag = (segEl) => {
-    const bar = segEl.closest('.catbar');
+  // 统一设置选中态（供点击切换与「?tag=」直达链接共用）
+  const setActive = (active) => {
+    const bar = document.getElementById('catbar');
     if (!bar) return;
-    const tag = segEl.dataset.tag ?? '*';
-    const segs = Array.from(bar.querySelectorAll('button.seg'));
-    // 单选：目标段若已选中则回到“全部”，否则选中目标
-    let active = tag;
-    if (tag !== '*' && segEl.classList.contains('on')) active = '*';
-    segs.forEach((s) => {
-      const on = s.dataset.tag === active;
+    Array.from(bar.querySelectorAll('button.seg')).forEach((s) => {
+      const on = (s.dataset.tag ?? '*') === active;
       s.classList.toggle('on', on);
       s.setAttribute('aria-selected', String(on));
     });
     applyFilter(active);
+  };
+
+  const selectTag = (segEl) => {
+    const tag = segEl.dataset.tag ?? '*';
+    // 单选：目标段若已选中则回到“全部”，否则选中目标
+    setActive(tag !== '*' && segEl.classList.contains('on') ? '*' : tag);
   };
 
   const applyFilter = (active) => {
@@ -215,13 +217,27 @@ const allTags = [...tagCounts.entries()].sort(
   if (!window.__cwWorksFilterWired) {
     window.__cwWorksFilterWired = true;
     document.addEventListener('click', onSegClick);
-    // 软导航完成后恢复当前选中态统计
-    window.addEventListener('astro:page-load', () => {
+    // 软导航完成后恢复当前选中态统计；侧栏「分类」用的 ?tag=xxx 也在这里落地
+    const initFromUrl = () => {
       const bar = document.getElementById('catbar');
       const grid = document.getElementById('grid');
       if (!bar || !grid) return;
-      const active = bar.querySelector('button.seg.on')?.dataset.tag ?? '*';
-      applyFilter(active);
-    });
+      let want = null;
+      try {
+        want = new URLSearchParams(location.search).get('tag');
+      } catch (err) {
+        want = null;
+      }
+      const known = want && Array.from(bar.querySelectorAll('button.seg')).some((s) => s.dataset.tag === want);
+      setActive(known ? want : bar.querySelector('button.seg.on')?.dataset.tag ?? '*');
+    };
+
+    window.addEventListener('astro:page-load', initFromUrl);
+    // 直接打开 /works/?tag=xxx 时，astro:page-load 可能早于本脚本执行，故再补一次
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initFromUrl, { once: true });
+    } else {
+      initFromUrl();
+    }
   }
 </script>
