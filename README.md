@@ -45,8 +45,8 @@ public/
 
 ## 图片 / 图床
 
-- 影集原图已从 PNG（共 180MB）压缩为 **webp**（1600w q78，共 ~3MB），存于 `public/shots/mc/`；
-  原 PNG 备份在工作区外 `mc-originals-backup/`，不进仓库。
+- 影集原图已从 PNG（共 180MB）压缩为 **webp**（1600w q78，共 ~3MB），存于 `public/shots/mc/`。
+  （原 PNG 备份 `mc-originals-backup/` 已随工作区清理删除，仓库里的 webp 是当前唯一副本。）
 - 页面图片统一经 `src/site.ts` 的 `imgUrl()` 输出；当前 `IMG_CDN = ''`，走本地相对路径
   （图片随 `dist` 由 Cloudflare Pages 自带 CDN 服务）。**不要改回 jsDelivr 图床**——国内访问不稳，已踩坑回退。
 - 只影响 `/shots/…` 等静态图；ReactBits 组件原码不动，仅宿主/页面拼前缀。

@@ -58,7 +58,7 @@ plugins/vite-cjs-inline-shim.mjs ← 构建 shim（勿删，见“构建坑”�
 
 ## 图片与图床
 - 图片统一经 `src/site.ts` 的 `imgUrl()`：`IMG_CDN=''`（当前）走本地相对路径，图片随 `dist` 由 Cloudflare Pages CDN 服务——**稳定，勿改回 jsDelivr**（国内不稳踩过坑）。
-- 影集 40 张原 PNG 已转 webp（约 3MB）。原 PNG 备份于工作区外 `D:\deep seek workplace\mc-originals-backup\`（不在仓库）。
+- 影集 40 张原 PNG 已转 webp（约 3MB）。原 PNG 备份（`mc-originals-backup/`）已于 2026-09 随工作区清理删除，**仓库里的 webp 现在是唯一副本**；要更高分辨率原图需重新提供。
 - 加新影集：webp 放 `public/shots/mc/` + `src/content/shots/` 加一条 md（`image: /shots/mc/mc-xxx.webp`）。
 
 ## 作品（works）怎么加
