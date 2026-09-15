@@ -60,6 +60,35 @@ const setup = async (send, width, height) => {
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
 };
 
+// 等待布局就绪：线上 /account/ 内嵌 giscus 第三方 iframe，6s 固定等待可能仍停在
+// readyState=loading（此时 .shell 还没渲染 → 侧栏高度测成 0，误报为站点问题）。
+// 这里改为轮询"选择器已存在且高度>0"，最多等 40s（线上 /account/ 内嵌 giscus，
+// 冷启动偶发要 20s+）；超时则照常断言（真失败仍会暴露），并打印超时提示便于判读。
+const waitForLayout = async (evaluate, selector, timeoutMs = 40000) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    const ok = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)});
+      return !!e && e.getBoundingClientRect().height > 0; })()`);
+    if (ok) return Date.now() - t0;
+    await sleep(500);
+  }
+  return -1;
+};
+
+// 等 sideSticky() 把两栏补成等高之后再做断言：实测 /404.html 会先出现
+// 左 661 / 右 841 的中间态，约 1s 后才被补齐到 841/841。
+// 不等它就会把这个瞬态误报成"两栏不等高"。
+const waitForEqualSidebars = async (evaluate, timeoutMs = 15000) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < timeoutMs) {
+    const d = await evaluate(`(() => { const l=document.querySelector('.shell-left'), r=document.querySelector('.shell-right');
+      const h=(e)=>e?Math.round(e.getBoundingClientRect().height):0; return { l:h(l), r:h(r) }; })()`);
+    if (d && d.l > 0 && d.r > 0 && Math.abs(d.l - d.r) <= 1) return { waited: Date.now() - t0, ...d };
+    await sleep(400);
+  }
+  return null;
+};
+
 const main = async () => {
   // 环境自检
   try {
@@ -85,7 +114,13 @@ const main = async () => {
     await withTab(BASE + path, async ({ send, evaluate, errors }) => {
       await setup(send, 1440, 900);
       await evaluate(`location.replace(${JSON.stringify(BASE + path)})`);
-      await sleep(6000);
+      await sleep(3000);
+      // 首页不套三栏壳层，等 .main-content 即可；子页面还要等两栏被补成等高
+      const isHomePage = path === '/';
+      const waited = await waitForLayout(evaluate, isHomePage ? '.main-content' : '.shell-left');
+      if (waited < 0) console.log(`  · ${path} ⚠️ 等待布局超时（40s），下面的断言可能是等待不足而非站点问题`);
+      else if (waited > 3000) console.log(`  · ${path} 布局等待 ${(waited / 1000).toFixed(1)}s`);
+      if (!isHomePage) await waitForEqualSidebars(evaluate);
       const d = await evaluate(`(() => {
         const l = document.querySelector('.shell-left'), r = document.querySelector('.shell-right');
         const h = (e) => e ? Math.round(e.getBoundingClientRect().height) : 0;
@@ -144,12 +179,18 @@ const main = async () => {
       return a ? a.getAttribute('href') : null; })()`);
     if (href) {
       await evaluate(`[...document.querySelectorAll('.nav-sub a')].find((x) => x.getAttribute('href') === ${JSON.stringify(href)}).click()`);
-      await sleep(4000);
-      const d = await evaluate(`(() => ({ url: location.pathname + location.search,
-        hidden: [...document.querySelectorAll('.wk-item')].filter((i) => i.hidden).length,
-        chip: document.getElementById('catnow') ? !document.getElementById('catnow').hidden : null }))()`);
-      check('导航分类 → 列表按分类过滤', d.hidden > 0, `${d.url}（隐藏 ${d.hidden} 项）`);
-      check('分类回显条出现', d.chip === true);
+      // 轮询等筛选生效：线上软导航 + 水合比本地慢，固定 sleep 会读到"还没过滤"的中间态
+      let d = null;
+      const t0 = Date.now();
+      while (Date.now() - t0 < 15000) {
+        await sleep(500);
+        d = await evaluate(`(() => ({ url: location.pathname + location.search,
+          hidden: [...document.querySelectorAll('.wk-item')].filter((i) => i.hidden).length,
+          chip: document.getElementById('catnow') ? !document.getElementById('catnow').hidden : null }))()`);
+        if (d && d.hidden > 0 && d.chip === true) break;
+      }
+      check('导航分类 → 列表按分类过滤', !!d && d.hidden > 0, `${d ? d.url : '?'}（隐藏 ${d ? d.hidden : '?'} 项）`);
+      check('分类回显条出现', !!d && d.chip === true);
     } else {
       check('导航栏存在分类二级菜单', false, '未找到 ?tag= 链接');
     }
@@ -173,7 +214,9 @@ const main = async () => {
   await withTab(BASE + '/works/', async ({ send, evaluate }) => {
     await setup(send, 414, 860);
     await evaluate(`location.replace(${JSON.stringify(BASE + '/works/')})`);
-    await sleep(6000);
+    await sleep(3000);
+    // 手机端侧栏是 display:none（高度 0），所以等中栏出现即可
+    await waitForLayout(evaluate, '.main-content');
     const d = await evaluate(`(() => { const l = document.querySelector('.shell-left');
       // 手机端是单列：中栏不一定是 .shell 的直接子元素，选择器放宽并容错，
       // 否则软导航换页的竞态会让这里的 querySelector 返回 null 而抛错（非站点问题）。
