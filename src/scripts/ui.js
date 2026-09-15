@@ -1354,18 +1354,37 @@ function sideSticky() {
     // hdSide 由 autoHideHeader 控制：'nav' = 导航栏在（侧栏贴它下方），
     // 'free' = 导航栏已收起（侧栏可用整屏，长栏可滚到底）
     const navHidden = document.documentElement.dataset.hdSide === 'free';
+
+    // 先把上一轮的等高清掉，量出两栏各自的自然高度（读取会强制回流）
+    sides.forEach((el) => {
+      el.style.minHeight = '';
+    });
+    const heights = sides.map((el) => el.getBoundingClientRect().height).filter((h) => h > 0);
+    if (!heights.length) return;
+
+    /* 等高：sticky 的可滑动余量 = 容器（网格行）高度 − 本栏高度，
+       两栏高度不同时余量就不同 —— 内容短的页面（主内容比右栏还矮）上，
+       高的那栏会先被容器下边界顶走、矮的那栏还贴着，于是越滚越错位。
+       把两栏补成等高后，余量一致，两栏严格同步（不会改变卡片位置，只是多了空白高度）。 */
+    const maxH = Math.max(...heights);
+    sides.forEach((el) => {
+      if (el.style.minHeight !== `${maxH}px`) el.style.minHeight = `${maxH}px`;
+    });
+
     const navTop = navHidden ? 10 : HEADER + GAP;
     sides.forEach((el) => el.style.removeProperty('--side-top'));
-    const info = sides
-      .map((el) => el.getBoundingClientRect().height)
-      .filter((h) => h > 0)
-      .map((h) => ({ own: Math.min(navTop, vh - h - GAP), floor: MIN_VISIBLE - h }));
-    if (!info.length) return;
+    const info = heights.map((h) => ({ own: Math.min(navTop, vh - h - GAP), floor: MIN_VISIBLE - h }));
     // 导航栏可见时不允许负值（负值=内容压到导航栏下面）；收起时才放开滚动范围
     const base = navHidden ? Math.min(...info.map((i) => i.own)) : navTop;
     const floor = navHidden ? Math.max(...info.map((i) => i.floor)) : navTop;
     const shared = Math.round(Math.max(base, Math.min(floor, navTop)));
-    sides.forEach((el) => el.style.setProperty('--side-top', shared + 'px'));
+    sides.forEach((el) => {
+      // 回程（导航栏要出现了，侧栏回到 82px）用更短的时长：长栏时回程可能有几百 px，
+      // 慢慢滑就会在半路上从导航栏底下钻出来；60ms 内到位，导航栏 0.28s 才滑下来。
+      // 去程（导航栏已收起）保持 0.16s，与导航栏收起节奏一致。
+      el.style.setProperty('--side-dur', navHidden ? '0.16s' : '0.06s');
+      el.style.setProperty('--side-top', shared + 'px');
+    });
   };
   window.__cwSideRefresh = apply;
 

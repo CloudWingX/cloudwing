@@ -100,7 +100,10 @@
     position: sticky;
     top: var(--side-top, var(--shell-top));
     align-self: start;
-    transition: top 0.16s var(--ease);
+    /* 时长由 ui.js 按「去程/回程」设置（--side-dur）：
+       导航栏收起后放侧栏上去用 0.16s；导航栏要出现前把侧栏推回 82px 用 0.06s，
+       保证导航栏滑下来时侧栏已经让开，两者不会叠在一起。 */
+    transition: top var(--side-dur, 0.16s) var(--ease);
   }
   @media (prefers-reduced-motion: reduce) {
     .shell-left,
