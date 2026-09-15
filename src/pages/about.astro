@@ -11,7 +11,6 @@ import { SITE } from '../site';
       <header class="page-head" data-ent>
         <p class="kicker"><b>PROFILE</b> / ABOUT · 关于</p>
         <h1><ProximityText client:load label={SITE.author} radius={190} /></h1>
-        <p class="sub">计算机科学与技术（本科在读）· 后端与质量保障方向 —— 用网站记录学习、代码与走过的每一步。</p>
       </header>
 
       <section class="who" data-ent style="--ad:.12s">
@@ -281,15 +280,13 @@ import { SITE } from '../site';
      不占布局，所以标题照旧从页面顶部开始，版面是正常流。
      这里**不给正文让位**：牌子就是压在字上（用户要求的「牌子盖在字上」的观感），
      文字从牌子底下穿过。
-     标题收一档字号，是为了让吊绳不横着划过名字——实测各宽度下 h1 右端都停在吊绳左侧。 */
+     标题字号已由全站 .page-head h1 统一收小（约 34px），吊绳不会再横着划过名字，
+     所以这里不再单独覆盖字号。 */
   @media (min-width: 1200px) {
     .about-root .ly-floater {
       width: min(340px, 46%);
       height: min(68vh, 520px);
       z-index: 3; /* 浮在正文之上 */
-    }
-    .about-root .page-head h1 {
-      font-size: clamp(1.9rem, 3.8vw, 3.2rem);
     }
     .ly-hint { bottom: 10px; }
   }

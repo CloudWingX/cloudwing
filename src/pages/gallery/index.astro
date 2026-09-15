@@ -27,13 +27,11 @@ const count = String(shots.length);
     <header class="page-head" data-ent>
       <p class="kicker"><b>02</b> / GALLERY 画廊</p>
       <h1>画廊</h1>
-      <p class="sub">
-        游戏截图与日常收藏 · 当前 <span id="gal-count">{count}</span> 张 · 分类见顶部导航「画廊」下拉菜单 · 点击卡片可查看大图。
-      </p>
       <p class="gal-filter" id="gal-filter" hidden>
         <span class="gf-k">分类</span>
         <span class="gf-v" id="gal-cat">—</span>
-        <a class="gf-clear" href="/gallery/">显示全部 {count} 张</a>
+        <span class="gf-n"><span id="gal-count">{count}</span> 张</span>
+        <a class="gf-clear" href="/gallery/">显示全部</a>
       </p>
     </header>
 

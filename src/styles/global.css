@@ -420,7 +420,9 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
 
 /* ============ 页面头 / 正文区 ============ */
 .page-head { padding: clamp(2.2rem, 6vw, 4rem) 0 0.4rem; }
-.page-head h1 { font-family: var(--font-display); text-transform: uppercase; font-size: clamp(2rem, 6vw, 3.6rem); letter-spacing: -0.01em; margin-bottom: 0.3em; }
+/* 子页面大标题整体收小一档（原来桌面接近 58px，比侧栏卡片还抢眼）；
+   三栏壳层里还会再收紧上边距，见 styles/shell.css */
+.page-head h1 { font-family: var(--font-display); text-transform: uppercase; font-size: clamp(1.45rem, 3vw, 2.15rem); letter-spacing: -0.01em; margin-bottom: 0.2em; }
 .page-head .sub { color: var(--ink-2); max-width: 42em; }
 
 .prose { max-width: var(--w-text); font-size: 1.05rem; line-height: 1.95; color: var(--ink); }
@@ -450,7 +452,7 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
 /* 作品详情 */
 .work-head { margin-bottom: 2.6rem; }
 .work-head .no-big { font-family: var(--font-mono); font-size: 0.84rem; letter-spacing: 0.2em; color: var(--accent-deep); font-weight: 600; font-variant-numeric: tabular-nums; }
-.work-head h1 { font-family: var(--font-display); font-size: clamp(1.8rem, 5vw, 3rem); margin: 0.25em 0 0.3em; letter-spacing: -0.01em; }
+.work-head h1 { font-family: var(--font-display); font-size: clamp(1.4rem, 2.7vw, 2rem); margin: 0.2em 0 0.25em; letter-spacing: -0.01em; }
 .work-head .sub { color: var(--ink-2); }
 .work-head .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; margin-top: 1.8rem; border-radius: var(--r-m); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.85); background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: var(--shadow-sm); }
 .work-head .meta-grid > div { padding: 0.85rem 1rem; border-right: 1px solid var(--line-1); border-bottom: 1px solid var(--line-1); }

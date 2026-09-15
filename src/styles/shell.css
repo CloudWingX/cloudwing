@@ -55,12 +55,31 @@
     margin-right: 0;
   }
   /* 列表页头部原本有 clamp(2.2rem,6vw,4rem) 的大留白（为整页居中版式服务），
-     三栏里由壳层提供顶部留白即可，这里收紧到 1rem。 */
+     三栏里由壳层提供顶部留白即可，这里收紧；简介已删除，标题块整体上提、
+     与左栏个人信息卡顶边同一条水平线。 */
   .shell .page-head {
-    padding-top: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.2rem;
   }
   .shell .work-head {
-    padding-top: 1rem;
+    padding-top: 0.5rem;
+  }
+  /* kicker 与标题、标题与下方内容之间的间距一并收紧（标题变小后原来的间距显得空） */
+  .shell .page-head .kicker,
+  .shell .work-head .no-big {
+    margin-bottom: 0.85rem;
+  }
+  .shell .page-head h1 {
+    margin-bottom: 0;
+  }
+  /* 互动页自带 .room-stage 上留白与 .wrap.room 的左右留白，
+     三栏里和其它子页面统一：标题块顶边齐平、内容左边缘对齐 */
+  .shell .room-stage {
+    padding-top: 0.5rem;
+  }
+  .shell .wrap.room {
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
