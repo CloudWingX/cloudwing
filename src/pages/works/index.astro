@@ -26,37 +26,26 @@ const works: WMeta[] = raw.map((m) => ({
   url: `/works/${m.id}/`,
 }));
 
-// 分类统计：按出现次数降序，同次再按拼音
-const tagCounts = new Map<string, number>();
-works.forEach((w) => w.tags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
-const allTags = [...tagCounts.entries()].sort(
-  (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'),
-);
+// 分类统计已移到导航栏「作品库」二级菜单（见 components/Header.astro），
+// 这里不再自己算，只按 ?tag= 过滤卡片。
 ---
 <SidebarLayout title="作品库" center>
   <div class="wrap">
     <header class="page-head" data-ent>
       <p class="kicker"><b>01</b> / INDEX OF WORKS</p>
       <h1>作品库</h1>
-      <p class="sub">按归档日期倒序。点选分类查看对应档案，点「全部」查看所有。</p>
+      <p class="sub">按归档日期倒序。分类已移到顶部导航「作品库」的下拉菜单里，选一个分类即可筛选。</p>
     </header>
 
     <section class="section" style="padding-top:2rem">
-      <!-- 分类分段控件：单条磨砂玻璃条，单选切换 -->
-      <div class="catbar-wrap rv" aria-label="作品分类">
-        <div class="catbar" id="catbar" role="tablist">
-          <span class="catbar-label">分类</span>
-          <div class="catbar-segs" role="presentation">
-            <button type="button" class="seg on" data-tag="*" role="tab" aria-selected="true">全部</button>
-            {allTags.map(([t, n]) => (
-              <button type="button" class="seg" data-tag={t} role="tab" aria-selected="false">
-                <span>{t}</span>
-                <i class="seg-count">{n}</i>
-              </button>
-            ))}
-          </div>
-          <span class="catbar-count" id="count">{works.length} 项</span>
-        </div>
+      <!-- 分类选择器已移到导航栏二级菜单；这里只保留「当前筛的是哪个分类」与清除入口 -->
+      <div class="catnow-wrap rv" id="catnow" hidden>
+        <p class="catnow">
+          <span class="catnow-k">分类</span>
+          <span class="catnow-v" id="catnow-name">全部</span>
+          <span class="catnow-count" id="count">{works.length} 项</span>
+          <a class="catnow-clear" id="catnow-clear" href="/works/">清除筛选</a>
+        </p>
       </div>
       <ul class="grid rv" id="grid" style="--d:.08s">
         {works.map((w) => <WorkCard w={w} />)}
@@ -70,130 +59,68 @@ const allTags = [...tagCounts.entries()].sort(
 </SidebarLayout>
 
 <style>
-  /* —— 分类分段控件：单条磨砂玻璃条 —— */
-  .catbar-wrap { margin-bottom: 2rem; }
-  .catbar {
-    display: flex;
+  /* —— 当前分类提示条（分类选择器已移到导航栏二级菜单，这里只做回显与清除）—— */
+  .catnow-wrap { margin-bottom: 1.6rem; }
+  .catnow {
+    display: inline-flex;
     align-items: center;
-    gap: 1rem;
-    max-width: 100%;
-    padding: 0.4rem 0.5rem 0.4rem 1rem;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0.4rem 0.75rem 0.4rem 0.95rem;
     border-radius: 999px;
     border: 1px solid var(--line-2);
     background: var(--glass);
-    backdrop-filter: blur(16px) saturate(1.3);
-    -webkit-backdrop-filter: blur(16px) saturate(1.3);
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
     box-shadow: var(--shadow-sm);
+    font-size: 0.8rem;
   }
-  .catbar-label {
-    flex: none;
+  .catnow-k {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.22em;
+    font-size: 0.66rem;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--ink-3);
-    padding-right: 0.9rem;
-    border-right: 1px solid var(--line-2);
-    white-space: nowrap;
   }
-  .catbar-segs {
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-    padding: 0.15rem 0;
+  .catnow-v {
+    font-weight: 700;
+    color: var(--accent-deep);
   }
-  .catbar-segs::-webkit-scrollbar { display: none; }
-  .catbar .seg {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5em;
-    padding: 0.5em 1.1em;
-    border: 0;
-    border-radius: 999px;
-    background: transparent;
+  .catnow-count {
     font-family: var(--font-mono);
-    font-size: 0.8rem;
-    letter-spacing: 0.04em;
+    font-size: 0.7rem;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .catnow-clear {
+    margin-left: 0.25rem;
+    padding: 0.16rem 0.6rem;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
     color: var(--ink-2);
-    cursor: pointer;
-    font: inherit;
-    line-height: 1.2;
-    transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+    text-decoration: none;
+    transition: color 0.16s var(--ease), border-color 0.16s var(--ease), background 0.16s var(--ease);
   }
-  .catbar .seg:hover { color: var(--accent-deep); background: var(--accent-soft); }
-  .catbar .seg.on {
-    background: var(--accent);
-    color: var(--on-accent);
-    box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--accent) 55%, transparent);
-  }
-  .catbar .seg-count {
-    font-style: normal;
-    font-family: var(--font-mono);
-    font-size: 0.68em;
-    line-height: 1;
-    min-width: 1.4em;
-    text-align: center;
-    border-radius: 999px;
-    padding: 0.2em 0.35em;
+  .catnow-clear:hover {
+    color: var(--accent-deep);
+    border-color: var(--accent);
     background: var(--accent-soft);
-    color: var(--ink-3);
-    font-variant-numeric: tabular-nums;
-    transition: background 0.18s ease, color 0.18s ease;
-  }
-  .catbar .seg:hover .seg-count { color: var(--accent-deep); background: rgba(255, 255, 255, 0.75); }
-  .catbar .seg.on .seg-count { color: var(--on-accent); background: color-mix(in srgb, var(--on-accent) 24%, transparent); }
-  .catbar-count {
-    flex: none;
-    margin-left: auto;
-    padding-left: 0.9rem;
-    border-left: 1px solid var(--line-2);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.08em;
-    color: var(--ink-3);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-  /* 深色主题 */
-  :global(html[data-theme='dark']) .catbar { background: rgba(24, 24, 28, 0.6); box-shadow: none; }
-  :global(html[data-theme='dark']) .catbar .seg:hover { background: rgba(255, 255, 255, 0.1); color: var(--ink); }
-  @media (max-width: 720px) {
-    .catbar { border-radius: 18px; flex-wrap: wrap; gap: 0.5rem 0.75rem; padding: 0.6rem 0.6rem 0.6rem 0.9rem; }
-    .catbar-label { display: none; }
-    .catbar-segs { width: 100%; }
-    .catbar-count { margin-left: 0; padding-left: 0; border-left: 0; }
   }
 </style>
 
 <script>
-  // 分类单选筛选（点选一个分类查看，点“全部”恢复）+ 实时数量。
-  // document 级事件委托 + DOM 状态驱动：软导航重建后无需重绑，永远有效。
-  // 统一设置选中态（供点击切换与「?tag=」直达链接共用）
-  const setActive = (active) => {
-    const bar = document.getElementById('catbar');
-    if (!bar) return;
-    Array.from(bar.querySelectorAll('button.seg')).forEach((s) => {
-      const on = (s.dataset.tag ?? '*') === active;
-      s.classList.toggle('on', on);
-      s.setAttribute('aria-selected', String(on));
-    });
-    applyFilter(active);
-  };
-
-  const selectTag = (segEl) => {
-    const tag = segEl.dataset.tag ?? '*';
-    // 单选：目标段若已选中则回到“全部”，否则选中目标
-    setActive(tag !== '*' && segEl.classList.contains('on') ? '*' : tag);
-  };
-
+  // 分类筛选：选择器已在导航栏「作品库」二级菜单里，点分类 → /works/?tag=xxx。
+  // 这里只负责按 ?tag= 过滤卡片、回显当前分类、以及「清除筛选」。
+  // document 级事件委托 + DOM 状态驱动，软导航重建后无需重绑。
   const applyFilter = (active) => {
     const grid = document.getElementById('grid');
     const countEl = document.getElementById('count');
     const emptyEl = document.getElementById('empty');
+    const wrap = document.getElementById('catnow');
+    const nameEl = document.getElementById('catnow-name');
     if (!grid) return;
     const items = Array.from(grid.querySelectorAll('.wk-item'));
     let n = 0;
@@ -205,34 +132,26 @@ const allTags = [...tagCounts.entries()].sort(
     }
     if (countEl) countEl.textContent = `${n} / ${items.length} 项`;
     if (emptyEl) emptyEl.hidden = n !== 0;
+    if (wrap) wrap.hidden = active === '*';
+    if (nameEl) nameEl.textContent = active === '*' ? '全部' : active;
   };
 
-  const onSegClick = (e) => {
-    const segEl = e.target.closest('button.seg[data-tag]');
-    if (!segEl) return;
-    e.preventDefault();
-    selectTag(segEl);
+  const initFromUrl = () => {
+    if (!document.getElementById('grid')) return;
+    let want = null;
+    try {
+      want = new URLSearchParams(location.search).get('tag');
+    } catch (err) {
+      want = null;
+    }
+    applyFilter(want || '*');
   };
 
   if (!window.__cwWorksFilterWired) {
     window.__cwWorksFilterWired = true;
-    document.addEventListener('click', onSegClick);
-    // 软导航完成后恢复当前选中态统计；侧栏「分类」用的 ?tag=xxx 也在这里落地
-    const initFromUrl = () => {
-      const bar = document.getElementById('catbar');
-      const grid = document.getElementById('grid');
-      if (!bar || !grid) return;
-      let want = null;
-      try {
-        want = new URLSearchParams(location.search).get('tag');
-      } catch (err) {
-        want = null;
-      }
-      const known = want && Array.from(bar.querySelectorAll('button.seg')).some((s) => s.dataset.tag === want);
-      setActive(known ? want : bar.querySelector('button.seg.on')?.dataset.tag ?? '*');
-    };
-
-    window.addEventListener('astro:page-load', initFromUrl);
+    // 必须挂在 document 上：astro:page-load 由路由器在 document 上派发且不冒泡，
+    // 挂 window 永远收不到 —— 于是软导航（例如点导航栏分类）后筛选不会生效。
+    document.addEventListener('astro:page-load', initFromUrl);
     // 直接打开 /works/?tag=xxx 时，astro:page-load 可能早于本脚本执行，故再补一次
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initFromUrl, { once: true });

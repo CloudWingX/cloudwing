@@ -203,6 +203,7 @@ function boot() {
     sideSticky,         // 侧栏吸顶：导航栏可见时贴其下方，收起时随页面滚
     autoHideHeader,     // 导航栏下滑收起 / 上滑滑回
     calPanel,           // 侧栏更新日历：点日期展开当天记录
+    navSub,             // 导航栏二级菜单（各子页面的分类）
   ].forEach((fn) => {
     try {
       fn();
@@ -1503,6 +1504,68 @@ function calPanel() {
       close(cl.closest('[data-cal-panel]'));
     }
   });
+}
+
+/* ---------- 导航栏二级菜单（各子页面的分类）----------
+   桌面：悬停展开（也支持点击小箭头，便于触屏/键盘）；Esc 或点别处收起。
+   软导航会重建 header，所以状态每次刷新，监听只绑一次 document 委托。 */
+function navSub() {
+  const items = () => [...document.querySelectorAll('[data-nav-sub]')];
+  const closeAll = (except) => {
+    items().forEach((it) => {
+      if (it === except) return;
+      it.removeAttribute('data-open');
+      const caret = it.querySelector('[data-nav-caret]');
+      if (caret) caret.setAttribute('aria-expanded', 'false');
+      const panel = it.querySelector('[data-nav-panel]');
+      if (panel) panel.setAttribute('hidden', '');
+    });
+  };
+  const openItem = (it) => {
+    closeAll(it);
+    it.setAttribute('data-open', 'true');
+    const caret = it.querySelector('[data-nav-caret]');
+    if (caret) caret.setAttribute('aria-expanded', 'true');
+    const panel = it.querySelector('[data-nav-panel]');
+    if (panel) panel.removeAttribute('hidden');
+  };
+
+  if (window.__cwNavSubWired) {
+    closeAll();
+    return;
+  }
+  window.__cwNavSubWired = true;
+
+  const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+  document.addEventListener('pointerover', (ev) => {
+    if (!fine.matches) return;
+    const it = ev.target.closest('[data-nav-sub]');
+    if (it) openItem(it);
+    else if (!ev.target.closest('[data-nav-panel]')) closeAll();
+  });
+
+  document.addEventListener('click', (ev) => {
+    const caret = ev.target.closest('[data-nav-caret]');
+    if (caret) {
+      ev.preventDefault();
+      const it = caret.closest('[data-nav-sub]');
+      if (it.getAttribute('data-open') === 'true') closeAll();
+      else openItem(it);
+      return;
+    }
+    // 点面板里的分类链接后收起；点页面其它地方也收起
+    if (ev.target.closest('[data-nav-panel] a')) {
+      window.setTimeout(() => closeAll(), 60);
+      return;
+    }
+    if (!ev.target.closest('[data-nav-sub]')) closeAll();
+  });
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') closeAll();
+  });
+  closeAll();
 }
 
 // 首次加载与每次导航后都执行（函数内部有守卫，可安全重复调用）

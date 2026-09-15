@@ -1,10 +1,40 @@
 ---
 import { SITE, NAV } from '../site';
+import { getCollection } from 'astro:content';
 import HexMark from './HexMark.astro';
 
 const { current = '/' } = Astro.props;
 const isActive = (href: string) =>
   href === '/' ? current === '/' : current.startsWith(href);
+
+/* ---------- 各子页面的分类 → 对应导航项的二级菜单 ----------
+   作品库的分类 = 作品标签（tags），画廊的分类 = 截图所属游戏（game）。
+   两者都由内容集合现算，新增作品/截图后菜单自动更新，不用改这里。 */
+const worksAll = await getCollection('works');
+const shotsAll = await getCollection('shots');
+
+const countBy = (list: string[]) => {
+  const m = new Map<string, number>();
+  list.forEach((k) => k && m.set(k, (m.get(k) ?? 0) + 1));
+  return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
+};
+
+const workTags = countBy(worksAll.flatMap((e) => e.data.tags ?? []));
+const shotGames = countBy(shotsAll.map((e) => e.data.game ?? ''));
+
+const SUBS: Record<string, { label: string; href: string; count?: number; sub?: boolean }[]> = {
+  '/works/': [
+    { label: '全部作品', href: '/works/', sub: true },
+    ...workTags.map(([t, n]) => ({ label: t, href: `/works/?tag=${encodeURIComponent(t)}`, count: n })),
+  ],
+  '/gallery/': [
+    { label: '全部截图', href: '/gallery/', sub: true },
+    ...shotGames.map(([g, n]) => ({ label: g, href: `/gallery/?game=${encodeURIComponent(g)}`, count: n })),
+  ],
+};
+
+const items = NAV.map((item) => ({ ...item, sub: SUBS[item.href] ?? [] }));
+const pad = (n: number) => String(n).padStart(2, '0');
 ---
 <header class="site-header" data-nav>
   <div class="hd">
@@ -17,11 +47,41 @@ const isActive = (href: string) =>
 
     <nav class="nav" aria-label="主导航">
       {
-        NAV.map((item) => (
-          <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
-            {item.label}
-          </a>
-        ))
+        items.map((item) =>
+          item.sub.length > 0 ? (
+            <span class="nav-item has-sub" data-nav-sub>
+              <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+                {item.label}
+              </a>
+              <button
+                type="button"
+                class="nav-caret"
+                data-nav-caret
+                aria-expanded="false"
+                aria-haspopup="true"
+                aria-label={`展开${item.label}的分类`}
+              >
+                <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                  <path d="M2.6 4.4 6 7.8l3.4-3.4" />
+                </svg>
+              </button>
+              <ul class="nav-sub" data-nav-panel hidden>
+                {item.sub.map((s) => (
+                  <li>
+                    <a href={s.href} class:list={[{ 'is-all': s.sub }]}>
+                      <span class="ns-label">{s.label}</span>
+                      {s.count !== undefined && <span class="ns-count">{pad(s.count)}</span>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </span>
+          ) : (
+            <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+              {item.label}
+            </a>
+          ),
+        )
       }
     </nav>
 
@@ -58,8 +118,20 @@ const isActive = (href: string) =>
 
   <!-- 移动端抽屉 -->
   <div class="drawer" data-nav-drawer hidden>
-    {NAV.map((item) => (
-      <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
+    {items.map((item) => (
+      <>
+        <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
+        {item.sub.length > 1 && (
+          <div class="drawer-sub">
+            {item.sub.slice(1).map((s) => (
+              <a href={s.href}>
+                <span>{s.label}</span>
+                {s.count !== undefined && <i>{pad(s.count)}</i>}
+              </a>
+            ))}
+          </div>
+        )}
+      </>
     ))}
     <a href="/search/" aria-current={isActive('/search/') ? 'page' : undefined}>搜索</a>
     {SITE.github && (
@@ -163,6 +235,104 @@ const isActive = (href: string) =>
     border-color: color-mix(in srgb, var(--accent) 28%, transparent);
   }
 
+  /* —— 导航二级菜单（各子页面的分类）—— */
+  .nav-item {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .nav-caret {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: transform 0.18s var(--ease), color 0.16s ease, background 0.16s ease;
+  }
+  .nav-caret:hover {
+    color: var(--accent-deep);
+    background: var(--accent-soft);
+  }
+  .nav-item[data-open='true'] .nav-caret {
+    color: var(--accent-deep);
+    transform: rotate(180deg);
+  }
+  .nav-item[data-open='true'] > a {
+    color: var(--ink);
+    background: var(--accent-soft);
+  }
+  .nav-sub {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-6px);
+    min-width: 190px;
+    margin: 0;
+    padding: 0.4rem;
+    list-style: none;
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(20px) saturate(1.5);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.18s var(--ease), transform 0.18s var(--ease), visibility 0.18s;
+    z-index: 80;
+  }
+  .nav-item[data-open='true'] .nav-sub {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+  .nav-sub[hidden] {
+    display: block; /* 用 opacity/visibility 做动画，这里不让 hidden 直接掐掉过渡 */
+  }
+  .nav-sub li + li {
+    margin-top: 2px;
+  }
+  .nav-sub a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 10px;
+    font-size: 0.76rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-2);
+  }
+  .nav-sub a:hover {
+    color: var(--ink);
+    background: var(--accent-soft);
+  }
+  .nav-sub a.is-all {
+    color: var(--accent-deep);
+    font-weight: 600;
+  }
+  .nav-sub .ns-count {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .nav-sub li + li.is-all,
+  .nav-sub li:first-child + li {
+    border-top: 1px solid var(--line-1);
+  }
+  .nav-sub li:first-child + li {
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
+  }
+
   /* —— 右侧动作（幽灵胶囊按钮簇） —— */
   .acts {
     display: flex;
@@ -243,6 +413,37 @@ const isActive = (href: string) =>
     animation: nav-in 0.22s var(--ease);
   }
   .drawer[hidden] { display: none; }
+  /* 抽屉里的二级分类（缩进一级，挂在对应页面项下面） */
+  .drawer-sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: -2px 0 6px 1.15rem;
+    padding-left: 0.7rem;
+    border-left: 1px solid var(--line-2);
+  }
+  .drawer-sub a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    font-size: 0.74rem;
+    color: var(--ink-2);
+    background: transparent;
+  }
+  .drawer-sub a i {
+    font-family: var(--font-mono);
+    font-style: normal;
+    font-size: 0.62rem;
+    color: var(--ink-3);
+  }
+  .drawer-sub a:hover {
+    color: var(--accent-deep);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
   @keyframes nav-in {
     from { opacity: 0; transform: translateY(-8px); }
     to { opacity: 1; transform: none; }

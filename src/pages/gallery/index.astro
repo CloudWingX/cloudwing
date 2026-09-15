@@ -19,20 +19,29 @@ const shots = all
     aspect: e.data.aspect ?? '16:9',
   }));
 const count = String(shots.length);
+// 分类（游戏/场景）在导航栏「画廊」二级菜单里：点分类 → /gallery/?game=xxx。
+// 静态站构建时拿不到查询串，所以过滤在浏览器端做（见页面底部脚本）。
 ---
 <SidebarLayout title="画廊" center>
   <div class="wrap">
     <header class="page-head" data-ent>
       <p class="kicker"><b>02</b> / GALLERY 画廊</p>
       <h1>画廊</h1>
-      <p class="sub">游戏截图与日常收藏 · 当前 {count} 张 · 点击卡片可查看大图。</p>
+      <p class="sub">
+        游戏截图与日常收藏 · 当前 <span id="gal-count">{count}</span> 张 · 分类见顶部导航「画廊」下拉菜单 · 点击卡片可查看大图。
+      </p>
+      <p class="gal-filter" id="gal-filter" hidden>
+        <span class="gf-k">分类</span>
+        <span class="gf-v" id="gal-cat">—</span>
+        <a class="gf-clear" href="/gallery/">显示全部 {count} 张</a>
+      </p>
     </header>
 
     <section class="section" style="padding-top:1.6rem">
       <ul class="gal-grid">
         {
           shots.map((s, i) => (
-            <li class="gal-item" id={s.no} data-ent style={`--ad:${(i % 10) * 70}ms`}>
+            <li class="gal-item" id={s.no} data-game={s.game} data-ent style={`--ad:${(i % 10) * 70}ms`}>
               <button class="gal-card" type="button" data-gal-open
                 data-title={s.title}
                 data-meta={`${s.no} · ${s.date} · ${s.game}`}
@@ -75,6 +84,47 @@ const count = String(shots.length);
 </SidebarLayout>
 
 <style>
+  /* 当前分类回显（分类选择器在导航栏「画廊」二级菜单里） */
+  .gal-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0.2rem 0 0;
+    padding: 0.35rem 0.7rem 0.35rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-2);
+    background: var(--glass);
+    backdrop-filter: blur(14px) saturate(1.3);
+    -webkit-backdrop-filter: blur(14px) saturate(1.3);
+    box-shadow: var(--shadow-sm);
+    font-size: 0.8rem;
+  }
+  .gf-k {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .gf-v { font-weight: 700; color: var(--accent-deep); }
+  .gf-clear {
+    margin-left: 0.2rem;
+    padding: 0.16rem 0.6rem;
+    border: 1px solid var(--line-2);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+    text-decoration: none;
+    transition: color 0.16s var(--ease), border-color 0.16s var(--ease), background 0.16s var(--ease);
+  }
+  .gf-clear:hover {
+    color: var(--accent-deep);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .gal-item[hidden] { display: none !important; }
   /* 画廊页样式：玻璃卡网格，跟随浅/深主题 */
   .gal-grid {
     list-style: none;
@@ -235,5 +285,42 @@ const count = String(shots.length);
       if (e.target === dlg) { dlg.close(); document.body.classList.remove('modal-open'); }
     });
     dlg.addEventListener('close', () => document.body.classList.remove('modal-open'));
+  }
+
+  // 分类筛选：导航栏「画廊」二级菜单点分类 → /gallery/?game=xxx。
+  // 静态站构建时读不到查询串，所以在浏览器端过滤（软导航后同样重新应用）。
+  const applyGameFilter = () => {
+    const grid = document.querySelector('.gal-grid');
+    if (!grid) return;
+    let want = null;
+    try {
+      want = new URLSearchParams(location.search).get('game');
+    } catch (err) {
+      want = null;
+    }
+    const items = Array.from(grid.querySelectorAll('.gal-item'));
+    let n = 0;
+    items.forEach((it) => {
+      const on = !want || it.dataset.game === want;
+      it.hidden = !on;
+      if (on) n++;
+    });
+    const chip = document.getElementById('gal-filter');
+    const catEl = document.getElementById('gal-cat');
+    const countEl = document.getElementById('gal-count');
+    if (catEl) catEl.textContent = want || '—';
+    if (countEl) countEl.textContent = String(n);
+    if (chip) chip.hidden = !want;
+  };
+
+  if (!window.__cwGalFilterWired) {
+    window.__cwGalFilterWired = true;
+    // 挂 document：astro:page-load 在 document 上派发（挂 window 收不到）
+    document.addEventListener('astro:page-load', applyGameFilter);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyGameFilter, { once: true });
+    } else {
+      applyGameFilter();
+    }
   }
 </script>
