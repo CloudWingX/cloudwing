@@ -336,8 +336,16 @@ CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真�
   | `--line-2` | `rgba(12,12,14,.50)` | `rgba(255,255,255,.44)` | ≈3.5:1 / 4.6:1 | 卡片、胶囊、控件的实边框 |
   | `--line-glass` | `rgba(255,255,255,.72)` | `rgba(255,255,255,.36)` | 玻璃面内白描边 | 玻璃卡外框、顶栏、按钮 |
   | `--line-w` | `2px` | — | — | 按钮 / 标签 / 顶栏 / 侧栏卡 / 目录 |
-  | `--line-w-card` | `1.5px` | — | — | 内容卡（作品卡 / plate / feat / step / door-row） |
-  | `--line-w-pill` | `1.5px` | — | — | 小胶囊（标签 / 联系方式 / 日历格 / 统计格）——**不要用 2px**，会把「GitHub/Bilibili/邮箱」那排挤到换行 |
+  | `--line-w-card` | `2px` | — | — | 内容卡（作品卡 / plate / feat / step / door-row） |
+  | `--line-w-pill` | `2px` | — | — | 小胶囊（标签 / 联系方式 / 日历格 / 统计格） |
+  两个坑（2026-09-15 都踩过）：
+  1. **不要用 `1.5px`**：Blink 会把 1.5px 向下取整渲染成 **1px**（实测 devicePixelRatio 1 与 3 都是 1px），
+     等于加粗没生效。要加粗就写 `2px`。
+  2. **Astro 页面/组件里的 `<style>` 是作用域样式，优先级高于 global.css / motion.css**：
+     `Header.astro`（顶栏 `.pill`/`.theme-toggle`/`.burger`）等 6 个文件里写死的
+     `1px solid var(--line-2)` 会把全局加粗**局部盖掉**。这类写死值已全部换成 `var(--line-w)`；
+     以后加粗不合预期，先查页面/组件里的作用域样式（`grep -r "1px solid" src/`）。
+     自检脚本：`node scripts/border-check.mjs [url]` 直接打印各元素**实际生效**的边框宽度。
   原值（`--line-1` 1.32:1、`--line-2` 1.84:1）低于非文字 UI 的 3:1 可见性门槛，元素边界糊在一起很费眼。
 - 字体：**西文 Outfit 走 Google Fonts**（`Base.astro` 里 preconnect + `css2?family=Outfit:wght@400..900`；国内可能连不上，
   断网/受限时回退系统字体）；中文走系统字体（PingFang SC / 微软雅黑…）；代码块用 `--font-code`。
