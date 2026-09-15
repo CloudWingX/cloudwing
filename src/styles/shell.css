@@ -134,7 +134,7 @@
 
 /* ---------- 侧栏玻璃卡（沿用全站磨砂玻璃风格） ---------- */
 .sidecard {
-  border: 1px solid var(--line-2);
+  border: var(--line-w) solid var(--line-2);
   border-radius: var(--r-l);
   background: var(--glass);
   backdrop-filter: blur(10px);
@@ -435,7 +435,7 @@
 }
 .pf-links a {
   padding: 0.16rem 0.5rem;
-  border: 1px solid var(--line-2);
+  border: var(--line-w-pill) solid var(--line-2);
   border-radius: 999px;
   color: var(--ink-2);
   text-decoration: none;
@@ -514,7 +514,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.12rem 0.5rem;
-  border: 1px solid var(--line-2);
+  border: var(--line-w-pill) solid var(--line-2);
   border-radius: 999px;
   font-family: var(--font-mono);
   font-size: 0.64rem;
@@ -548,7 +548,7 @@
   padding: 0.3rem 0.2rem;
   border-radius: var(--r-s);
   background: color-mix(in srgb, var(--glass) 70%, transparent);
-  border: 1px solid var(--line-2);
+  border: var(--line-w-pill) solid var(--line-2);
 }
 .wx-days .d-wd {
   font-family: var(--font-mono);
@@ -582,7 +582,7 @@
   color: var(--ink-3);
 }
 .wx-retry {
-  border: 1px solid var(--line-2);
+  border: var(--line-w-pill) solid var(--line-2);
   border-radius: 999px;
   background: transparent;
   color: var(--ink-2);
@@ -630,7 +630,7 @@
   padding: 0.3rem 0.45rem;
   border-radius: var(--r-s);
   background: color-mix(in srgb, var(--glass) 70%, transparent);
-  border: 1px solid var(--line-2);
+  border: var(--line-w-pill) solid var(--line-2);
 }
 .sw-stats .k {
   font-size: 0.72rem;
@@ -795,7 +795,7 @@
   color: var(--accent-deep);
 }
 .sw-cal-close {
-  border: 1px solid var(--line-2);
+  border: var(--line-w-pill) solid var(--line-2);
   border-radius: 999px;
   background: transparent;
   color: var(--ink-2);
@@ -832,7 +832,7 @@
   font-family: var(--font-mono);
   font-size: 0.58rem;
   letter-spacing: 0.06em;
-  border: 1px solid var(--line-2);
+  border: var(--line-w-pill) solid var(--line-2);
   border-radius: 999px;
   padding: 0.04rem 0.32rem;
   color: var(--ink-3);
@@ -878,7 +878,7 @@
   font-size: 0.62rem;
   letter-spacing: 0.06em;
   color: var(--ink-3);
-  border: 1px solid var(--line-2);
+  border: var(--line-w-pill) solid var(--line-2);
   border-radius: 999px;
   padding: 0.05rem 0.36rem;
   white-space: nowrap;
@@ -888,7 +888,7 @@
 .art-toc {
   margin: 0 0 1.8rem;
   padding: 0.85rem 1rem 0.95rem;
-  border: 1px solid var(--line-2);
+  border: var(--line-w) solid var(--line-2);
   border-radius: var(--r-l);
   background: var(--glass);
   backdrop-filter: blur(10px);

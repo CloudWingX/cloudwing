@@ -311,7 +311,7 @@ html.js .sli.in {
   position: relative;
   border-radius: 18px;
   background: linear-gradient(165deg, rgba(255, 255, 255, 0.78), rgba(252, 252, 253, 0.46));
-  border: 1px solid var(--line-glass);
+  border: var(--line-w) solid var(--line-glass);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.06),
     0 8px 24px rgba(0, 0, 0, 0.08),
@@ -358,7 +358,7 @@ html.js .sli.in {
 @keyframes nav-sweep { to { transform: translateX(280%); } }
 .nav a[aria-current="page"] {
   background: rgba(255, 255, 255, 0.94); color: var(--accent-deep);
-  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.16), inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.16), inset 0 0 0 2px rgba(0, 0, 0, 0.16);
 }
 
 /* 署名：脉冲黑/白点 */
@@ -487,7 +487,7 @@ body {
 /* 切换开关（月 / 日） */
 .theme-toggle {
   flex: none; width: 38px; height: 38px; border-radius: 50%;
-  border: 1px solid var(--line-2);
+  border: var(--line-w) solid var(--line-2);
   background: var(--glass-soft);
   color: var(--ink-2);
   display: inline-flex; align-items: center; justify-content: center;
@@ -520,8 +520,8 @@ html[data-theme='dark'] {
   --paper-1: #151517;
   --paper-2: #0f0f11;
   --paper-3: #1c1c1f;
-  --line-1: rgba(255, 255, 255, 0.14);
-  --line-2: rgba(255, 255, 255, 0.28);
+  --line-1: rgba(255, 255, 255, 0.26);
+  --line-2: rgba(255, 255, 255, 0.44);
   --ink: #f2f2f3;
   --ink-2: #b8babf;
   --ink-3: #8e9096; /* 原 #818389 对玻璃仅 4.0:1，压深到达标 */
@@ -542,7 +542,7 @@ html[data-theme='dark'] {
   --glass: linear-gradient(160deg, rgba(38, 38, 41, 0.66), rgba(13, 13, 15, 0.42));
   --glass-strong: linear-gradient(160deg, rgba(46, 46, 50, 0.8), rgba(18, 18, 20, 0.55));
   --glass-soft: linear-gradient(160deg, rgba(38, 38, 41, 0.44), rgba(13, 13, 15, 0.22));
-  --line-glass: rgba(255, 255, 255, 0.22);
+  --line-glass: rgba(255, 255, 255, 0.36);
 }
 /* 页面底色与光斑在夜间的形态（黑白灰） */
 html[data-theme='dark'] body {
@@ -569,11 +569,11 @@ html[data-theme='dark'] .topbar {
   border-color: rgba(255, 255, 255, 0.24);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
-html[data-theme='dark'] .nav a:hover { background: rgba(255, 255, 255, 0.13); }
+html[data-theme='dark'] .nav a:hover { background: rgba(255, 255, 255, 0.16); }
 html[data-theme='dark'] .nav a[aria-current='page'] {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
   color: var(--accent-ink);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.42);
 }
 html[data-theme='dark'] .brand .bname small { color: var(--ink-3) !important; -webkit-text-fill-color: var(--ink-3); }
 html[data-theme='dark'] .brand .hex { filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.35)); }
@@ -582,18 +582,18 @@ html[data-theme='dark'] :is(
   .plate, .wk-card, .feat, .step, .door-row, .shot-card,
   .card, .contact, .lightbox
 ) {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.34);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 html[data-theme='dark'] .wk-card:hover,
 html[data-theme='dark'] .feat:hover,
 html[data-theme='dark'] .step:hover,
 html[data-theme='dark'] .shot-card:hover,
-html[data-theme='dark'] .door-row:hover { border-color: rgba(255, 255, 255, 0.55); }
+html[data-theme='dark'] .door-row:hover { border-color: rgba(255, 255, 255, 0.6); }
 /* 常用控件微调 */
 html[data-theme='dark'] .chip {
   background: rgba(20, 20, 22, 0.6);
-  border-color: rgba(255, 255, 255, 0.26);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 html[data-theme='dark'] .btn { border-color: rgba(255, 255, 255, 0.3); }
 html[data-theme='dark'] .prose blockquote { background: rgba(30, 30, 33, 0.6); border-color: var(--accent); }

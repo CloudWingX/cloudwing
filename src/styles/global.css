@@ -20,10 +20,16 @@
   --glass: linear-gradient(165deg, rgba(255, 255, 255, 0.74), rgba(252, 252, 253, 0.42));
   --glass-strong: linear-gradient(165deg, rgba(255, 255, 255, 0.88), rgba(253, 253, 254, 0.58));
   --glass-soft: linear-gradient(165deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
-  --line-1: rgba(12, 12, 14, 0.13); /* 细分隔 */
-  --line-2: rgba(12, 12, 14, 0.27); /* 边框 */
-  /* 玻璃面内描边：前白边在深色主题下过亮，统一走令牌 */
-  --line-glass: rgba(255, 255, 255, 0.66);
+  /* 分隔线/边框：原值太淡（--line-1 仅 1.32:1、--line-2 仅 1.84:1，非文字 UI 的
+     可见性门槛是 3:1），元素边界糊在一起很费眼。这里整体压深：
+     --line-1 ≈2.0:1（行分隔，保持低调）、--line-2 ≈3.5:1（卡片/胶囊边界，清晰可辨）。 */
+  --line-1: rgba(12, 12, 14, 0.3); /* 细分隔 */
+  --line-2: rgba(12, 12, 14, 0.5); /* 边框 */
+  /* 玻璃面内描边：玻璃本身是浅色，白边要足够实才看得出轮廓 */
+  --line-glass: rgba(255, 255, 255, 0.72);
+  --line-w: 2px;      /* 交互控件（按钮/胶囊/导航容器）的边框粗细 */
+  --line-w-card: 1.5px; /* 内容卡（帖子/作品/侧栏卡）的边框粗细 */
+  --line-w-pill: 1.5px; /* 小胶囊（标签/联系方式/日历格/统计格）：2px 会把这一排挤到换行 */
   --ink: #101013;
   --ink-2: #45474e;  /* 次要文字（原 #55575e，压深提高可读性） */
   --ink-3: #63656d;  /* 三级文字：★可读性修复★ 原 #9a9ca3 仅 2.49:1，全面不达标 */
@@ -166,7 +172,7 @@ body::before {
   background: var(--glass);
   backdrop-filter: blur(9px) saturate(1.15);
   -webkit-backdrop-filter: blur(9px) saturate(1.15);
-  border: 1px solid var(--line-glass);
+  border: var(--line-w-card) solid var(--line-glass);
   border-radius: var(--r-l);
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
@@ -176,7 +182,7 @@ body::before {
 .btn {
   display: inline-flex; align-items: center; gap: 0.55rem;
   padding: 0.6em 1.4em;
-  border: 1px solid var(--line-glass);
+  border: var(--line-w) solid var(--line-glass);
   border-radius: 999px;
   background: var(--glass-strong);
   color: var(--ink);
@@ -201,7 +207,7 @@ body::before {
 .chip {
   display: inline-block;
   padding: 0.12em 0.75em;
-  border: 1px solid var(--line-2);
+  border: var(--line-w-pill) solid var(--line-2);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.5);
   font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.04em;
@@ -322,7 +328,7 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
   background: var(--glass);
   backdrop-filter: blur(9px) saturate(1.15);
   -webkit-backdrop-filter: blur(9px) saturate(1.15);
-  border: 1px solid var(--line-glass);
+  border: var(--line-w-card) solid var(--line-glass);
   box-shadow: var(--shadow-sm);
   transition: transform 0.18s var(--ease), box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -360,7 +366,7 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
   background: var(--glass);
   backdrop-filter: blur(9px) saturate(1.15);
   -webkit-backdrop-filter: blur(9px) saturate(1.15);
-  border: 1px solid var(--line-glass);
+  border: var(--line-w-card) solid var(--line-glass);
   box-shadow: var(--shadow-sm);
   transition: transform 0.18s var(--ease), box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -387,7 +393,7 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
   background: var(--glass);
   backdrop-filter: blur(9px) saturate(1.15);
   -webkit-backdrop-filter: blur(9px) saturate(1.15);
-  border: 1px solid var(--line-glass);
+  border: var(--line-w-card) solid var(--line-glass);
   color: inherit; text-decoration: none;
   box-shadow: var(--shadow-sm);
   transition: transform 0.16s var(--ease), box-shadow 0.16s ease, border-color 0.16s ease;
@@ -536,7 +542,7 @@ html[data-theme='dark'] .worknav .wn-item { border-color: rgba(255, 255, 255, 0.
 .lightbox::backdrop { background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .lightbox img { display: block; max-width: 100%; max-height: 84vh; border-radius: var(--r-l) var(--r-l) 0 0; }
 .lightbox .lb-cap { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.7rem 1.1rem; font-family: var(--font-mono); font-size: 0.76rem; letter-spacing: 0.06em; color: var(--ink-2); }
-.lightbox .lb-cap button { background: var(--accent-soft); border: 1px solid var(--line-2); border-radius: 999px; cursor: pointer; color: var(--ink); font-family: var(--font-mono); font-size: 0.72rem; padding: 0.25rem 0.85rem; }
+.lightbox .lb-cap button { background: var(--accent-soft); border: var(--line-w-pill) solid var(--line-2); border-radius: 999px; cursor: pointer; color: var(--ink); font-family: var(--font-mono); font-size: 0.72rem; padding: 0.25rem 0.85rem; }
 .lightbox .lb-cap button:hover { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 
 .e404 { text-align: center; padding: clamp(3rem, 10vw, 6.5rem) 0; }
