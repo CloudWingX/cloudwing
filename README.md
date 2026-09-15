@@ -12,7 +12,7 @@
 - 订阅：作品档案 **RSS** → `/rss.xml`（head 自动发现 + 页脚入口）
 - 背景：全站统一的 React Bits **Particles** 粒子层（`PageParticlesBackground`，跟随浅/深主题）
 - 子页面：三栏布局（左导航树 + 内容 + 右挂件）、更新日历、天气卡；顶部导航下滑自动收起
-- 自检：`node scripts/smoke.mjs`（47 项断言，测本地或线上）
+- 自检：`node scripts/smoke.mjs`（48 项断言，测本地或线上）
 - 部署：GitHub `CloudWingX/cloudwing`（公开）→ Cloudflare Pages 自动构建 → `https://cloudwing.pages.dev`
 
 ## 本地运行

@@ -175,11 +175,15 @@ const main = async () => {
     await evaluate(`location.replace(${JSON.stringify(BASE + '/works/')})`);
     await sleep(6000);
     const d = await evaluate(`(() => { const l = document.querySelector('.shell-left');
+      // 手机端是单列：中栏不一定是 .shell 的直接子元素，选择器放宽并容错，
+      // 否则软导航换页的竞态会让这里的 querySelector 返回 null 而抛错（非站点问题）。
+      const m = document.querySelector('.shell > .main-content') || document.querySelector('.main-content');
       return { 左栏显示: l ? getComputedStyle(l).display : 'none',
-        中栏宽: Math.round(document.querySelector('.shell > .main-content').getBoundingClientRect().width),
+        中栏宽: m ? Math.round(m.getBoundingClientRect().width) : null,
         ovf: document.documentElement.scrollWidth - document.documentElement.clientWidth }; })()`);
     check('手机端侧栏隐藏', d.左栏显示 === 'none');
     check('手机端无横向溢出', d.ovf === 0, 'overflowX=' + d.ovf);
+    check('手机端单列（中栏可见）', d.中栏宽 !== null && d.中栏宽 > 300, `中栏宽=${d.中栏宽}`);
   });
 
   const failed = results.filter((r) => !r.ok);

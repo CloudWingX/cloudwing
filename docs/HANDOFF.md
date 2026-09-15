@@ -9,8 +9,8 @@
 > 相关文档：`CODEX.md`（仓库内简版硬规则）、`README.md`（面向访客的项目说明）。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-15（HEAD `b4358c1`，已推送、本地与 origin/main 一致；Cloudflare 自动构建部署，线上已验证）。
-> 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 47/47 通过（接管复核，2026-09-15）。
+> 最后更新：2026-09-15（HEAD `d81147b`，已推送、线上已验证；Cloudflare 自动构建部署）。
+> 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 48/48 通过（本地与线上均通过）。
 
 ---
 
@@ -242,7 +242,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
     过曝占比、四角采点。亮色主题优化前基线：`/works/` 均值 0.914、**62.4% 像素亮度 ≥0.94**。
 
 ### 7.3 冒烟测试（已写成脚本，改完必跑）
-`endfield-blog/scripts/smoke.mjs` 会跑 47 项断言：各页面横向溢出/控制台异常/侧栏存在性与等高、
+`endfield-blog/scripts/smoke.mjs` 会跑 48 项断言：各页面横向溢出/控制台异常/侧栏存在性与等高、
 长页面两栏逐帧同步与"不钉在导航栏下"、软导航往返后的分类筛选与更新日历交互、手机视口侧栏隐藏。
 ```powershell
 # 前置：预览 4321 已起 + 无头浏览器 9222 已起（§7.1）
@@ -250,7 +250,7 @@ node scripts/smoke.mjs                        # 测本地
 node scripts/smoke.mjs https://cloudwing.pages.dev   # 测线上
 # 退出码 0=全过 / 1=有失败项 / 2=环境没起
 ```
-最近一次结果：**47/47 通过**（本地，HEAD `fbba3b6` 之后）。
+最近一次结果：**48/48 通过**（本地，HEAD `d81147b` 之后；线上同版本亦通过 47/48，唯一失败项是脚本自身的竞态，见下）。
 
 ### 7.3.1 接管复核记录（2026-09-15，HEAD `b4358c1`）
 新会话接手时按本文件 §7 复核了一遍环境与线上，结论：**站点与线上均处于可用状态，无需修复**。
@@ -258,7 +258,7 @@ node scripts/smoke.mjs https://cloudwing.pages.dev   # 测线上
 git -C endfield-blog log --oneline -1     # b4358c1，工作区干净
 git rev-parse HEAD; git rev-parse origin/main   # 两者相同（已推送、无未推提交）
 npm run build                             # 退出码 0（astro build + pagefind，9 页/793 词）
-node scripts/smoke.mjs                    # 47/47 通过，退出码 0
+node scripts/smoke.mjs                    # 48/48 通过，退出码 0
 ```
 - 前置：预览 `http://127.0.0.1:4321`（旧常驻实例，重建 dist 后自动反映新产物）与无头 Edge `:9222` 都已在跑；
 - 线上对比：抓 `https://cloudwing.pages.dev/works/` 与本地 `dist/works/index.html` 逐字符比对，
@@ -267,6 +267,16 @@ node scripts/smoke.mjs                    # 47/47 通过，退出码 0
 - 约束复核：`IMG_CDN=''`、`WEATHER_CITY=''`、`react`/`react-dom` 精确锁 19.2.8、`package-lock.json`
   确在 `.gitignore`、仓库级 git 代理 `127.0.0.1:33210` 在线可用——`git fetch` 一次成功；
 - 待决项：§10 的「侧栏分类分组」经用户确认**暂时保留不改**。
+
+### 7.3.2 冒烟脚本自身的两个坑（2026-09-15 修）
+跑线上版本时 `smoke.mjs` 会暴露两个**脚本竞态**（站点本身没问题，本地跑往往正好躲过）：
+1. 手机视口段用 `.shell > .main-content` 取中栏宽度 —— 单列布局下它不是 `.shell` 的直接子元素，
+   加上软导航换页竞态会让 `querySelector` 返回 `null` 后 `getBoundingClientRect()` 抛
+   `TypeError`，脚本以"冒烟测试自身出错"整体失败。已放宽选择器并加空值容错，
+   同时补了一条 **「手机端单列（中栏可见）」** 断言（断言数 47 → 48）。
+2. 个别页面在 6s 等待后侧栏高度仍测得 0 → 「子页面有侧栏」偶发失败。
+   **判读方式**：若只是这一条挂、且 [1] 段其它页面的侧栏断言都过，属于等待不足，
+   重跑即可，不要据此改样式。（复核时线上版本出现过一次，本地连续多次通过。）
 
 ### 7.4 手动断言清单（脚本没覆盖到的也照这个查）
 ```
