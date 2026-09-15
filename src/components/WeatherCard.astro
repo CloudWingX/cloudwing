@@ -1,0 +1,30 @@
+---
+// 左侧栏「天气」小帖：放在个人信息卡下面。
+// 数据源 uapis.cn（免费、无需 key、中文），字段含实时天气、今日高低温、体感、湿度、
+// 风、AQI/空气质量、未来几天预报与预警。
+// 因为要显示「实时」天气，且静态站构建时拿不到访客 IP，所以这里只渲染骨架，
+// 数据由 ui.js 的 weatherWidget() 在浏览器端拉取（localStorage 缓存 30 分钟，避免每次切页都请求）。
+import { WEATHER_CITY } from '../site';
+---
+<section class="sidecard sw-weather" data-weather data-weather-city={WEATHER_CITY}>
+  <h2>WEATHER / 天气</h2>
+
+  <div class="wx-now">
+    <span class="wx-glyph" data-wx-glyph aria-hidden="true">☁</span>
+    <span class="wx-temp"><b data-wx-temp>--</b><i>°</i></span>
+    <span class="wx-where">
+      <span class="wx-city" data-wx-city>定位中…</span>
+      <span class="wx-cond" data-wx-cond></span>
+    </span>
+  </div>
+
+  <p class="wx-meta" data-wx-meta></p>
+  <p class="wx-aqi" data-wx-aqi hidden></p>
+
+  <ul class="wx-days" data-wx-days hidden></ul>
+
+  <p class="wx-foot">
+    <span data-wx-note>实时天气 · 正在获取</span>
+    <button type="button" class="wx-retry" data-wx-retry hidden>重试</button>
+  </p>
+</section>

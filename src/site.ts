@@ -6,6 +6,11 @@
 export const IMG_CDN = '';
 export const imgUrl = (p: string) => (p && p.startsWith('/') && IMG_CDN ? IMG_CDN + p : p);
 
+// 侧栏天气卡片（数据来自 uapis.cn，无需 key）：
+//   '' = 按访客 IP 自动定位（每位访客看到自己所在城市，不暴露站点所在地，默认推荐）
+//   填城市名则可固定城市，例如 '北京'
+export const WEATHER_CITY = '';
+
 export const SITE = {
   // 站点名（正文里显示，中文）
   title: '云翼',

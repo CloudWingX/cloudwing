@@ -428,6 +428,172 @@
   background: var(--accent-soft);
 }
 
+/* ---------- 左栏：天气小帖（个人信息卡下方）---------- */
+.sw-weather .wx-now {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.wx-glyph {
+  flex: none;
+  width: 1.9rem;
+  text-align: center;
+  font-size: 1.55rem;
+  line-height: 1;
+  color: var(--ink);
+}
+.wx-temp {
+  flex: none;
+  display: inline-flex;
+  align-items: flex-start;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1;
+}
+.wx-temp b {
+  font-size: 1.7rem;
+  font-variant-numeric: tabular-nums;
+}
+.wx-temp i {
+  font-size: 0.9rem;
+  font-style: normal;
+  padding-top: 0.15em;
+  color: var(--ink-3);
+}
+.wx-where {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.wx-city {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wx-cond {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.wx-meta {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.wx-aqi {
+  margin: 0.35rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.12rem 0.5rem;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+.wx-aqi[hidden] {
+  display: none;
+}
+.wx-aqi b {
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+.wx-days {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0.55rem 0 0;
+  border-top: 1px dashed var(--line-2);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+.wx-days[hidden] {
+  display: none;
+}
+.wx-days li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.3rem 0.2rem;
+  border-radius: var(--r-s);
+  background: color-mix(in srgb, var(--glass) 70%, transparent);
+  border: 1px solid var(--line-2);
+}
+.wx-days .d-wd {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+.wx-days .d-glyph {
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--ink);
+}
+.wx-days .d-temp {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.wx-days .d-temp b {
+  color: var(--accent-deep);
+}
+.wx-foot {
+  margin: 0.55rem 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+.wx-retry {
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 0.08rem 0.45rem;
+  cursor: pointer;
+}
+.wx-retry[hidden] {
+  display: none;
+}
+.wx-retry:hover {
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+/* 加载中：数字位淡闪，别让卡片看起来是坏的 */
+.sw-weather[data-wx-state='loading'] .wx-temp b {
+  animation: wx-pulse 1.4s ease-in-out infinite;
+}
+@keyframes wx-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-weather[data-wx-state='loading'] .wx-temp b {
+    animation: none;
+  }
+}
+
 /* ---------- 右栏挂件：统计 / 日历 / 名言 ---------- */
 .sw-stats {
   list-style: none;

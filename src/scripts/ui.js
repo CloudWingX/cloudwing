@@ -204,6 +204,7 @@ function boot() {
     autoHideHeader,     // 导航栏下滑收起 / 上滑滑回
     calPanel,           // 侧栏更新日历：点日期展开当天记录
     navSub,             // 导航栏二级菜单（各子页面的分类）
+    weatherWidget,      // 左侧栏天气小帖（uapis.cn，浏览器端拉取 + 30 分钟缓存）
   ].forEach((fn) => {
     try {
       fn();
@@ -1566,6 +1567,174 @@ function navSub() {
     if (ev.key === 'Escape') closeAll();
   });
   closeAll();
+}
+
+/* ---------- 侧栏天气小帖 ----------
+   数据源 uapis.cn（免费无需 key，中文）。静态站构建时拿不到访客 IP，所以在这里拉：
+   结果存 localStorage（30 分钟），软导航重建 DOM 时直接用缓存渲染，不重复请求。
+   失败/离线只显示一行提示 + 重试按钮，不弹错。 */
+function weatherWidget() {
+  const card = document.querySelector('[data-weather]');
+  if (!card) return;
+
+  const KEY = '__cwWeather_v1';
+  const TTL = 30 * 60 * 1000;
+  const API = 'https://uapis.cn/api/v1/misc/weather?extended=true&forecast=true&hourly=false&minutely=false&indices=false&lang=zh';
+  const GLYPHS = [
+    [/雷/, '⛈'],
+    [/雪|冰|冻/, '❄'],
+    [/雨/, '☂'],
+    [/雾|霾|沙|尘|浮尘/, '≋'],
+    [/阴/, '☁'],
+    [/多云/, '⛅'],
+    [/晴/, '☀'],
+  ];
+  const glyphOf = (text) => {
+    const t = String(text || '');
+    for (const [re, g] of GLYPHS) if (re.test(t)) return g;
+    return '☁';
+  };
+  const el = (sel) => card.querySelector(sel);
+
+  const readCache = () => {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (data && data.t > Date.now() - TTL && data.v) return data.v;
+    } catch (e) {
+      /* 忽略 */
+    }
+    return null;
+  };
+  const writeCache = (v) => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ t: Date.now(), v }));
+    } catch (e) {
+      /* 隐私模式等忽略 */
+    }
+  };
+
+  const render = (d) => {
+    card.dataset.wxState = 'ready';
+    const temp = d.temperature != null ? Math.round(d.temperature) : '--';
+    el('[data-wx-temp]').textContent = temp;
+    el('[data-wx-glyph]').textContent = glyphOf(d.weather);
+    el('[data-wx-city]').textContent = (d.city || d.district || d.province || '—').replace(/市$/, '');
+    el('[data-wx-cond]').textContent = d.weather || '';
+
+    const bits = [];
+    if (d.temp_max != null && d.temp_min != null) bits.push(`高 ${Math.round(d.temp_max)}° 低 ${Math.round(d.temp_min)}°`);
+    if (d.feels_like != null) bits.push(`体感 ${Math.round(d.feels_like)}°`);
+    if (d.humidity != null) bits.push(`湿度 ${d.humidity}%`);
+    if (d.wind_direction) bits.push(`${d.wind_direction}${d.wind_power || ''}`);
+    el('[data-wx-meta]').textContent = bits.join(' · ');
+
+    const aqiEl = el('[data-wx-aqi]');
+    if (d.aqi != null) {
+      aqiEl.hidden = false;
+      aqiEl.innerHTML = '';
+      const b = document.createElement('b');
+      b.textContent = `AQI ${d.aqi}`;
+      aqiEl.appendChild(b);
+      const cat = document.createElement('span');
+      cat.textContent = `${d.aqi_category || ''}${d.aqi_primary ? ' · ' + d.aqi_primary : ''}`.trim();
+      aqiEl.appendChild(cat);
+    } else {
+      aqiEl.hidden = true;
+    }
+
+    const daysEl = el('[data-wx-days]');
+    const days = (d.forecast || []).slice(0, 3);
+    daysEl.innerHTML = '';
+    if (days.length) {
+      daysEl.hidden = false;
+      days.forEach((f) => {
+        const li = document.createElement('li');
+        const wd = document.createElement('span');
+        wd.className = 'd-wd';
+        wd.textContent = (f.week || '').replace(/^星期/, '周');
+        const g = document.createElement('span');
+        g.className = 'd-glyph';
+        g.textContent = glyphOf(f.weather_day);
+        const t = document.createElement('span');
+        t.className = 'd-temp';
+        const hi = document.createElement('b');
+        hi.textContent = `${Math.round(f.temp_max)}°`;
+        t.appendChild(hi);
+        t.appendChild(document.createTextNode(` / ${Math.round(f.temp_min)}°`));
+        li.appendChild(wd);
+        li.appendChild(g);
+        li.appendChild(t);
+        daysEl.appendChild(li);
+      });
+    } else {
+      daysEl.hidden = true;
+    }
+
+    el('[data-wx-note]').textContent = [d.report_time, d.city ? `${d.city}${d.district && d.district !== d.city ? ' ' + d.district : ''}` : '']
+      .filter(Boolean)
+      .join(' · ');
+    el('[data-wx-retry]').hidden = true;
+  };
+
+  const failed = (msg) => {
+    card.dataset.wxState = 'error';
+    el('[data-wx-city]').textContent = msg;
+    el('[data-wx-cond]').textContent = '';
+    el('[data-wx-note]').textContent = '天气数据源：uapis.cn';
+    el('[data-wx-retry]').hidden = false;
+  };
+
+  const load = (force) => {
+    if (!force) {
+      const cached = readCache();
+      if (cached) {
+        render(cached);
+        return;
+      }
+    }
+    if (navigator.connection && navigator.connection.saveData) {
+      failed('已开启省流模式');
+      return;
+    }
+    // 首屏 boot() 可能被 DOMContentLoaded 与 astro:page-load 各调一次，
+    // 加个在途标记，避免同一秒发出两个相同请求
+    if (window.__cwWeatherLoading) return;
+    window.__cwWeatherLoading = true;
+    card.dataset.wxState = 'loading';
+    const city = card.dataset.weatherCity;
+    const url = city ? `${API}&city=${encodeURIComponent(city)}` : API;
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = ctrl ? window.setTimeout(() => ctrl.abort(), 9000) : null;
+    fetch(url, ctrl ? { signal: ctrl.signal } : undefined)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('http ' + r.status))))
+      .then((res) => {
+        window.clearTimeout(timer);
+        if (!res || res.temperature == null) throw new Error('bad payload');
+        writeCache(res);
+        render(res);
+      })
+      .catch(() => {
+        window.clearTimeout(timer);
+        failed('天气暂不可用');
+      })
+      .finally(() => {
+        window.__cwWeatherLoading = false;
+      });
+  };
+
+  if (!window.__cwWeatherWired) {
+    window.__cwWeatherWired = true;
+    // 委托：重试按钮（软导航后依然有效）
+    document.addEventListener('click', (ev) => {
+      if (ev.target.closest('[data-wx-retry]')) {
+        ev.preventDefault();
+        load(true);
+      }
+    });
+  }
+  load(false);
 }
 
 // 首次加载与每次导航后都执行（函数内部有守卫，可安全重复调用）

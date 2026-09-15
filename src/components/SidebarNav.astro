@@ -1,9 +1,10 @@
-﻿---
+---
 // 左侧栏（全站子页面通用，内容固定不随页面变化）：
 //   作品库（全部作品 + 每件作品）/ 分类（可直接筛列表）/ 画廊（全部截图 + 每张）/ 站点页面
 // 只按 pathname 决定「哪个条目高亮」和「哪个分组默认展开」，其余完全一致。
 import { getCollection } from 'astro:content';
 import { SITE } from '../site';
+import WeatherCard from './WeatherCard.astro';
 import '../styles/shell.css';
 
 // 个人信息卡（侧栏左上角）——顶部背景图待定：
@@ -63,6 +64,9 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
       </p>
     </div>
   </section>
+
+  <!-- 天气小帖：紧跟在个人信息卡下面 -->
+  <WeatherCard />
 
   <nav class="sidecard sidetree" aria-label="站点导航树">
     <h2>INDEX / 档案索引</h2>
