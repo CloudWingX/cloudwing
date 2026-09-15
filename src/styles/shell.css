@@ -489,21 +489,32 @@
   /* 略扁的格子（不是为了好看，是为了让右栏总高在常见视口里不超屏，
      左右两栏才能共用同一个吸顶值、齐步停住） */
   aspect-ratio: 1.12;
+  border: 0;
+  padding: 0;
+  background: transparent;
   border-radius: 7px;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   color: var(--ink-3);
   font-variant-numeric: tabular-nums;
+  cursor: default;
 }
 .sw-cal .cell.empty {
   visibility: hidden;
 }
-.sw-cal .cell.on {
+/* 有记录的日子：可点开看「当天做了什么」 */
+.sw-cal .cell.has {
+  cursor: pointer;
   background: var(--accent-soft);
   color: var(--accent-deep);
   font-weight: 700;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease), box-shadow 0.16s var(--ease);
 }
-.sw-cal .cell.on::after {
+.sw-cal .cell.has:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.sw-cal .cell.has::after {
   content: '';
   position: absolute;
   bottom: 3px;
@@ -512,9 +523,147 @@
   border-radius: 50%;
   background: var(--accent);
 }
+.sw-cal .cell.has .cnt {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-style: normal;
+  font-size: 0.52rem;
+  line-height: 1.35;
+  min-width: 0.62rem;
+  text-align: center;
+  color: var(--paper-1);
+  background: var(--accent-deep);
+  border-radius: 999px;
+}
+.sw-cal .cell[aria-expanded='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+.sw-cal .cell[aria-expanded='true']::after {
+  background: var(--on-accent);
+}
+.sw-cal .cell[aria-expanded='true'] .cnt {
+  color: var(--accent-deep);
+  background: var(--paper-1);
+}
 .sw-cal .cell.today {
   box-shadow: inset 0 0 0 1px var(--accent);
   color: var(--ink);
+}
+
+.sw-month-n {
+  margin-left: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--ink-3);
+}
+.sw-cal-legend {
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+.sw-cal-legend .lg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+.sw-cal-legend .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.sw-cal-hint {
+  margin: 0.45rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+.sw-cal-panel {
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--line-2);
+}
+.sw-cal-panel[hidden] {
+  display: none;
+}
+.sw-cal-panel-head {
+  margin: 0 0 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  color: var(--accent-deep);
+}
+.sw-cal-close {
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 0.1rem 0.45rem;
+  cursor: pointer;
+}
+.sw-cal-close:hover {
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.sw-cal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+}
+.sw-cal-list li {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.sw-cal-list .ci-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.sw-cal-list .ci-kind {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.06em;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  padding: 0.04rem 0.32rem;
+  color: var(--ink-3);
+}
+.sw-cal-list .ci-title {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.sw-cal-list a.ci-title:hover {
+  color: var(--accent-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sw-cal-list .ci-note {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  color: var(--ink-3);
 }
 
 .sw-quote blockquote {

@@ -11,7 +11,6 @@ const works = (await getCollection('works')).sort(
 const shots = (await getCollection('shots')).sort(
   (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
 );
-
 /* ---------- 站点统计 ---------- */
 const tagSet = new Set<string>();
 works.forEach((w) => (w.data.tags ?? []).forEach((t: string) => tagSet.add(t)));
@@ -31,22 +30,66 @@ const lastActive = [...works, ...shots]
 const lastActiveStr = lastActive ? new Date(lastActive).toISOString().slice(0, 10) : '—';
 
 /* ---------- 活跃日历（当月，有归档的日期打点）---------- */
+/* ---------- 更新日历：把「作品 / 截图 / 站点更新」按日期聚合成事件 ---------- */
+type CalEvent = { kind: string; title: string; url?: string; note?: string };
+
+const worksEvents = works.map((e) => ({
+  date: new Date(e.data.date).toISOString().slice(0, 10),
+  kind: '作品',
+  title: e.data.title ?? '未命名档案',
+  url: `/works/${e.id}/`,
+}));
+const shotEvents = shots.map((e) => ({
+  date: new Date(e.data.date).toISOString().slice(0, 10),
+  kind: '截图',
+  title: e.data.title ?? '未命名截图',
+  url: `/gallery/#${String(e.id).toUpperCase()}`,
+}));
+const logEvents = (await getCollection('changelog')).flatMap((e) =>
+  (e.data.items ?? []).map((it) => ({
+    date: new Date(e.data.date).toISOString().slice(0, 10),
+    kind: it.kind || '更新',
+    title: it.title,
+    note: it.note || '',
+  })),
+);
+
+// 日期 → 事件列表（新事件在前）
+const byDay = new Map<string, CalEvent[]>();
+[...worksEvents, ...shotEvents, ...logEvents].forEach((ev) => {
+  const list = byDay.get(ev.date) ?? [];
+  list.push({ kind: ev.kind, title: ev.title, url: (ev as { url?: string }).url, note: (ev as { note?: string }).note });
+  byDay.set(ev.date, list);
+});
+
+const pad = (n: number) => String(n).padStart(2, '0');
 const now = new Date();
 const y = now.getFullYear();
 const m = now.getMonth();
 const firstWeekday = new Date(y, m, 1).getDay(); // 0 = 周日
 const daysInMonth = new Date(y, m + 1, 0).getDate();
-const activeDays = new Set<number>();
-[...works, ...shots].forEach((e) => {
-  const d = new Date(e.data.date);
-  if (d.getFullYear() === y && d.getMonth() === m) activeDays.add(d.getDate());
-});
+const iso = (day: number) => `${y}-${pad(m + 1)}-${pad(day)}`;
+const monthEvents = [...byDay.entries()].filter(([d]) => d.startsWith(`${y}-${pad(m + 1)}`));
+const dayCount = new Map<string, number>(monthEvents.map(([d, list]) => [d, list.length]));
+const kindCount = new Map<string, number>();
+monthEvents.forEach(([, list]) => list.forEach((ev) => kindCount.set(ev.kind, (kindCount.get(ev.kind) ?? 0) + 1)));
+const kindSummary = [...kindCount.entries()].sort((a, b) => b[1] - a[1]);
+
 const cells: (number | null)[] = [
   ...Array.from({ length: firstWeekday }, () => null),
   ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
 ];
 const monthLabel = `${y} 年 ${m + 1} 月`;
 const today = now.getDate();
+const todayIso = `${y}-${pad(m + 1)}-${pad(today)}`;
+const monthTotal = monthEvents.reduce((n, [, list]) => n + list.length, 0);
+
+// 交给前端渲染当天明细（键为 ISO 日期）
+const calData: Record<string, CalEvent[]> = {};
+byDay.forEach((list, d) => {
+  calData[d] = list;
+});
+const calJson = JSON.stringify(calData).replace(/</g, '\\u003c');
 
 /* ---------- 最近更新（作品 + 截图混排）---------- */
 const recent = [
@@ -95,24 +138,56 @@ const quote = QUOTES[dayIndex % QUOTES.length];
     <p class="sw-last">最后更新 · {lastActiveStr}</p>
   </section>
 
-  <!-- 活跃日历 -->
-  <section class="sidecard">
-    <h2>CALENDAR / 活跃日历</h2>
-    <p class="sw-month">{monthLabel}</p>
-    <div class="sw-cal" role="presentation">
+  <!-- 更新日历：有记录的日子可点，展开当天「做了什么」 -->
+  <section class="sidecard sw-cal-card">
+    <h2>CALENDAR / 更新日历</h2>
+    <p class="sw-month">
+      {monthLabel}
+      {monthTotal > 0 && <span class="sw-month-n">{monthTotal} 条更新</span>}
+    </p>
+    <div class="sw-cal" role="group" aria-label={`${monthLabel}更新日历，有记录的日期可点开查看`}>
       {['日', '一', '二', '三', '四', '五', '六'].map((d) => (
-        <span class="wd">{d}</span>
+        <span class="wd" aria-hidden="true">{d}</span>
       ))}
-      {cells.map((d) =>
-        d === null ? (
-          <span class="cell empty" />
-        ) : (
-          <span class:list={['cell', { on: activeDays.has(d), today: d === today }]} title={activeDays.has(d) ? `${m + 1} 月 ${d} 日有归档` : undefined}>
+      {cells.map((d) => {
+        if (d === null) return <span class="cell empty" />;
+        const key = iso(d);
+        const list = byDay.get(key) ?? [];
+        const n = list.length;
+        const names = list.map((ev) => `${ev.kind}：${ev.title}`).join('；');
+        return n > 0 ? (
+          <button
+            type="button"
+            class:list={['cell', 'has', { today: d === today }]}
+            data-cal-day={key}
+            aria-label={`${m + 1} 月 ${d} 日 ${n} 条记录`}
+            title={names}
+          >
             {d}
-          </span>
-        ),
-      )}
+            {n > 1 && <i class="cnt">{n}</i>}
+          </button>
+        ) : (
+          <span class:list={['cell', { today: d === today }]} title={`${m + 1} 月 ${d} 日`}>{d}</span>
+        );
+      })}
     </div>
+    {kindSummary.length > 0 && (
+      <p class="sw-cal-legend">
+        {kindSummary.map(([k, n]) => (
+          <span class="lg-item"><i class="dot" />{k} {n}</span>
+        ))}
+      </p>
+    )}
+    <p class="sw-cal-hint" data-cal-hint>点日期看当天做了什么</p>
+
+    <div class="sw-cal-panel" data-cal-panel hidden>
+      <p class="sw-cal-panel-head">
+        <span data-cal-title>—</span>
+        <button type="button" class="sw-cal-close" data-cal-close aria-label="收起当天记录">收起</button>
+      </p>
+      <ul class="sw-cal-list" data-cal-list></ul>
+    </div>
+    <script type="application/json" data-cal-data set:html={calJson} />
   </section>
 
   <!-- 最近更新 -->

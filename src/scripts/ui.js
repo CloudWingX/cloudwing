@@ -202,6 +202,7 @@ function boot() {
     tocSpy,             // 右侧栏「本页目录」滚动高亮（子页面三栏壳层）
     sideSticky,         // 侧栏吸顶：导航栏可见时贴其下方，收起时随页面滚
     autoHideHeader,     // 导航栏下滑收起 / 上滑滑回
+    calPanel,           // 侧栏更新日历：点日期展开当天记录
   ].forEach((fn) => {
     try {
       fn();
@@ -1386,6 +1387,103 @@ function sideSticky() {
     window.__cwSideRO.disconnect();
     sides.forEach((el) => window.__cwSideRO.observe(el));
   }
+}
+
+/* ---------- 侧栏「更新日历」：点某天看当天做了什么 ----------
+   数据由组件以 <script type="application/json" data-cal-data> 内联在卡片里；
+   软导航后 DOM 重建但数据随之更新，所以这里只绑一次 document 委托，每次点击现读数据。 */
+function calPanel() {
+  if (window.__cwCalWired) return;
+  window.__cwCalWired = true;
+
+  const readData = () => {
+    const el = document.querySelector('[data-cal-data]');
+    if (!el) return {};
+    try {
+      return JSON.parse(el.textContent || '{}');
+    } catch (err) {
+      return {};
+    }
+  };
+
+  const close = (panel) => {
+    if (!panel) return;
+    panel.hidden = true;
+    panel.dataset.day = '';
+    const card = panel.closest('.sw-cal-card');
+    if (card) card.querySelectorAll('[data-cal-day][aria-expanded]').forEach((b) => b.removeAttribute('aria-expanded'));
+  };
+
+  const open = (btn) => {
+    const card = btn.closest('.sw-cal-card');
+    if (!card) return;
+    const panel = card.querySelector('[data-cal-panel]');
+    const titleEl = card.querySelector('[data-cal-title]');
+    const listEl = card.querySelector('[data-cal-list]');
+    if (!panel || !titleEl || !listEl) return;
+
+    const day = btn.dataset.calDay || '';
+    if (panel.dataset.day === day && !panel.hidden) {
+      close(panel); // 再点同一天 = 收起
+      return;
+    }
+
+    const items = readData()[day] || [];
+    const parts = day.split('-');
+    const wd = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date(day + 'T00:00:00').getDay()];
+    titleEl.textContent = `${Number(parts[1])} 月 ${Number(parts[2])} 日 · ${wd} · ${items.length} 条`;
+
+    listEl.textContent = '';
+    items.forEach((it) => {
+      const li = document.createElement('li');
+      const head = document.createElement('span');
+      head.className = 'ci-head';
+      const kind = document.createElement('span');
+      kind.className = 'ci-kind';
+      kind.textContent = it.kind || '更新';
+      head.appendChild(kind);
+      const title = it.url ? document.createElement('a') : document.createElement('span');
+      title.className = 'ci-title';
+      title.textContent = it.title || '';
+      if (it.url) title.setAttribute('href', it.url);
+      head.appendChild(title);
+      li.appendChild(head);
+      if (it.note) {
+        const note = document.createElement('span');
+        note.className = 'ci-note';
+        note.textContent = it.note;
+        li.appendChild(note);
+      }
+      listEl.appendChild(li);
+    });
+
+    card.querySelectorAll('[data-cal-day][aria-expanded]').forEach((b) => b.removeAttribute('aria-expanded'));
+    btn.setAttribute('aria-expanded', 'true');
+    panel.hidden = false;
+    panel.dataset.day = day;
+    // 展开后侧栏变高，重算吸顶位（ResizeObserver 也会触发，这里再保一手）
+    if (typeof window.__cwSideRefresh === 'function') window.__cwSideRefresh();
+    // 面板在视口外时把它带进来（已在视野内则不动）
+    try {
+      panel.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+    } catch (err) {
+      /* 老浏览器忽略 */
+    }
+  };
+
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-cal-day]');
+    if (btn) {
+      ev.preventDefault();
+      open(btn);
+      return;
+    }
+    const cl = ev.target.closest('[data-cal-close]');
+    if (cl) {
+      ev.preventDefault();
+      close(cl.closest('[data-cal-panel]'));
+    }
+  });
 }
 
 // 首次加载与每次导航后都执行（函数内部有守卫，可安全重复调用）

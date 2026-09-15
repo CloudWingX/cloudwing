@@ -30,4 +30,22 @@ const shots = defineCollection({
   }),
 });
 
-export const collections = { works, shots };
+// 站点更新记录：src/content/changelog/*.md —— 一天一个文件，items 里写当天做了什么。
+// 侧栏「更新日历」会把这些和作品/截图一起按日期聚合，点某天就能看到当天记录。
+const changelog = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/changelog' }),
+  schema: z.object({
+    date: z.coerce.date(),
+    items: z
+      .array(
+        z.object({
+          kind: z.string().default('更新'), // 上线 / 优化 / 修复 / 内容 …
+          title: z.string(),
+          note: z.string().default(''),
+        }),
+      )
+      .default([]),
+  }),
+});
+
+export const collections = { works, shots, changelog };
