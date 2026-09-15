@@ -542,7 +542,10 @@ html[data-theme='dark'] {
   --glass: linear-gradient(160deg, rgba(38, 38, 41, 0.66), rgba(13, 13, 15, 0.42));
   --glass-strong: linear-gradient(160deg, rgba(46, 46, 50, 0.8), rgba(18, 18, 20, 0.55));
   --glass-soft: linear-gradient(160deg, rgba(38, 38, 41, 0.44), rgba(13, 13, 15, 0.22));
-  --line-glass: rgba(255, 255, 255, 0.36);
+  /* 深色下卡面比底色亮一档，让内容卡浮起来 */
+  --glass-card: linear-gradient(160deg, rgba(58, 58, 62, 0.82), rgba(30, 30, 34, 0.62));
+  /* 深色主题的玻璃/卡片用白描边（浅色主题走 --line-2 深灰线，见 global.css 注释） */
+  --line-glass: rgba(255, 255, 255, 0.4);
 }
 /* 页面底色与光斑在夜间的形态（黑白灰） */
 html[data-theme='dark'] body {
@@ -577,12 +580,11 @@ html[data-theme='dark'] .nav a[aria-current='page'] {
 }
 html[data-theme='dark'] .brand .bname small { color: var(--ink-3) !important; -webkit-text-fill-color: var(--ink-3); }
 html[data-theme='dark'] .brand .hex { filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.35)); }
-/* 玻璃表面：去白边、换夜色阴影 */
+/* 玻璃表面：换夜色阴影（描边颜色交给 --line-glass 令牌，见上面的深色令牌块） */
 html[data-theme='dark'] :is(
   .plate, .wk-card, .feat, .step, .door-row, .shot-card,
   .card, .contact, .lightbox
 ) {
-  border-color: rgba(255, 255, 255, 0.34);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 html[data-theme='dark'] .wk-card:hover,

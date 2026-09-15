@@ -1,6 +1,7 @@
 // 核对线上实际生效的边框宽度与颜色
 const CDP = 'http://127.0.0.1:9222';
 const BASE = process.argv[2] || 'https://cloudwing.pages.dev';
+const THEME = process.argv[3] || 'light';
 const tab = await (await fetch(`${CDP}/json/new?` + encodeURIComponent(BASE + '/works/'), { method: 'PUT' })).json();
 const ws = new WebSocket(tab.webSocketDebuggerUrl);
 await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
@@ -9,9 +10,9 @@ const send = (m, p = {}) => new Promise((r) => { const i = ++id; pending.set(i, 
 ws.onmessage = (ev) => { const m = JSON.parse(ev.data); if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); } };
 await send('Page.enable'); await send('Runtime.enable');
 await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
-await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
+await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: THEME }] });
 await send('Page.addScriptToEvaluateOnNewDocument', {
-  source: `try{localStorage.setItem('cw-theme-pref','light');document.cookie='cw-theme-pref=light;path=/';}catch(e){}`,
+  source: `try{localStorage.setItem('cw-theme-pref','${THEME}');document.cookie='cw-theme-pref=${THEME};path=/';}catch(e){}`,
 });
 await send('Page.navigate', { url: BASE + '/works/' });
 await new Promise((r) => setTimeout(r, 5000));

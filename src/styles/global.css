@@ -20,13 +20,18 @@
   --glass: linear-gradient(165deg, rgba(255, 255, 255, 0.74), rgba(252, 252, 253, 0.42));
   --glass-strong: linear-gradient(165deg, rgba(255, 255, 255, 0.88), rgba(253, 253, 254, 0.58));
   --glass-soft: linear-gradient(165deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
+  /* 内容卡（作品卡/帖子、档案框）专用面：比 --glass 更实一档，卡面明显浮在页面底色上 */
+  --glass-card: linear-gradient(165deg, rgba(255, 255, 255, 0.95), rgba(253, 253, 254, 0.8));
   /* 分隔线/边框：原值太淡（--line-1 仅 1.32:1、--line-2 仅 1.84:1，非文字 UI 的
      可见性门槛是 3:1），元素边界糊在一起很费眼。这里整体压深：
      --line-1 ≈2.0:1（行分隔，保持低调）、--line-2 ≈3.5:1（卡片/胶囊边界，清晰可辨）。 */
   --line-1: rgba(12, 12, 14, 0.3); /* 细分隔 */
   --line-2: rgba(12, 12, 14, 0.5); /* 边框 */
-  /* 玻璃面内描边：玻璃本身是浅色，白边要足够实才看得出轮廓 */
-  --line-glass: rgba(255, 255, 255, 0.72);
+  /* 玻璃面/卡片的实边框。
+     ★浅色主题必须是深色线★：原来这里是 `rgba(255,255,255,.72)`（白线），在浅色页面上
+     等于没有轮廓 —— 作品卡"没有黑色边框、卡片不明显"就是这么来的（侧栏卡因为用
+     --line-2 才看得见）。深色主题在 motion.css 把它覆盖成白色，两种主题各走一套。 */
+  --line-glass: var(--line-2);
   --line-w: 2px;      /* 交互控件（按钮/胶囊/导航容器）的边框粗细 */
   --line-w-card: 2px; /* 内容卡（帖子/作品/侧栏卡）的边框粗细 */
   /* 小胶囊（标签/联系方式/日历格/统计格）：同样用 2px。
@@ -155,6 +160,18 @@ body::before {
   backdrop-filter: blur(11px) saturate(1.25);
   -webkit-backdrop-filter: blur(11px) saturate(1.25);
   border: 1px solid var(--line-glass);
+}
+
+/* 内容卡（作品卡/帖子、档案框、首页板块、灵感条、画廊卡）用更实的卡面：
+   只重定义 --glass，下面各自的 `background: var(--glass)` 会跟着变，
+   卡面因此明显浮在页面底色上；侧栏卡（.sidecard）不在此列，保持原玻璃质感。 */
+.wk-card,
+.plate,
+.feat,
+.step,
+.door-row,
+.shot-card {
+  --glass: var(--glass-card);
 }
 
 /* ============ 编号小节标题 ============ */

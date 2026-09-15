@@ -345,7 +345,17 @@ CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真�
      `Header.astro`（顶栏 `.pill`/`.theme-toggle`/`.burger`）等 6 个文件里写死的
      `1px solid var(--line-2)` 会把全局加粗**局部盖掉**。这类写死值已全部换成 `var(--line-w)`；
      以后加粗不合预期，先查页面/组件里的作用域样式（`grep -r "1px solid" src/`）。
-     自检脚本：`node scripts/border-check.mjs [url]` 直接打印各元素**实际生效**的边框宽度。
+     自检脚本：`node scripts/border-check.mjs [url] [light|dark]` 直接打印各元素**实际生效**的
+     边框宽度/颜色；`node scripts/card-separation.mjs [url] [light|dark]` 量"卡面 vs 页面底色"分离度。
+  3. **`--line-glass` 在两种主题下必须是相反的颜色**（2026-09-15 修）：它原来是硬编码的
+     `rgba(255,255,255,.72)`（白线）——在深色主题下正确，但**浅色主题下等于没有轮廓**，
+     作品卡"没有边框、卡片不明显"就是这么来的（侧栏卡用的是 `--line-2` 深灰线，所以它一直看得见）。
+     现在：**浅色基值 = `var(--line-2)`（深灰线）**，深色令牌块里覆盖成 `rgba(255,255,255,.4)`。
+     凡是"浅色下某个面没有边界"的问题，先确认它用的是 `--line-glass` 还是 `--line-2`。
+  4. **内容卡的面用 `--glass-card`**（比 `--glass` 更实一档）：通过
+     `.wk-card, .plate, .feat, .step, .door-row, .shot-card { --glass: var(--glass-card) }`
+     重定义变量来生效（这些规则的 `background: var(--glass)` 会跟着变）。
+     侧栏卡 `.sidecard` 不在其中，保持原玻璃质感。实测卡面 vs 底色 1.29:1（浅）/1.25:1（深）。
   原值（`--line-1` 1.32:1、`--line-2` 1.84:1）低于非文字 UI 的 3:1 可见性门槛，元素边界糊在一起很费眼。
 - 字体：**西文 Outfit 走 Google Fonts**（`Base.astro` 里 preconnect + `css2?family=Outfit:wght@400..900`；国内可能连不上，
   断网/受限时回退系统字体）；中文走系统字体（PingFang SC / 微软雅黑…）；代码块用 `--font-code`。
