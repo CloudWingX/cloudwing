@@ -192,6 +192,18 @@ items:
 12. **首页/其他页的"入场动效"与 `center` 版式**：`.center-page` 会把标题居中；三栏壳层里已改成左对齐
     （`shell.css` 的 `@media (min-width:1200px)` 段），移动端仍居中。
 
+13. **浅色页底色改了却不生效**（2026-09 亮色主题优化时踩到）：`global.css` 里 `body` 的背景**被
+    `motion.css` 的 V16 规则整条覆盖**（`motion.css` 的 `body { background: linear-gradient(115deg, …) }`）。
+    即**浅色页面底色的真实取值在 `motion.css`**：只改 `global.css` 的 `--bg` 不会改变渲染结果
+    （`--bg` 当时只被页脚等少量地方用到）。深色同理，`html[data-theme='dark'] body` 也在 `motion.css`。
+    **改底色必须两处一起改**；排查时先看 `getComputedStyle(document.body).backgroundImage` 里
+    有没有新底色特征（如 `120% 80%`）。
+
+14. **亮色主题三级文字曾经完全不达标**：`--ink-3` 原为 `#9a9ca3`，对玻璃卡实测仅 **2.49:1**
+    （WCAG AA 小字要求 4.5:1），全站 32 处（kicker / 日期 / 编号 / 画廊编号 / 页脚…）都看不清。
+    已压深到 `#63656d`（页底 4.87:1、玻璃 5.56:1），`--ink-2` 同步 `#55575e → #45474e`（7.77:1）；
+    暗色 `--ink-3` 由 `#818389`（3.93:1）提到 `#8e9096`（4.66:1）。**不要再往浅了调。**
+
 ---
 
 ## 7. 验证与调试
@@ -219,6 +231,15 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 - 截某区域做**密度图**（把 PNG 裁一块降采样成 ASCII）→ 看清布局与元素占位；
 - `sharp` 统计（本机 `endfield-blog/node_modules/sharp` 可用）：算均值/标准差、做像素差分、算贴图保真（PSNR）；
 - 几何断言优于肉眼：直接量矩形、比较是否重叠、`scrollWidth - clientWidth` 判横向溢出。
+- **已脚本化的三个取证工具**（2026-09 加，改版式/配色时直接用）：
+  - `node scripts/contrast-audit.mjs [url]` — 亮色主题**可读性审计**：每个可见文字节点算
+    「前景 vs 实际合成背景」的 WCAG 对比度，列出不达标项（含渐变裁切文字近似）。
+    退出码 0=无问题 / 1=有不达标 / 2=环境没起。**当前基线：0 处不达标。**
+  - `node scripts/shots-theme.mjs [url] [outDir]` — 用 CDP 强制 light/dark 各截一遍
+    （无头浏览器 `prefers-color-scheme` 默认 dark，必须显式 `Emulation.setEmulatedMedia`，
+    否则你会以为自己在看浅色其实在审深色）。
+  - `node scripts/imgstats.mjs <png...>` / `node scripts/imgpix.mjs <png...>` — 亮度分位数、
+    过曝占比、四角采点。亮色主题优化前基线：`/works/` 均值 0.914、**62.4% 像素亮度 ≥0.94**。
 
 ### 7.3 冒烟测试（已写成脚本，改完必跑）
 `endfield-blog/scripts/smoke.mjs` 会跑 47 项断言：各页面横向溢出/控制台异常/侧栏存在性与等高、

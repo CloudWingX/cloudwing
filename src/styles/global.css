@@ -6,20 +6,27 @@
 :root {
   color-scheme: light;
 
-  /* 底与玻璃（黑白灰：仅中性色阶） */
-  --bg: #f4f4f5;
-  --bg-deep: #e7e8ea;
-  --paper: #f4f4f5;
-  --paper-1: #ffffff;
-  /* 玻璃面：带高光斜向渐变，透出背景光斑 */
-  --glass: linear-gradient(165deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.26));
-  --glass-strong: linear-gradient(165deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.44));
-  --glass-soft: linear-gradient(165deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.12));
-  --line-1: rgba(12, 12, 14, 0.12); /* 细分隔 */
-  --line-2: rgba(12, 12, 14, 0.26); /* 边框 */
+  /* 底与玻璃（黑白灰：仅中性色阶）
+     注：底色刻意不用纯白/近白 —— 之前 #f4f4f5 + 高不透明玻璃实测整页 62% 像素
+     亮度 ≥0.94（均值 0.914），观感刺眼。这里把"页面底色/玻璃"压暗一档，
+     内容卡（--paper-1）保持近白，靠层次而不是靠整体发白来撑开版面。 */
+  --bg: #e9ebee;      /* 页面底色（原 #f4f4f5） */
+  --bg-deep: #dcdfe4; /* 页脚/渐深端（原 #e7e8ea） */
+  --paper: #e9ebee;
+  --paper-1: #ffffff; /* 卡片面：仍是白，内容区保持清爽 */
+  --paper-2: #f1f3f5;
+  --paper-3: #e2e5e9;
+  /* 玻璃面：比底色亮但不发白，透出背景光斑 */
+  --glass: linear-gradient(165deg, rgba(255, 255, 255, 0.74), rgba(252, 252, 253, 0.42));
+  --glass-strong: linear-gradient(165deg, rgba(255, 255, 255, 0.88), rgba(253, 253, 254, 0.58));
+  --glass-soft: linear-gradient(165deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.2));
+  --line-1: rgba(12, 12, 14, 0.13); /* 细分隔 */
+  --line-2: rgba(12, 12, 14, 0.27); /* 边框 */
+  /* 玻璃面内描边：前白边在深色主题下过亮，统一走令牌 */
+  --line-glass: rgba(255, 255, 255, 0.66);
   --ink: #101013;
-  --ink-2: #55575e;
-  --ink-3: #9a9ca3;
+  --ink-2: #45474e;  /* 次要文字（原 #55575e，压深提高可读性） */
+  --ink-3: #63656d;  /* 三级文字：★可读性修复★ 原 #9a9ca3 仅 2.49:1，全面不达标 */
   --on-accent: #ffffff;
 
   /* 强调：黑（浅色底上的“强调”= 纯黑，白字反白） */
@@ -75,7 +82,9 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 140%);
+  background:
+    radial-gradient(120% 80% at 78% -10%, rgba(255, 255, 255, 0.5), transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 140%);
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-body);
@@ -100,10 +109,10 @@ h1, h2, h3, h4 { margin: 0 0 0.5em; line-height: 1.25; color: var(--ink); }
 body::before {
   content: ""; position: fixed; inset: 0; z-index: -3; pointer-events: none;
   background-image:
-    radial-gradient(46rem 30rem at 86% -6%, rgba(96, 99, 108, 0.2), transparent 62%),
-    radial-gradient(40rem 28rem at -8% 16%, rgba(96, 99, 108, 0.16), transparent 60%),
-    radial-gradient(38rem 30rem at 12% 96%, rgba(96, 99, 108, 0.12), transparent 60%),
-    radial-gradient(34rem 26rem at 92% 88%, rgba(96, 99, 108, 0.1), transparent 60%);
+    radial-gradient(46rem 30rem at 86% -6%, rgba(88, 91, 100, 0.16), transparent 62%),
+    radial-gradient(40rem 28rem at -8% 16%, rgba(88, 91, 100, 0.13), transparent 60%),
+    radial-gradient(38rem 30rem at 12% 96%, rgba(88, 91, 100, 0.11), transparent 60%),
+    radial-gradient(34rem 26rem at 92% 88%, rgba(88, 91, 100, 0.09), transparent 60%);
 }
 .grid-bg { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; }
 /* 两团缓慢漂移的预模糊光晕（中性灰，黑白观感） */
@@ -136,7 +145,7 @@ body::before {
   background: var(--glass);
   backdrop-filter: blur(11px) saturate(1.25);
   -webkit-backdrop-filter: blur(11px) saturate(1.25);
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line-glass);
 }
 
 /* ============ 编号小节标题 ============ */
@@ -157,7 +166,7 @@ body::before {
   background: var(--glass);
   backdrop-filter: blur(9px) saturate(1.15);
   -webkit-backdrop-filter: blur(9px) saturate(1.15);
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--line-glass);
   border-radius: var(--r-l);
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
@@ -167,7 +176,7 @@ body::before {
 .btn {
   display: inline-flex; align-items: center; gap: 0.55rem;
   padding: 0.6em 1.4em;
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--line-glass);
   border-radius: 999px;
   background: var(--glass-strong);
   color: var(--ink);
@@ -313,7 +322,7 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
   background: var(--glass);
   backdrop-filter: blur(9px) saturate(1.15);
   -webkit-backdrop-filter: blur(9px) saturate(1.15);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--line-glass);
   box-shadow: var(--shadow-sm);
   transition: transform 0.18s var(--ease), box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -351,7 +360,7 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
   background: var(--glass);
   backdrop-filter: blur(9px) saturate(1.15);
   -webkit-backdrop-filter: blur(9px) saturate(1.15);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--line-glass);
   box-shadow: var(--shadow-sm);
   transition: transform 0.18s var(--ease), box-shadow 0.18s ease, border-color 0.18s ease;
 }
@@ -378,7 +387,7 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
   background: var(--glass);
   backdrop-filter: blur(9px) saturate(1.15);
   -webkit-backdrop-filter: blur(9px) saturate(1.15);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--line-glass);
   color: inherit; text-decoration: none;
   box-shadow: var(--shadow-sm);
   transition: transform 0.16s var(--ease), box-shadow 0.16s ease, border-color 0.16s ease;
@@ -409,8 +418,8 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
 /* ============ 页脚 ============ */
 .site-footer {
   margin-top: clamp(3rem, 8vw, 6rem);
-  border-top: 1px solid rgba(255, 255, 255, 0.75);
-  background: rgba(255, 255, 255, 0.4);
+  border-top: 1px solid var(--line-glass);
+  background: rgba(255, 255, 255, 0.28);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -454,7 +463,7 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
 .work-head .no-big { font-family: var(--font-mono); font-size: 0.84rem; letter-spacing: 0.2em; color: var(--accent-deep); font-weight: 600; font-variant-numeric: tabular-nums; }
 .work-head h1 { font-family: var(--font-display); font-size: clamp(1.4rem, 2.7vw, 2rem); margin: 0.2em 0 0.25em; letter-spacing: -0.01em; }
 .work-head .sub { color: var(--ink-2); }
-.work-head .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; margin-top: 1.8rem; border-radius: var(--r-m); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.85); background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: var(--shadow-sm); }
+.work-head .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; margin-top: 1.8rem; border-radius: var(--r-m); overflow: hidden; border: 1px solid var(--line-glass); background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: var(--shadow-sm); }
 .work-head .meta-grid > div { padding: 0.85rem 1rem; border-right: 1px solid var(--line-1); border-bottom: 1px solid var(--line-1); }
 .work-head .meta-grid > div:last-child { border-right: 0; }
 .work-head .meta-grid dt { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); }
@@ -514,10 +523,10 @@ html[data-theme='dark'] .worknav .wn-item { border-color: rgba(255, 255, 255, 0.
 
 /* ============ 灯箱 / 404 ============ */
 .lightbox {
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--line-glass);
   border-radius: var(--r-l);
   padding: 0;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.84);
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
   box-shadow: var(--shadow-lg);
