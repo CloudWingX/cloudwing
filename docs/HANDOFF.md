@@ -9,8 +9,8 @@
 > 相关文档：`CODEX.md`（仓库内简版硬规则）、`README.md`（面向访客的项目说明）。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-15（HEAD `108eaa5`，已推送；Cloudflare 自动构建部署，线上已验证）。
-> 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 47/47 通过。
+> 最后更新：2026-09-15（HEAD `b4358c1`，已推送、本地与 origin/main 一致；Cloudflare 自动构建部署，线上已验证）。
+> 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 47/47 通过（接管复核，2026-09-15）。
 
 ---
 
@@ -230,6 +230,22 @@ node scripts/smoke.mjs https://cloudwing.pages.dev   # 测线上
 # 退出码 0=全过 / 1=有失败项 / 2=环境没起
 ```
 最近一次结果：**47/47 通过**（本地，HEAD `fbba3b6` 之后）。
+
+### 7.3.1 接管复核记录（2026-09-15，HEAD `b4358c1`）
+新会话接手时按本文件 §7 复核了一遍环境与线上，结论：**站点与线上均处于可用状态，无需修复**。
+```powershell
+git -C endfield-blog log --oneline -1     # b4358c1，工作区干净
+git rev-parse HEAD; git rev-parse origin/main   # 两者相同（已推送、无未推提交）
+npm run build                             # 退出码 0（astro build + pagefind，9 页/793 词）
+node scripts/smoke.mjs                    # 47/47 通过，退出码 0
+```
+- 前置：预览 `http://127.0.0.1:4321`（旧常驻实例，重建 dist 后自动反映新产物）与无头 Edge `:9222` 都已在跑；
+- 线上对比：抓 `https://cloudwing.pages.dev/works/` 与本地 `dist/works/index.html` 逐字符比对，
+  **除三处构建指纹外完全相同**——`generator` 版本号（本地 astro 7.3.1 vs 构建机 7.3.2，`npm outdated`
+  显示本地落后一个 patch）与 `astro-island uid`（每次构建随机）。**内容层面线上 = 本地，部署没落下**；
+- 约束复核：`IMG_CDN=''`、`WEATHER_CITY=''`、`react`/`react-dom` 精确锁 19.2.8、`package-lock.json`
+  确在 `.gitignore`、仓库级 git 代理 `127.0.0.1:33210` 在线可用——`git fetch` 一次成功；
+- 待决项：§10 的「侧栏分类分组」经用户确认**暂时保留不改**。
 
 ### 7.4 手动断言清单（脚本没覆盖到的也照这个查）
 ```
