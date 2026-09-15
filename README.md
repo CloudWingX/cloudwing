@@ -3,13 +3,16 @@
 个人学习与作品档案站 —— Astro 静态站，磨砂玻璃扁平化 UI（浅色通透、黑白灰强调）。
 记录代码、图集与学习轨迹，按编号留存、过程可追溯。
 
-> 🔧 **给接手开发者（Codex）的首读文件：见 [`CODEX.md`](./CODEX.md)** —— 含硬规则、
-> 路由、主题机制、图床策略、构建/部署坑与下一步建议。下面的 README 只是概览。
+> 🔧 **给接手开发者的首读文件：[`docs/HANDOFF.md`](./docs/HANDOFF.md)** —— 完整交接文档：环境硬约束、
+> 目录职责、三条铁律、12 条踩坑记录（症状→根因→修法）、验证与部署手法、遗留待决项。
+> 简版硬规则见 [`CODEX.md`](./CODEX.md)；下面是面向访客的概览。
 
 - 技术栈：Astro 7.3（静态输出）、React 岛、gsap、React Bits 组件原码（`src/components/ReactBits/`）
-- 页面：首页（hero + 三板块交错）、作品库（卡 → 详情 + 玻璃分段分类）、画廊（玻璃网格 + 大图）、关于（履历 + MagicBento + Lanyard）、互动（giscus 留言板）
+- 页面：首页（hero + 三板块交错）、作品库（卡 → 详情；分类在顶部导航的下拉二级菜单里）、画廊（玻璃网格 + 大图，分类同样在导航二级菜单）、关于（履历 + MagicBento + Lanyard 吊牌）、互动（giscus 留言板）
 - 订阅：作品档案 **RSS** → `/rss.xml`（head 自动发现 + 页脚入口）
-- 背景：全站 Particles（`/account/` 用 GridScan）
+- 背景：全站统一的 React Bits **Particles** 粒子层（`PageParticlesBackground`，跟随浅/深主题）
+- 子页面：三栏布局（左导航树 + 内容 + 右挂件）、更新日历、天气卡；顶部导航下滑自动收起
+- 自检：`node scripts/smoke.mjs`（47 项断言，测本地或线上）
 - 部署：GitHub `CloudWingX/cloudwing`（公开）→ Cloudflare Pages 自动构建 → `https://cloudwing.pages.dev`
 
 ## 本地运行
