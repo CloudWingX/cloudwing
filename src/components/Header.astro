@@ -277,7 +277,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     margin: 0;
     padding: 0.4rem;
     list-style: none;
-    border: 1px solid var(--line-2);
+    border: var(--line-w) solid var(--line-2);
     border-radius: 14px;
     background: var(--glass-strong);
     -webkit-backdrop-filter: blur(20px) saturate(1.5);
@@ -349,7 +349,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
     gap: 7px;
     height: 40px;
     border-radius: 999px;
-    border: 1px solid var(--line-2);
+    /* 走全局粗细令牌（原先写死 1px，且 Astro 作用域选择器优先级更高，
+       会盖掉 global/motion 里的 var(--line-w) 加粗） */
+    border: var(--line-w) solid var(--line-2);
     background: var(--glass-soft);
     color: var(--ink-2);
     font-family: var(--font-mono);
@@ -405,7 +407,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     gap: 2px;
     padding: 10px;
     border-radius: 18px;
-    border: 1px solid var(--line-2);
+    border: var(--line-w) solid var(--line-2);
     background: var(--glass-strong);
     backdrop-filter: blur(24px) saturate(1.5);
     -webkit-backdrop-filter: blur(24px) saturate(1.5);
@@ -420,14 +422,14 @@ const pad = (n: number) => String(n).padStart(2, '0');
     gap: 4px;
     margin: -2px 0 6px 1.15rem;
     padding-left: 0.7rem;
-    border-left: 1px solid var(--line-2);
+    border-left: var(--line-w) solid var(--line-2);
   }
   .drawer-sub a {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
     padding: 0.3rem 0.6rem;
-    border: 1px solid var(--line-2);
+    border: var(--line-w) solid var(--line-2);
     border-radius: 999px;
     font-size: 0.74rem;
     color: var(--ink-2);
