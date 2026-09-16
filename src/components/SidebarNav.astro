@@ -5,6 +5,7 @@
 import { getCollection } from 'astro:content';
 import { SITE } from '../site';
 import WeatherCard from './WeatherCard.astro';
+import MusicPlayer from './MusicPlayer.astro';
 import '../styles/shell.css';
 
 // 个人信息卡（侧栏左上角）——顶部背景图待定：
@@ -152,4 +153,7 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
       </ul>
     </details>
   </nav>
+
+  <!-- 音乐播放器：左侧栏最下方（歌曲列表见 site.ts 的 MUSIC） -->
+  <MusicPlayer />
 </aside>

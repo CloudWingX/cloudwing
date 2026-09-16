@@ -11,6 +11,13 @@ export const imgUrl = (p: string) => (p && p.startsWith('/') && IMG_CDN ? IMG_CD
 //   填城市名则可固定城市，例如 '北京'
 export const WEATHER_CITY = '';
 
+// 左侧栏底部音乐播放器（见 components/MusicPlayer.astro）。
+// 歌曲暂定：数组为空时播放器显示「待添加」占位，不发任何网络请求。
+// 加歌只需往里加一条（音频建议放 public/music/，文件名用英文/数字）：
+//   { title: '曲名', artist: '作者（可选）', src: '/music/song.mp3' }
+// 也可填外部直链（注意跨域与稳定性）。多条即为播放列表，支持上一首/下一首。
+export const MUSIC: { title: string; artist?: string; src: string }[] = [];
+
 export const SITE = {
   // 站点名（正文里显示，中文）
   title: '云翼',

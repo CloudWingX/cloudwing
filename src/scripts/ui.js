@@ -205,6 +205,7 @@ function boot() {
     calPanel,           // 侧栏更新日历：点日期展开当天记录
     navSub,             // 导航栏二级菜单（各子页面的分类）
     weatherWidget,      // 左侧栏天气小帖（uapis.cn，浏览器端拉取 + 30 分钟缓存）
+    musicPlayer,        // 左侧栏音乐播放器（歌曲见 site.ts 的 MUSIC）
   ].forEach((fn) => {
     try {
       fn();
@@ -1381,10 +1382,11 @@ function sideSticky() {
     const floor = navHidden ? Math.max(...info.map((i) => i.floor)) : navTop;
     const shared = Math.round(Math.max(base, Math.min(floor, navTop)));
     sides.forEach((el) => {
-      // 回程（导航栏要出现了，侧栏回到 82px）用更短的时长：长栏时回程可能有几百 px，
-      // 慢慢滑就会在半路上从导航栏底下钻出来；60ms 内到位，导航栏 0.28s 才滑下来。
+      // 回程（导航栏要出现了，侧栏瞬间回到 82px）必须**瞬间归位**：栏比视口高时
+      // 侧栏可能停在负值，任何时长的动画都会经过 0~82px 这一段，而导航栏 0.28s 才滑下来，
+      // 中途就会出现「侧栏压在导航栏下」的帧（实测 /gallery/ 2 帧）。
       // 去程（导航栏已收起）保持 0.16s，与导航栏收起节奏一致。
-      el.style.setProperty('--side-dur', navHidden ? '0.16s' : '0.06s');
+      el.style.setProperty('--side-dur', navHidden ? '0.16s' : '0s');
       el.style.setProperty('--side-top', shared + 'px');
     });
   };
@@ -1735,6 +1737,216 @@ function weatherWidget() {
     });
   }
   load(false);
+}
+
+/* ---------- 左侧栏「音乐播放器」----------
+   歌曲列表在 site.ts 的 MUSIC（为空则只有占位，直接返回）。
+   ⚠️ <audio> 必须挂在 document.body 上、而不是侧栏里：软导航会整个换掉侧栏 DOM，
+      挂在里面的话一切页面音乐就断。同理状态存 window 单例、监听走 document 委托。 */
+function musicPlayer() {
+  const card = document.querySelector('[data-music]');
+  if (!card) return;
+  const total = Number(card.dataset.musicCount || '0');
+  if (!total) return; // 歌曲未添加：只有占位内容，无需交互
+
+  const st =
+    window.__cwMusic ||
+    (window.__cwMusic = {
+      audio: null,
+      index: 0,
+      wired: false,
+      restored: false,
+    });
+
+  // ---- 音频元素：全局单例，挂 body 上，切页不中断 ----
+  if (!st.audio) {
+    const a = new Audio();
+    a.preload = 'metadata';
+    a.addEventListener('timeupdate', () => {
+      paintProgress();
+      if (st.audio.duration && !st.audio.paused) {
+        // 记录播放位置：整页刷新后可以接着放
+        try {
+          sessionStorage.setItem('cw-music-at', String(Math.floor(st.audio.currentTime)));
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    });
+    a.addEventListener('loadedmetadata', () => {
+      paintProgress();
+      if (card.dataset.musicResume) {
+        const at = Number(card.dataset.musicResume) || 0;
+        if (at > 0 && at < (a.duration || Infinity)) a.currentTime = at;
+        delete card.dataset.musicResume;
+      }
+    });
+    a.addEventListener('play', () => {
+      card.dataset.state = 'playing';
+      setToggleLabel(true);
+    });
+    a.addEventListener('pause', () => {
+      card.dataset.state = 'paused';
+      setToggleLabel(false);
+    });
+    a.addEventListener('ended', () => step(1, true));
+    a.addEventListener('error', () => {
+      card.dataset.state = 'error';
+      setToggleLabel(false);
+      const dur = card.querySelector('[data-mu-dur]');
+      if (dur) dur.textContent = '--:--';
+    });
+    st.audio = a;
+  }
+  const audio = st.audio;
+
+  // ---- 取曲目信息（从侧栏的 DOM 上读，避免在 ui.js 里再引一份 MUSIC）----
+  const srcs = () => {
+    const raw = card.dataset.musicSrcs || '';
+    return raw ? raw.split('|') : [];
+  };
+
+  const fmt = (s) => {
+    if (!isFinite(s) || s <= 0) return '0:00';
+    const m = Math.floor(s / 60);
+    const r = Math.floor(s % 60);
+    return `${m}:${String(r).padStart(2, '0')}`;
+  };
+
+  const setToggleLabel = (playing) => {
+    const btn = card.querySelector('[data-mu-toggle]');
+    if (!btn) return;
+    btn.setAttribute('aria-label', playing ? '暂停' : '播放');
+  };
+
+  const paintProgress = () => {
+    const bar = card.querySelector('[data-mu-bar]');
+    const fill = card.querySelector('[data-mu-fill]');
+    const cur = card.querySelector('[data-mu-cur]');
+    const dur = card.querySelector('[data-mu-dur]');
+    const d = audio.duration;
+    const t = audio.currentTime;
+    if (fill && isFinite(d) && d > 0) fill.style.width = `${(t / d) * 100}%`;
+    if (cur) cur.textContent = fmt(t);
+    if (dur) dur.textContent = isFinite(d) && d > 0 ? fmt(d) : '--:--';
+    if (bar && isFinite(d) && d > 0) {
+      bar.setAttribute('aria-valuenow', String(Math.round((t / d) * 100)));
+      bar.setAttribute('aria-valuetext', `${fmt(t)} / ${fmt(d)}`);
+    }
+  };
+
+  const load = (i, autoplay) => {
+    const list = srcs();
+    if (!list.length) return;
+    st.index = ((i % list.length) + list.length) % list.length;
+    audio.src = list[st.index];
+    card.dataset.state = 'loading';
+    // 曲名/作者：由页面按 index 渲染成 data 属性太啰嗦，这里直接读 DOM 上的列表
+    const titles = (card.dataset.musicTitles || '').split('|');
+    const artists = (card.dataset.musicArtists || '').split('|');
+    const tEl = card.querySelector('[data-mu-title]');
+    const aEl = card.querySelector('[data-mu-artist]');
+    if (tEl) tEl.textContent = titles[st.index] || '未命名曲目';
+    if (aEl) aEl.textContent = artists[st.index] || '未知作者';
+    const no = card.querySelector('[data-mu-no]');
+    if (no) no.textContent = `${String(st.index + 1).padStart(2, '0')} / ${String(list.length).padStart(2, '0')}`;
+    try {
+      sessionStorage.setItem('cw-music-idx', String(st.index));
+    } catch (e) {
+      /* ignore */
+    }
+    paintProgress();
+    if (autoplay) {
+      const p = audio.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(() => {
+          // 浏览器拦截自动播放：保持暂停，等用户点一下
+          card.dataset.state = 'paused';
+        });
+      }
+    }
+  };
+
+  const step = (delta, autoplay) => {
+    if (!audio.src) return load(st.index + delta, autoplay);
+    load(st.index + delta, autoplay);
+  };
+
+  // ---- 首次进入：恢复上次的曲目与播放位置（不自动播放，避免被拦截）----
+  if (!st.restored) {
+    st.restored = true;
+    let idx = 0;
+    let at = 0;
+    try {
+      idx = Number(sessionStorage.getItem('cw-music-idx') || '0') || 0;
+      at = Number(sessionStorage.getItem('cw-music-at') || '0') || 0;
+    } catch (e) {
+      /* ignore */
+    }
+    st.index = idx;
+    // 位置通过 dataset 传给 loadedmetadata 里使用
+    card.dataset.musicResume = String(at);
+    if (!audio.src) load(idx, false);
+  }
+
+  // 软导航后侧栏被重建：把 UI 重新同步到正在播放的音频
+  paintProgress();
+  setToggleLabel(!audio.paused);
+  if (audio.src) {
+    const no = card.querySelector('[data-mu-no]');
+    const list = srcs();
+    if (no) no.textContent = `${String(st.index + 1).padStart(2, '0')} / ${String(list.length).padStart(2, '0')}`;
+    const titles = (card.dataset.musicTitles || '').split('|');
+    const tEl = card.querySelector('[data-mu-title]');
+    if (tEl && titles[st.index]) tEl.textContent = titles[st.index];
+    if (!audio.paused) card.dataset.state = 'playing';
+  }
+
+  if (st.wired) return;
+  st.wired = true;
+
+  // ---- 事件委托：软导航换掉侧栏 DOM 后依然有效 ----
+  document.addEventListener('click', (ev) => {
+    const el = ev.target instanceof Element ? ev.target : null;
+    if (!el) return;
+    const host = el.closest('[data-music]');
+    if (!host) return;
+
+    if (el.closest('[data-mu-toggle]')) {
+      if (audio.paused) {
+        if (!audio.src) load(st.index, true);
+        else {
+          const p = audio.play();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        }
+      } else audio.pause();
+      return;
+    }
+    if (el.closest('[data-mu-prev]')) return step(-1, true);
+    if (el.closest('[data-mu-next]')) return step(1, true);
+
+    const bar = el.closest('[data-mu-bar]');
+    if (bar && isFinite(audio.duration) && audio.duration > 0) {
+      const r = bar.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+      audio.currentTime = ratio * audio.duration;
+      paintProgress();
+    }
+  });
+
+  // 进度条键盘操作（←/→ 各 5 秒），无额外 tabindex 依赖
+  document.addEventListener('keydown', (ev) => {
+    const bar = ev.target instanceof Element ? ev.target.closest('[data-mu-bar]') : null;
+    if (!bar) return;
+    if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+    ev.preventDefault();
+    if (!isFinite(audio.duration)) return;
+    audio.currentTime = Math.min(
+      audio.duration,
+      Math.max(0, audio.currentTime + (ev.key === 'ArrowRight' ? 5 : -5)),
+    );
+    paintProgress();
+  });
 }
 
 // 首次加载与每次导航后都执行（函数内部有守卫，可安全重复调用）

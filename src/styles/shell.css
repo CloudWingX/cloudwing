@@ -114,14 +114,15 @@
     display: block;
     /* 不做栏内滚动：整栏跟着页面一起走；
        --side-top 由 ui.js 的 sideSticky() 算：导航栏展开时固定贴在它下方（82px），
-       导航栏收起时改用「栏高 vs 视口高」的滚动规则（可负值，于是长栏能一路滚到底）。
-       过渡比导航栏的 0.28s 更短，导航栏滑回时侧栏已让开，不会压在一起。 */
+       导航栏收起时改用「栏高 vs 视口高」的滚动规则（可负值，于是长栏能一路滚到底）。 */
     position: sticky;
     top: var(--side-top, var(--shell-top));
     align-self: start;
     /* 时长由 ui.js 按「去程/回程」设置（--side-dur）：
-       导航栏收起后放侧栏上去用 0.16s；导航栏要出现前把侧栏推回 82px 用 0.06s，
-       保证导航栏滑下来时侧栏已经让开，两者不会叠在一起。 */
+       去程（导航栏收起、放开滚动范围）用 0.16s，跟导航栏收起节奏一致；
+       回程用 **0s**（瞬间归位）—— 栏比视口高时侧栏可能停在 -45px 之类的负值，
+       若用 0.06s 动画回去，它会沿路经过 0~82px 这一段，而导航栏 0.28s 才滑下来，
+       中途就会出现「侧栏压在导航栏下」的帧（实测 /gallery/ 2 帧）。瞬间归位则永不重叠。 */
     transition: top var(--side-dur, 0.16s) var(--ease);
   }
   @media (prefers-reduced-motion: reduce) {
@@ -946,4 +947,152 @@
 /* 左侧树里点画廊截图（/gallery/#MC-0xx）落到卡片时同样别被头部压住 */
 .gal-item[id] {
   scroll-margin-top: calc(var(--header-h, 64px) + 1.2rem);
+}
+
+/* ---------- 左侧栏底部「音乐播放器」（见 components/MusicPlayer.astro） ----------
+   歌曲列表来自 site.ts 的 MUSIC；交互在 ui.js 的 musicPlayer()。 */
+.music-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+/* 曲名 / 作者：没有歌曲时这两行不存在，用 data-music-count 兜底 */
+[data-music-count='0'] .mu-hint { margin: 0.15rem 0 0; }
+.mu-title {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
+  /* 长曲名截断，不把卡片撑高 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mu-artist {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+/* 进度条：可点击/键盘跳转 */
+.mu-bar {
+  position: relative;
+  height: 6px;
+  margin: 0.35rem 0 0.15rem;
+  border-radius: 999px;
+  background: var(--line-1);
+  border: 1px solid var(--line-2);
+  cursor: pointer;
+  overflow: hidden;
+}
+.mu-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mu-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.12s linear;
+}
+.mu-time {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 控制按钮 */
+.mu-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+.mu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 999px;
+  border: var(--line-w-pill) solid var(--line-2);
+  background: var(--glass-soft);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease, transform 0.16s var(--ease);
+}
+.mu-btn:hover { color: var(--accent-deep); border-color: var(--accent); background: var(--accent-soft); }
+.mu-btn:active { transform: scale(0.94); }
+.mu-play {
+  width: 36px;
+  height: 36px;
+  border: var(--line-w) solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.mu-play:hover { color: var(--on-accent); background: var(--accent-deep); border-color: var(--accent-deep); }
+/* 播放/暂停图标二选一显示 */
+.mu-ico-pause { display: none; }
+.mu-play[aria-label='暂停'] .mu-ico-play { display: none; }
+.mu-play[aria-label='暂停'] .mu-ico-pause { display: block; }
+.mu-no {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 正在播放：曲名前的脉冲点 */
+.music-card[data-state='playing'] .mu-title::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 0.4em;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  animation: ping-dot 2.4s ease-out infinite;
+}
+
+/* 加载失败 */
+.music-card[data-state='error'] .mu-title { color: var(--err); }
+
+/* 空态（歌曲未添加） */
+.mu-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--r-s);
+  border: var(--line-w-pill) dashed var(--line-2);
+  background: color-mix(in srgb, var(--glass) 70%, transparent);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+.mu-empty svg { color: var(--ink-3); flex: none; }
+.mu-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.62rem;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+.mu-hint code {
+  font-family: var(--font-code);
+  font-size: 0.95em;
+  background: var(--accent-soft);
+  padding: 0 0.25em;
+  border-radius: 4px;
 }
