@@ -298,6 +298,25 @@ items:
     自检：`node scripts/verify-search.mjs [url]`（17 项：懒加载、开关、结果、快捷键、
     软导航后仍可用）。
 
+21. **CardSwap（首页作品卡片）的尺寸约定**（2026-09-15 修显示 bug）：这个组件的几何很反直觉，
+    改它之前务必先读这条。
+    - CardSwap 把 `width`/`height` 同时当作**容器尺寸**与**单卡的内联尺寸**，
+      而卡片是绝对定位在容器**中心**、再按 ±`cardDistance`/±`verticalDistance` 铺开的。
+      所以"容器 = 单卡"时，卡片必然伸出容器；容器 CSS 是 `overflow:visible`、
+      外层 `.works-block` 又是 `overflow:clip` → **伸出的部分直接被切掉**（原 bug：右侧缺一条、
+      后排顶进导航栏）。
+    - 现约定：**容器按整叠尺寸给**（`.works-deck-inner` = 卡宽 + 2×distX，高同理由组件算），
+      再用 `index.astro` 里 `.card { width/height: var(--deck-card-w/h) !important }`
+      把单卡压回"容器 − 2×dist"（`!important` 必须有，内联样式优先级更高）。
+    - 卡片内容：封面在上、**文字块绝对定位在左下角**。前排卡片会把后排这块盖住，
+      所以后排只露封面，不会出现两个标题叠在一起。
+    - **卡面必须不透明**（用 `--paper-1/2/3`，不要用 `--glass-strong`）：半透明会让后排文字透出来，
+      看起来就像"两行字压在一起"。
+    - 位置：卡片堆放在 `.wrap` 内的两栏栅格里（`.wb-copy` / `.wb-deck`），
+      与页面栅格天然对齐；**不要再改回 `position:absolute` 挂在板块右下角**（那正是跑出内容列的原因）。
+    - 组件按容器实测宽度反解所有尺寸与字号（`HomeWorksCardSwap.jsx` 的 `R` 比例表），
+      所以换列宽/断点都不用改数值。自检：`node scripts/verify-deck.mjs [url]`。
+
 ---
 
 ## 7. 验证与调试

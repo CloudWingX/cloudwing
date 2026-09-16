@@ -47,13 +47,18 @@ const latestWorks = (await getCollection('works'))
          这里不用 data-ent —— 那是“加载即播放”，下方板块多半在首屏之外） -->
     <!-- 01 板块：卡片锚定右下角；滚动进入时弹出、进入 02 前淡出（见下方脚本） -->
     <section class="home-block works-block" id="sec-works">
-      <div class="wrap">
-        <p class="kicker"><b>01</b> / WORKS 作品库</p>
-        <h2>作品档案</h2>
-        <p class="hb-desc">编号作品与配方档案：封面、工艺标签、过程说明，每件都可追溯。
-          右下角是最新入库，点卡片即可打开对应档案，<a href="/works/">进入作品库 →</a>。</p>
+      <div class="wrap wb-grid">
+        <div class="wb-copy">
+          <p class="kicker"><b>01</b> / WORKS 作品库</p>
+          <h2>作品档案</h2>
+          <p class="hb-desc">编号作品与配方档案：封面、工艺标签、过程说明，每件都可追溯。
+            这里是最新入库，点卡片即可打开对应档案，<a href="/works/">进入作品库 →</a>。</p>
+        </div>
+        {/* 卡片堆：位于内容列内、与文案同属一个栅格，随列宽自适应 */}
+        <div class="wb-deck">
+          <HomeWorksCardSwap client:load items={latestWorks} />
+        </div>
       </div>
-      <HomeWorksCardSwap client:load items={latestWorks} />
     </section>
 
     <section class="home-block gallery-block" id="sec-gallery">
@@ -252,49 +257,84 @@ const latestWorks = (await getCollection('works'))
   .at-link:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
   .at-link:hover span { transform: translateX(3px); }
 
-  /* —— 01 板块：标题居上；CardSwap 锚定板块右下部。
-     板块间无分界线（V48），卡片底部不再贴死下缘，留出与下一板块自然衔接的空隙 —— */
+  /* —— 01 板块：标题居上，卡片堆在内容列内与正文并排。
+     原先卡片堆用 position:absolute 锚在板块右下角（right: clamp(6px,2vw,24px)，
+     已跑出内容列右侧 ~121px），而卡片是围绕容器中心铺开的 → 整叠被板块的
+     overflow:clip 切断，还会顶进上方导航、压到下方 02 板块的文字。 */
   .works-block {
     position: relative;
     min-height: min(96vh, 860px);
     overflow: clip; /* 卡片掉落动画不溢出到 02 板块 */
-    padding-bottom: clamp(3.5rem, 9vh, 6.5rem); /* 卡片下方到下一板块的缓冲留白 */
+    /* 卡片堆从板块顶边开始向下铺开，上沿会略微超出文案块；
+       给板块足够的上下内边距，保证整叠（含后排高出的部分）落在板块内部、
+       既不会顶到上方导航栏，也不会压到下一个板块。 */
+    padding-top: clamp(1.5rem, 4vh, 3rem);
+    padding-bottom: clamp(3.5rem, 9vh, 6.5rem);
   }
-  .works-block .wrap { position: relative; z-index: 2; }
-  .works-block :global(.card-swap-container) {
-    position: absolute;
-    top: auto;
-    right: clamp(6px, 2vw, 24px);
-    bottom: clamp(3rem, 7vh, 5rem); /* 距板块底留出过渡空隙，卡片悬于板块内、不顶到 02 */
-    left: auto;
-    transform: translateY(30px);
-    opacity: 0;              /* 未进入视口前隐藏，滚动触发显示 */
-    transform-origin: 100% 100%;
-    z-index: 3;
-    will-change: opacity, transform;
-    /* 水平微调量：默认 0，手机端在 media 里给负值 */
-    --deck-dx: 0px;
+  /* 内容列内两栏：文案在左，卡片堆在右；两者同属 .wrap，天然与页面栅格对齐。
+     卡片堆是普通流里的元素，不再绝对定位 —— 位置随列走，永远不会跑出页面。 */
+  .works-block .wb-grid {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    align-items: center;
   }
-  /* 手机端微调（必须放在基础规则之后，否则 --deck-dx:0 会把下面的负值盖掉）：
-     带 3D 旋转的卡片视觉外框比容器宽，靠 right 让不干净，需要整体左移，
-     否则右边会被 .works-block 的 overflow:clip 切掉一条。 */
-  @media (max-width: 620px) {
-    .works-block :global(.card-swap-container) {
-      right: clamp(10px, 3vw, 18px);
-      bottom: clamp(2rem, 5vh, 3.5rem);
-      --deck-dx: -18px;
+  .works-block .wb-copy { min-width: 0; }
+  .works-block .wb-deck { min-width: 0; }
+  @media (min-width: 1024px) {
+    .works-block .wb-grid {
+      /* 文案列略窄、卡片列略宽：卡片堆需要横向空间铺开 */
+      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+      gap: clamp(1.5rem, 3vw, 3rem);
+      /* 顶对齐：卡片堆从板块顶边开始，整叠不会向上越界（越界会被 overflow:clip 切掉） */
+      align-items: start;
     }
+    /* 后排卡片按 --distY 向上铺开，会高出容器顶边；给卡片列留出这段高度，
+       整叠才完整落在板块内（含板块 padding），不会顶到上方导航栏或被板块的
+       overflow:clip 切掉上沿 —— 实测至少需要 ~0.2×容器高。 */
+    .works-block .wb-deck { margin-top: clamp(1.25rem, 4vw, 3rem); }
   }
-  /* 磨砂玻璃卡片材质（去分界线后取消大外投影，避免在留白上投出突兀暗影） */
+  /* 磨砂玻璃卡片材质。
+     注意：这里必须用**不透明**的卡面（--glass-card / --paper），不能用半透明玻璃 ——
+     卡片是叠起来的，前排要能盖住后排的文字；半透明会让后排的标题透出来，
+     看起来就像"两行字压在一起"（原始显示 bug 的一部分）。 */
   .works-block :global(.card) {
-    background: var(--glass-strong);
-    backdrop-filter: blur(28px) saturate(1.7);
-    -webkit-backdrop-filter: blur(28px) saturate(1.7);
-    border: 1px solid color-mix(in srgb, var(--line-2) 70%, rgba(255, 255, 255, 0.25));
+    background: linear-gradient(165deg, var(--paper-1), var(--paper-2));
+    border: 1px solid var(--line-glass);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      0 1px 3px rgba(0, 0, 0, 0.08); /* 仅贴边细影，无大范围外投影 */
+      0 2px 10px rgba(0, 0, 0, 0.18);
     color: var(--ink);
+    overflow: hidden;
+  }
+  html[data-theme='dark'] .works-block :global(.card) {
+    background: linear-gradient(165deg, var(--paper-3), var(--paper-2));
+  }
+  /* ★单卡尺寸必须比容器小★：CardSwap 把它的 width/height 同时当作容器尺寸与单卡的
+     内联尺寸写进 <Card>，而卡片要从容器中心向外铺开 ±dist —— 两者相等时卡片必然伸出
+     容器，被外层 overflow:clip 切掉（这就是之前的显示 bug）。
+     这里用 --deck-card-w/h（由组件按容器实测宽度算好并下发）把单卡压回"容器 − 2×dist"。
+     !important 是必要的：内联样式优先级高于类选择器。 */
+  .works-block :global(.card-swap-container .card) {
+    width: var(--deck-card-w) !important;
+    height: var(--deck-card-h) !important;
+  }
+  /* 卡片堆容器：**宽高由组件内联给出**（HomeWorksCardSwap 按外层实测宽度算出整叠尺寸，
+     容器必须比单卡更大，否则卡片会被裁）。这里只负责层级与滚动显隐的初始态，
+     千万不要写 height/width，否则会盖掉内联尺寸、又把卡片切掉。 */
+  .works-block :global(.card-swap-container) {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0 auto;
+    transform: translateY(30px);
+    opacity: 0;
+    z-index: 3;
+    will-change: opacity, transform;
   }
 </style>
 
@@ -325,12 +365,10 @@ const latestWorks = (await getCollection('works'))
 
     const o = pIn * pOut;
     const lift = (1 - o) * 34;
-    // 手机端卡片带 3D 旋转，视觉外框比容器宽（390px 下会超出右边缘约 11px 被裁），
-    // 缩小整叠并整体左移，保证完整落在屏内。偏移量由 CSS 的 --deck-dx 提供。
-    const sc = window.innerWidth <= 620 ? 0.6 : window.innerWidth <= 900 ? 0.82 : 1;
-    const dx = parseFloat(getComputedStyle(deck).getPropertyValue('--deck-dx')) || 0;
+    // 尺寸与水平位置现在全在宿主层按容器实测算（HomeWorksCardSwap），
+    // 这里只做"进入视口上浮 / 离开淡出"，不再需要缩放或水平微调。
     deck.style.opacity = o.toFixed(3);
-    deck.style.transform = `translate(${dx}px, ${lift.toFixed(1)}px) scale(${sc})`;
+    deck.style.transform = `translateY(${lift.toFixed(1)}px)`;
     deck.style.pointerEvents = o > 0.05 ? 'auto' : 'none';
   };
 
