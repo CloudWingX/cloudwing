@@ -79,8 +79,10 @@ endfield-blog/
 │   ├─ GiscusComments.astro  # 留言板/评论区（主题跟随、防重复注入）
 │   ├─ WorkCard.astro 等     # 作品卡、HexMark、页脚、打字机等小件
 │   ├─ ReactBits/            # React Bits 官方组件原码（见 §5 铁律三）
+│   ├─ SearchModal.astro     # 全站搜索悬浮窗（Pagefind，首次打开才加载 JS/CSS，见 §6.20）
 │   └─ *.jsx                 # 宿主层：Particles 背景、Lanyard、ProximityText、CardSwap…
-├─ src/pages/                # 首页 / 作品库 / 作品详情 / 画廊 / 关于 / 互动 / 搜索 / 404 / rss.xml
+├─ src/pages/                # 首页 / 作品库 / 作品详情 / 画廊 / 关于 / 互动 / 404 / rss.xml
+│                            #   ★搜索已不再是一个页面★，改成悬浮窗（SearchModal.astro）
 ├─ src/scripts/ui.js         # ★全站交互中枢：1547 行，所有动效与交互都在这（见 §6 各条）
 ├─ src/styles/global.css     # 设计令牌 + 基础版式（浅色为默认，深色在 motion.css 覆盖）
 ├─ src/styles/motion.css     # 动效与深色主题令牌
@@ -280,6 +282,22 @@ items:
     另：宿主在 `astro:page-load` 里 `setState` 也会打断水合，必须用 `mounted` ref 兜住
     （见 `SidebarStatValue.jsx`）。
 
+20. **搜索从独立页面改成悬浮窗**（2026-09-15，用户要求）：`src/pages/search.astro` 已删除，
+    改为 `components/SearchModal.astro`（`<dialog>`）+ `ui.js` 的 `searchModal()`。
+    触发点：顶栏搜索按钮、移动端抽屉、侧栏导航树、`⌘/Ctrl + K`（四个都用
+    `data-search-open` 委托）。
+    要点：
+    1. **Pagefind 的 JS/CSS 改成首次打开时才加载**（原先搜索页一进去就拉）——
+       任何页面都不再为搜索付首屏成本。
+    2. **`<dialog>` 在软导航后会被换掉**：不能缓存节点引用，对旧节点调 `showModal()`
+       会抛 `InvalidStateError: The element is not in a Document`（实测踩到）。
+       每次 `open()` 重新 `querySelector`，`close`/`cancel` 监听也对比"当前"节点。
+    3. 面板用 `--glass-panel`（比 `--glass-strong` 更实）：纯玻璃会让背后正文透进来、
+       读数打架。遮罩用 `::backdrop`（深色 0.72 / 浅色 0.5）。
+    4. sitemap 的 `filter` 排除规则已移除（搜索页不存在了）。
+    自检：`node scripts/verify-search.mjs [url]`（17 项：懒加载、开关、结果、快捷键、
+    软导航后仍可用）。
+
 ---
 
 ## 7. 验证与调试
@@ -379,7 +397,8 @@ node scripts/smoke.mjs                    # 48/48 通过，退出码 0
 ```
 □ 各页面：横向溢出 = 0
 □ 三栏页：两栏 top 逐帧相等（不同步帧 = 0）、等高、无"钉在导航栏下方"的帧
-□ 软导航一圈（首页↔作品库↔详情↔画廊↔关于↔互动↔搜索）后：交互仍可用、无 JS 异常
+□ 软导航一圈（首页↔作品库↔详情↔画廊↔关于↔互动）后：交互仍可用、无 JS 异常
+□ 搜索悬浮窗：顶栏/侧栏/抽屉/⌘K 四种触发都能开，Esc 与关闭按钮都能关，换页后仍可用
 □ Console 里无异常（尤其移动指针时——粒子转发曾无限递归）
 □ 手机视口（414/1024）：侧栏 display:none、单列、标题居中
 □ 首页：无侧栏、无 HTML 变化破坏

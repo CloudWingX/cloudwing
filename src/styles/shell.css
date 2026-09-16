@@ -233,6 +233,25 @@
   background: var(--accent-soft);
   color: var(--ink);
 }
+/* 导航树里的「搜索」是按钮（触发悬浮窗），外观与同级链接一致 */
+.st-list .st-search {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.34rem 0.45rem;
+  border: 0;
+  border-radius: var(--r-s);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.84rem;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+.st-list .st-search:hover { background: var(--accent-soft); color: var(--ink); }
 .st-list a .st-no {
   flex: 0 0 auto;
   font-family: var(--font-mono);

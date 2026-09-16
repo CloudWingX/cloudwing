@@ -4,7 +4,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 
 const BASE = (process.argv[2] || 'https://cloudwing.pages.dev').replace(/\/$/, '');
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
-const PAGES = ['/', '/works/', '/works/w002-site/', '/gallery/', '/about/', '/account/', '/search/', '/404.html'];
+const PAGES = ['/', '/works/', '/works/w002-site/', '/gallery/', '/about/', '/account/', '/404.html'];
 
 const sleep2 = sleep;
 for (const path of PAGES) {

@@ -80,10 +80,10 @@ title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cov
 - ✅ giscus 留言板已启用（`src/components/GiscusComments.astro` 公共组件，互动页 + **作品详情页**共用；主题随站点浅/深）；首条评论由登录用户发出时自动创建 discussion。
 - ✅ RSS 已加：`/rss.xml`（`src/pages/rss.xml.ts`，依赖 `@astrojs/rss`），Base head 有 auto-discovery、Footer 有入口。
 - ✅ 作品详情页有**上/下篇导航**（`[slug].astro` 计算相邻条目 → WorkLayout `newer`/`older` props）。
-- ✅ **全站搜索**：Pagefind（`npm run build` = `astro build && pagefind --site dist`），UI 在 `/search/`，Header 有搜索入口；`build:fast` 可跳过索引。
+- ✅ **全站搜索**：Pagefind（`npm run build` = `astro build && pagefind --site dist`）；**搜索是悬浮窗、不是页面**（`components/SearchModal.astro` + `ui.js` 的 `searchModal()`），Pagefind 的 JS/CSS 首次打开时才加载；触发点：顶栏搜索按钮 / 移动端抽屉 / 侧栏导航树 / `⌘Ctrl+K`；`build:fast` 可跳过索引。
 - ✅ 首页 01 板块已接**真实最新 3 篇作品**（读 works 集合，卡片可点进详情）。
 - ✅ 联系方式已填（邮箱 / GitHub / Bilibili）。
-- ✅ **sitemap**：`@astrojs/sitemap` 生成 `sitemap-index.xml` / `sitemap-0.xml`（已排除 `/search/`），`public/robots.txt` 已声明 Sitemap 地址。
+- ✅ **sitemap**：`@astrojs/sitemap` 生成 `sitemap-index.xml` / `sitemap-0.xml`，`public/robots.txt` 已声明 Sitemap 地址。
 - ✅ **og:image**：Base 输出 og:image / twitter:summary_large_image / canonical；默认图 `public/og/default.png`，作品页自动用 `/og/<id>.png`（不存在则回退默认）。新增作品后跑 `npm run og` 重新生成分享图（脚本 `scripts/gen-og.mjs`，基于 sharp）。
 - ✅ **关于页工牌 = 拉绳开关**：桌面端工牌贴在页面右上边缘（`.ly-floater` 绝对定位 `top:0; right:0`，430×720），**向下拖拽 96px 切换白日/夜间主题**，带“灯闪”反馈；手势 pointerdown 限定在工牌内、move/up 挂 window（拖拽可超出容器，不受范围限制）；仅 ≥1025px 启用（避免移动端滚动误触）。
 - ✅ **动效系统（V51）**：

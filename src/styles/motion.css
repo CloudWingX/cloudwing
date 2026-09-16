@@ -547,6 +547,8 @@ html[data-theme='dark'] {
   --glass-soft: linear-gradient(160deg, rgba(38, 38, 41, 0.44), rgba(13, 13, 15, 0.22));
   /* 深色下卡面比底色亮一档，让内容卡浮起来 */
   --glass-card: linear-gradient(160deg, rgba(58, 58, 62, 0.82), rgba(30, 30, 34, 0.62));
+  /* 浮层（搜索悬浮窗）：深色下也要够实，避免背后正文透进来 */
+  --glass-panel: linear-gradient(160deg, rgba(34, 34, 38, 0.97), rgba(20, 20, 23, 0.95));
   /* 深色主题的玻璃/卡片用白描边（浅色主题走 --line-2 深灰线，见 global.css 注释） */
   --line-glass: rgba(255, 255, 255, 0.4);
 }

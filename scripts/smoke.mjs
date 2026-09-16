@@ -16,7 +16,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 
-const SHELL_PAGES = ['/works/', '/works/w002-site/', '/gallery/', '/about/', '/account/', '/search/'];
+const SHELL_PAGES = ['/works/', '/works/w002-site/', '/gallery/', '/about/', '/account/'];
 const ALL_PAGES = [ '/', ...SHELL_PAGES, '/404.html'];
 
 const results = [];
@@ -212,9 +212,18 @@ const main = async () => {
     await sleep(800);    const cal = await evaluate(`(() => { const p = document.querySelector('[data-cal-panel]');
       return p ? { open: !p.hidden, items: p.querySelectorAll('li').length } : null; })()`);
     check('侧栏更新日历可展开当天记录', !!cal && cal.open && cal.items > 0, cal ? `${cal.items} 条` : '无日历');
+    // 搜索悬浮窗：触发能开、能关（页面本体已从 /search/ 改为弹窗，见 verify-search.mjs 的细测）
+    await evaluate(`document.querySelector('.search-pill[data-search-open]')?.click()`);
+    await sleep(900);
+    const modalOpen = await evaluate(`!!document.querySelector('[data-search-modal]')?.open`);
+    check('搜索悬浮窗可打开', modalOpen === true);
+    await evaluate(`document.querySelector('[data-search-close]')?.click()`);
+    await sleep(500);
+    const modalClosed = await evaluate(`!document.querySelector('[data-search-modal]')?.open`);
+    check('搜索悬浮窗可关闭', modalClosed === true);
     check('交互过程无 JS 异常', errors.length === 0, errors[0] || '');
     // 软导航一圈
-    for (const path of ['/gallery/', '/about/', '/account/', '/search/', '/']) {
+    for (const path of ['/gallery/', '/about/', '/account/', '/']) {
       await evaluate(`[...document.querySelectorAll('a')].find((a) => a.getAttribute('href') === ${JSON.stringify(path)})?.click()`);
       await sleep(3500);
     }

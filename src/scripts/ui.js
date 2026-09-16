@@ -212,6 +212,7 @@ function boot() {
     navSub,             // 导航栏二级菜单（各子页面的分类）
     weatherWidget,      // 左侧栏天气小帖（uapis.cn，浏览器端拉取 + 30 分钟缓存）
     musicPlayer,        // 左侧栏音乐播放器（歌曲见 site.ts 的 MUSIC）
+    searchModal,        // 全站搜索悬浮窗（Pagefind，首次打开才加载）
   ].forEach((fn) => {
     try {
       fn();
@@ -1952,6 +1953,141 @@ function musicPlayer() {
       Math.max(0, audio.currentTime + (ev.key === 'ArrowRight' ? 5 : -5)),
     );
     paintProgress();
+  });
+}
+
+/* ---------- 全站搜索：悬浮窗 ----------
+   搜索从"独立页面"改成悬浮窗（<dialog>），触发点：顶栏搜索按钮、移动端抽屉、
+   侧栏导航树里的「搜索」、以及 ⌘/Ctrl+K。
+   Pagefind 的 JS 与 CSS 都在**首次打开时**才加载（原先搜索页会在进入时就拉），
+   之后复用。状态放 window 单例、监听走 document 委托，软导航后照常可用。 */
+function searchModal() {
+  if (!document.querySelector('[data-search-modal]')) return;
+  const st = window.__cwSearch || (window.__cwSearch = { wired: false, mounted: false });
+
+  // 脚本只拉一次；但 UI 实例要按"当前弹窗节点"判断是否需要挂载
+  // （软导航会换掉弹窗 DOM，旧实例随之消失，必须在新节点上重建）。
+  const ensurePagefind = () => {
+    return new Promise((resolve) => {
+      // CSS 只在首次打开时插入
+      if (!document.getElementById('pagefind-ui-css')) {
+        const link = document.createElement('link');
+        link.id = 'pagefind-ui-css';
+        link.rel = 'stylesheet';
+        link.href = '/pagefind/pagefind-ui.css';
+        document.head.appendChild(link);
+      }
+      const mount = () => {
+        const PF = window.PagefindUI;
+        const host = document.querySelector('[data-search-modal]');
+        const target = host ? host.querySelector('[data-search-target]') : null;
+        if (typeof PF !== 'function' || !target) return false;
+        if (target.querySelector('.pagefind-ui')) return true; // 这个节点已经挂过了
+        st.mounted = true;
+        new PF({
+          element: target,
+          showSubResults: true,
+          showImages: false,
+          translations: {
+            placeholder: '搜索作品、图集与页面…',
+            clear_search: '清空',
+            load_more: '加载更多结果',
+            search_label: '站内搜索',
+            filters_label: '筛选',
+            zero_results: '没有找到与「[SEARCH_TERM]」相关的内容',
+            many_results: '找到 [COUNT] 条与「[SEARCH_TERM]」相关的内容',
+            one_result: '找到 1 条与「[SEARCH_TERM]」相关的内容',
+            alt_search: '未找到「[SEARCH_TERM]」，改为显示「[DIFFERENT_TERM]」的结果',
+            search_suggestion: '没有结果，试试以下关键词：',
+            searching: '搜索「[SEARCH_TERM]」…',
+          },
+        });
+        return true;
+      };
+      if (window.PagefindUI) return resolve(mount());
+      let s = document.getElementById('pagefind-ui-js');
+      if (!s) {
+        s = document.createElement('script');
+        s.id = 'pagefind-ui-js';
+        s.src = '/pagefind/pagefind-ui.js';
+        s.defer = true;
+        s.addEventListener('load', () => resolve(mount()));
+        s.addEventListener('error', () => resolve(false));
+        document.head.appendChild(s);
+      } else {
+        s.addEventListener('load', () => resolve(mount()), { once: true });
+        // 已加载但还没初始化的情况
+        window.setTimeout(() => resolve(mount()), 100);
+      }
+    });
+  };
+
+  const open = () => {
+    // ⚠️ 每次都重新取：软导航会换掉整棵 body，之前缓存的引用会变成
+    // "不在文档里"的旧节点，对它调 showModal() 会抛
+    // `InvalidStateError: The element is not in a Document`（实测踩到）。
+    const el = document.querySelector('[data-search-modal]');
+    if (!el || el.open) return;
+    st.el = el;
+    // 保留当前滚动位置：dialog 滚动锁会改 body，关闭后要还原
+    st.scrollY = window.scrollY;
+    if (typeof el.showModal === 'function') el.showModal();
+    else el.setAttribute('open', '');
+    document.documentElement.classList.add('search-open');
+    ensurePagefind().then(() => {
+      // 聚焦输入框（Pagefind 挂载是异步的，轮询等它就绪再聚焦）
+      let tries = 0;
+      const focus = () => {
+        const input = document.querySelector('[data-search-modal] .pagefind-ui__search-input');
+        if (input) { input.focus(); return; }
+        if (tries++ < 25) window.setTimeout(focus, 60);
+      };
+      focus();
+    });
+  };
+
+  const close = () => {
+    const el = st.el || document.querySelector('[data-search-modal]');
+    if (!el) return;
+    if (typeof el.close === 'function' && el.open) el.close();
+    else el.removeAttribute('open');
+    document.documentElement.classList.remove('search-open');
+    if (typeof st.scrollY === 'number') window.scrollTo(0, st.scrollY);
+  };
+
+  window.__cwSearchOpen = open;
+  if (st.wired) return;
+  st.wired = true;
+
+  // 触发点（委托：软导航换掉 Header/侧栏后依然有效）
+  document.addEventListener('click', (ev) => {
+    const t = ev.target instanceof Element ? ev.target : null;
+    if (!t) return;
+    if (t.closest('[data-search-close]')) { ev.preventDefault(); close(); return; }
+    const trigger = t.closest('[data-search-open]');
+    if (trigger) { ev.preventDefault(); open(); return; }
+    // 点面板外的遮罩区域关闭（<dialog> 自身就是遮罩层）
+    if (t.matches('[data-search-modal]')) close();
+  });
+
+  // close / cancel 也用委托，并对比"当前"的弹窗节点
+  // （软导航会换掉 <dialog>，不能跟旧引用比较，否则状态类清不掉）
+  const onDialogStateChange = (ev) => {
+    const cur = document.querySelector('[data-search-modal]');
+    if (!cur || ev.target !== cur) return;
+    document.documentElement.classList.remove('search-open');
+    if (ev.type === 'close' && typeof st.scrollY === 'number') window.scrollTo(0, st.scrollY);
+  };
+  document.addEventListener('close', onDialogStateChange, true);
+  document.addEventListener('cancel', onDialogStateChange, true);
+
+  // ⌘/Ctrl + K
+  document.addEventListener('keydown', (ev) => {
+    if ((ev.metaKey || ev.ctrlKey) && (ev.key === 'k' || ev.key === 'K')) {
+      ev.preventDefault();
+      const cur = document.querySelector('[data-search-modal]');
+      if (cur && cur.open) close(); else open();
+    }
   });
 }
 

@@ -10,10 +10,8 @@ export default defineConfig({
   output: 'static',
   integrations: [
     react(),
-    // 生成 sitemap-index.xml / sitemap-0.xml（搜索页不参与收录）
-    sitemap({
-      filter: (page) => !page.includes('/search/'),
-    }),
+    // 生成 sitemap-index.xml / sitemap-0.xml（全站页面）
+    sitemap(),
   ],
   build: {
     // Cloudflare Pages 直接上传 dist/ 即可

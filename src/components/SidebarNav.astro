@@ -40,7 +40,6 @@ const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeC
 const SITES = [
   { href: '/about/', label: '关于' },
   { href: '/account/', label: '互动' },
-  { href: '/search/', label: '搜索' },
 ];
 
 const cur = (url: string) => (url === pathname ? 'page' : undefined);
@@ -127,6 +126,12 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
             </a>
           </li>
         ))}
+        <li>
+          {/* 搜索已改成悬浮窗（不再是独立页面），这里用按钮触发 */}
+          <button type="button" class="st-search" data-search-open>
+            <span class="st-txt">搜索</span>
+          </button>
+        </li>
       </ul>
     </details>
 

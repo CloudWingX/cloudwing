@@ -1,0 +1,193 @@
+---
+// 全站搜索：悬浮窗（基于 Pagefind 的纯静态搜索，构建时生成索引，运行时无后端）。
+// 由 Header 的搜索按钮 / 移动端抽屉 / 侧栏导航树 / ⌘K(⌘Ctrl+K) 触发；
+// 相关交互在 ui.js 的 searchModal()。
+// 说明：Pagefind UI 的样式会在**首次打开时**才加载（link 动态插入），
+//       避免每个页面都为搜索多拉一个 CSS。
+---
+<dialog
+  class="search-modal"
+  data-search-modal
+  aria-label="站内搜索"
+>
+  <div class="sm-panel">
+    <div class="sm-head">
+      <span class="sm-kicker">SEARCH / 全站检索</span>
+      <button type="button" class="sm-close" data-search-close aria-label="关闭搜索" title="关闭（Esc）">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+
+    <div id="search" class="sm-body" data-search-target></div>
+
+    <p class="sm-foot">
+      <span class="sm-hint"><kbd>Esc</kbd> 关闭</span>
+      <span class="sm-hint"><kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>K</kbd> 打开</span>
+    </p>
+  </div>
+  <noscript><p class="sm-noscript">搜索需要启用 JavaScript。</p></noscript>
+</dialog>
+
+<style>
+  /* —— 悬浮窗外壳 —— */
+  .search-modal {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    max-width: min(46rem, 92vw);
+    width: 100%;
+    max-height: min(80vh, 44rem);
+    margin: auto; /* dialog 居中 */
+    overflow: visible;
+  }
+  .search-modal::backdrop {
+    /* 遮罩要够实：单靠 backdrop-filter 在某些渲染环境下不生效，会露出后面的页面 */
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  html[data-theme='light'] .search-modal::backdrop { background: rgba(28, 30, 34, 0.5); }
+  .search-modal[open] { animation: sm-in 0.18s var(--ease); }
+  @keyframes sm-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.99); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .sm-panel {
+    display: flex;
+    flex-direction: column;
+    max-height: min(80vh, 44rem);
+    border: var(--line-w) solid var(--line-glass);
+    border-radius: var(--r-l);
+    /* 比 --glass-strong 更实一档：搜索框要有足够的对比，背后页面的文字不能透进来
+       （纯玻璃面板会让正文透出、读数打架） */
+    background: var(--glass-panel);
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+
+  .sm-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem 0.7rem;
+    border-bottom: 1px solid var(--line-1);
+  }
+  .sm-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .sm-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border-radius: 999px;
+    border: var(--line-w-pill) solid var(--line-2);
+    background: var(--glass-soft);
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+  }
+  .sm-close:hover { color: var(--accent-deep); border-color: var(--accent); background: var(--accent-soft); }
+
+  /* 结果区：自身滚动，输入框留在顶部 */
+  .sm-body {
+    flex: 1 1 auto;
+    min-height: 8rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.2rem 1rem 1rem;
+  }
+
+  .sm-foot {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0.6rem 1rem 0.75rem;
+    border-top: 1px solid var(--line-1);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+  }
+  .sm-hint { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .sm-foot kbd {
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+    padding: 0.05em 0.35em;
+    border: 1px solid var(--line-2);
+    border-radius: 5px;
+    background: var(--accent-soft);
+    color: var(--ink-2);
+  }
+  .sm-noscript { padding: 0 1rem 1rem; color: var(--ink-2); }
+
+  /* —— Pagefind UI：贴合站点玻璃风格（与原来搜索页同一套变量）—— */
+  .sm-body :global(.pagefind-ui) {
+    --pagefind-ui-scale: 0.92;
+    --pagefind-ui-primary: var(--accent-deep);
+    --pagefind-ui-text: var(--ink);
+    --pagefind-ui-background: transparent;
+    --pagefind-ui-border: var(--line-2);
+    --pagefind-ui-tag: var(--accent-soft);
+    --pagefind-ui-border-width: 1px;
+    --pagefind-ui-border-radius: 14px;
+    --pagefind-ui-font: var(--font-body);
+  }
+  /* 输入框固定在面板顶部：让 Pagefind 的抽屉常开、随结果滚动 */
+  .sm-body :global(.pagefind-ui__form) { position: sticky; top: 0; z-index: 2; background: transparent; }
+  .sm-body :global(.pagefind-ui__search-input) {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--ink);
+    font-family: var(--font-body);
+    box-shadow: var(--shadow-sm);
+  }
+  .sm-body :global(.pagefind-ui__search-clear) { background: var(--accent-soft); color: var(--ink-2); }
+  .sm-body :global(.pagefind-ui__drawer) {
+    /* 弹窗里不需要"展开/收起"动画，常显即可；并去掉 Pagefind 自带的底色/阴影，
+       否则会在结果区糊出一块灰底（实测截图里很明显） */
+    display: block !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    padding: 0 !important;
+    gap: 0;
+  }
+  .sm-body :global(.pagefind-ui__results-area) { margin-top: 0.8rem; background: transparent; }
+  .sm-body :global(.pagefind-ui__results) { padding: 0; margin: 0; list-style: none; }
+  .sm-body :global(.pagefind-ui__result) { border-top: 1px solid var(--line-1); padding: 1rem 0; }
+  .sm-body :global(.pagefind-ui__result-title),
+  .sm-body :global(.pagefind-ui__result-link) { color: var(--ink); font-weight: 700; }
+  .sm-body :global(.pagefind-ui__result-link:hover) { color: var(--accent-deep); }
+  .sm-body :global(.pagefind-ui__result-excerpt) { color: var(--ink-2); }
+  .sm-body :global(mark) { background: var(--accent-soft); color: var(--accent-deep); padding: 0 0.12em; border-radius: 4px; }
+  .sm-body :global(.pagefind-ui__message) { color: var(--ink-3); font-family: var(--font-mono); font-size: 0.82rem; }
+  .sm-body :global(.pagefind-ui__button) {
+    background: var(--glass);
+    border: var(--line-w) solid var(--line-2);
+    color: var(--ink-2);
+  }
+  .sm-body :global(.pagefind-ui__button:hover) { border-color: var(--accent); color: var(--accent-deep); }
+
+  @media (max-width: 620px) {
+    .search-modal { max-width: 94vw; max-height: 86vh; }
+    .sm-panel { max-height: 86vh; }
+    .sm-body { padding: 0.2rem 0.8rem 0.8rem; }
+    .sm-foot { display: none; } /* 手机端没有物理键盘，隐藏快捷键提示 */
+  }
+</style>

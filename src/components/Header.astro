@@ -94,13 +94,14 @@ const pad = (n: number) => String(n).padStart(2, '0');
           <span>GitHub</span>
         </a>
       )}
-      <a class="pill search-pill" href="/search/" aria-label="站内搜索" title="站内搜索">
+      {/* 搜索改成悬浮窗触发（原先是 /search/ 独立页面，见 ui.js 的 searchModal()） */}
+      <button type="button" class="pill search-pill" data-search-open aria-label="站内搜索" title="站内搜索（⌘/Ctrl + K）">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
           <circle cx="11" cy="11" r="7" />
           <path d="m16.2 16.2 4.3 4.3" />
         </svg>
         <span>搜索</span>
-      </a>
+      </button>
       <button type="button" class="theme-toggle" aria-label="当前为白日模式，点击切换到夜间模式" aria-pressed="false" title="白日 / 夜间">
         <span class="ico-moon" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 13.6A8.6 8.6 0 0 1 10.4 3.8a8.6 8.6 0 1 0 9.8 9.8Z"/></svg>
@@ -133,7 +134,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
         )}
       </>
     ))}
-    <a href="/search/" aria-current={isActive('/search/') ? 'page' : undefined}>搜索</a>
+    <button type="button" class="drawer-search" data-search-open>搜索</button>
     {SITE.github && (
       <a class="ext" href={SITE.github} target="_blank" rel="noreferrer">GitHub ↗</a>
     )}
@@ -461,6 +462,22 @@ const pad = (n: number) => String(n).padStart(2, '0');
     text-decoration: none;
   }
   .drawer a:hover { background: var(--accent-soft); color: var(--ink); }
+  /* 抽屉里的「搜索」是按钮（触发悬浮窗），外观与链接一致 */
+  .drawer-search {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.65rem 1rem;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--ink-2);
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+  }
+  .drawer-search:hover { background: var(--accent-soft); color: var(--ink); }
   .drawer a[aria-current='page'] { color: var(--accent-deep); background: var(--accent-soft); }
   .drawer a.ext { color: var(--ink-3); font-size: 0.8rem; }
 
