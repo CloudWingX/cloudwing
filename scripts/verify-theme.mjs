@@ -33,6 +33,16 @@ const clearPref = async () => {
   })()`);
 };
 
+// 开局先清干净：否则同一个调试浏览器里上一次测试留下的偏好会让"默认值"断言全部误判
+// （实测踩过：跑完 contrast-audit light 后残留 cw-theme-pref=light，本脚本前 3 项全红）。
+await send('Network.enable');
+await send('Network.clearBrowserCookies');
+await send('Page.navigate', { url: BASE + '/works/' });
+await sleep(2500);
+await clearPref();
+await send('Page.navigate', { url: 'about:blank' });
+await sleep(400);
+
 // 模拟操作系统偏好（无头浏览器默认是 dark，所以要显式压成 light 才有意义）
 const osScheme = (v) => send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: v }] });
 
@@ -40,7 +50,7 @@ const themeNow = () => ev(`document.documentElement.dataset.theme`);
 
 console.log('=== 1) 全新访客：系统偏好「浅色」，站点应仍为夜间 ===');
 await osScheme('light');
-await clearPref();
+// 存储已在上面的预置步骤里清干净了（且此刻停在 about:blank，同源操作不可用）
 await send('Page.navigate', { url: BASE + '/works/' });
 await sleep(3500);
 const t1 = await themeNow();
