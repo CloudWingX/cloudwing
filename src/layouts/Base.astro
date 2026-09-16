@@ -62,7 +62,9 @@ const withParticles = true;
     <meta name="theme-color" content="#e9ebee" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)" />
     <script is:inline>
-      // 尽早应用主题：白日/夜间 二态（历史 auto 偏好按系统解析一次），避免闪烁。
+      // 尽早应用主题：白日/夜间 二态，避免闪烁。
+      // ★默认夜间★：没有存过偏好（或存的是历史值 auto）时一律用 dark —— 站点开箱即暗色。
+      //   用户点过主题开关后会把 light/dark 落盘，之后一律尊重用户选择。
       (function () {
         function g(k) {
           try { var v = localStorage.getItem(k) || sessionStorage.getItem(k); if (v) return v; } catch (e) { /* ignore */ }
@@ -74,17 +76,22 @@ const withParticles = true;
         }
         function pref() {
           var p = g('cw-theme-pref');
-          if (p === 'light' || p === 'dark' || p === 'auto') return p;
+          if (p === 'light' || p === 'dark') return p;
           var old = g('cw-theme'); // 旧版本：已解析主题当作偏好迁移
           if (old === 'light' || old === 'dark') return old;
-          return 'auto';
+          return null; // 无偏好 → 走默认（夜间）
         }
         var mode = pref();
-        var resolved = mode === 'auto'
-          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-          : mode;
+        // 默认夜间：只有用户显式选过 light 才是白日；旧值 auto 也一并归到夜间
+        var resolved = mode === 'light' ? 'light' : 'dark';
         document.documentElement.dataset.theme = resolved;
-        document.documentElement.dataset.themePref = mode;
+        document.documentElement.dataset.themePref = resolved;
+        // 浏览器 UI（手机地址栏等）的颜色：按**实际解析出的主题**给，
+        // 不能只靠 prefers-color-scheme —— 默认夜间时，系统是白日的访客会拿到浅色地址栏配深色页面。
+        // 取值与上面两个 <meta name="theme-color"> 保持一致（暗 #0c0c0e / 浅 #e9ebee）。
+        var tc = resolved === 'dark' ? '#0c0c0e' : '#e9ebee';
+        var metas = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', tc);
       })();
       // 尽早打上 js 标记，让「入场/显现」动效只在 JS 可用时接管（无 JS 则直接显示）
       document.documentElement.classList.add('js');

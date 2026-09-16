@@ -257,9 +257,10 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 - `sharp` 统计（本机 `endfield-blog/node_modules/sharp` 可用）：算均值/标准差、做像素差分、算贴图保真（PSNR）；
 - 几何断言优于肉眼：直接量矩形、比较是否重叠、`scrollWidth - clientWidth` 判横向溢出。
 - **已脚本化的三个取证工具**（2026-09 加，改版式/配色时直接用）：
-  - `node scripts/contrast-audit.mjs [url]` — 亮色主题**可读性审计**：每个可见文字节点算
+  - `node scripts/contrast-audit.mjs [url] [light|dark]` — 主题**可读性审计**：每个可见文字节点算
     「前景 vs 实际合成背景」的 WCAG 对比度，列出不达标项（含渐变裁切文字近似）。
-    退出码 0=无问题 / 1=有不达标 / 2=环境没起。**当前基线：0 处不达标。**
+    **两种主题都要跑**（第二参数切换，默认 light）。退出码 0=无问题 / 1=有不达标 / 2=环境没起。
+    当前基线：**亮色与暗色都 0 处不达标**。
   - `node scripts/shots-theme.mjs [url] [outDir]` — 用 CDP 强制 light/dark 各截一遍
     （无头浏览器 `prefers-color-scheme` 默认 dark，必须显式 `Emulation.setEmulatedMedia`，
     否则你会以为自己在看浅色其实在审深色）。
@@ -341,8 +342,8 @@ CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真�
   导航栏可见 → 恒 82px 且不许负值；导航栏收起 → 按「栏高 vs 视口高」算（可为负，长栏能滚到底）；
   两栏 `min-height` 补成等高保证行程一致；过渡按方向分 0.16s / 0.06s。
 - **左栏**：个人信息卡（横幅 `PROFILE_BANNER` 待定，头像取关于页 `avatar-card.jpg` 转 160/320 webp）
-  → 天气卡 → 导航树（作品库/分类/站点/画廊四组，默认折叠，当前项高亮）。
-- **右栏**：站点统计 / 更新日历（可点日期看当天记录）/ 最近更新（单行 4 条）/ 今日一言。
+  → 天气卡 → 导航树（作品库/分类/站点/画廊四组，默认折叠，当前项高亮）→ **音乐播放器**（§6.17）。
+- **右栏**：站点统计（数字带计数动画，§6.15）/ 更新日历（可点日期看当天记录）/ 最近更新（单行 4 条）/ 今日一言。
 - **导航栏**：`Header.astro`，下滑超 140px 自动收起（0.28s 动画，上滑滑回；移动端抽屉打开时不收），
   作品库与画廊有**分类二级菜单**（数据来自内容集合：作品 tags / 截图 game）。
 
@@ -352,6 +353,14 @@ CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真�
 
 - 主题：`html[data-theme=light|dark]`，偏好三通道持久化 `cw-theme-pref`（localStorage→sessionStorage→Cookie），
   `Base.astro` 头部内联脚本**先于渲染**应用，避免闪烁；切换由 `ui.js` 的 `initThemeToggle()` 委托处理。
+- **默认主题 = 夜间（dark）**（2026-09-15 改，用户指定）：没有存过偏好时一律渲染暗色，**不跟随系统**。
+  规则很简单：**只有显式存过 `light` 才是白日，其余（无偏好 / 历史 `auto`）全部归夜间。**
+  ⚠️ 默认值写在**两处**，改一处必须同时改另一处，否则会出现"首屏暗、水合后跳成亮"的闪动：
+  - `Base.astro` 首屏内联脚本（`resolved = mode === 'light' ? 'light' : 'dark'`）
+  - `ui.js` 的 `THEME_DEFAULT` + `applyDefault()`
+  用户点过开关后按其选择走（`applyPref` 落盘），系统偏好变化不再影响已选用户。
+  另外内联脚本会按**实际解析出的主题**改写 `<meta name="theme-color">` —— 默认夜间时，
+  系统是白日的手机访客不该拿到浅色地址栏。自检：`node scripts/verify-theme.mjs [url]`。
 - 配色：黑白灰 + 玻璃（`--accent` 浅色近黑、深色近白；`--accent-grad` 复用做横幅/按钮），
   令牌集中在 `global.css` 的 `:root`，深色覆盖在 `motion.css` 的 `html[data-theme='dark']`。**不要引入新配色**。
 - **边框（2026-09-15 加粗，别调回去）**：三档颜色 + 三档粗细，全站统一走令牌，不要写死 1px：

@@ -38,32 +38,34 @@ function storeSet(key, val) {
   setCookie(key, val);
 }
 
+// 主题默认值：站点开箱为**夜间**（用户没选过时）。
+// 与 Base.astro 首屏内联脚本必须保持一致，否则会出现"首屏暗、水合后跳成亮"的闪动。
+const THEME_DEFAULT = 'dark';
+
 // 偏好：仅 light/dark；旧 auto/旧键按系统解析一次（不进入存储循环）
 function readPref() {
   const p = storeGet(PREF_KEY);
   if (p === 'light' || p === 'dark') return p;
   const old = storeGet(THEME_KEY);
   if (old === 'light' || old === 'dark') { storeSet(PREF_KEY, old); return old; }
-  return null; // 无偏好 → 跟随系统
+  return null; // 无偏好 → 走 THEME_DEFAULT
 }
 
-function systemDark() {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+// 无偏好时的落地主题：夜间默认（不再跟随系统）。仅刷新 dataset，不落盘 —— 用户点按后才固定二态。
+function applyDefault() {
+  const root = document.documentElement;
+  root.dataset.theme = THEME_DEFAULT;
+  root.dataset.themePref = THEME_DEFAULT;
 }
 
 function applyPref(mode) {
   const root = document.documentElement;
-  const resolved = mode === 'dark' || (mode !== 'light' && systemDark()) ? 'dark' : 'light';
+  // 只可能是显式的 light / dark（调用方已过滤无偏好情况），不再有"跟随系统"分支
+  const resolved = mode === 'light' ? 'light' : 'dark';
   root.dataset.theme = resolved;
   root.dataset.themePref = resolved; // 二态：始终落盘 light/dark
   storeSet(PREF_KEY, resolved);
   storeSet(THEME_KEY, resolved); // 保留旧键兼容
-}
-
-// 无固定偏好时的“跟随系统”：只刷新 dataset，不落盘，用户点按后才固定二态
-function applySystem() {
-  const root = document.documentElement;
-  root.dataset.theme = systemDark() ? 'dark' : 'light';
 }
 
 function syncThemeButtons() {
@@ -91,9 +93,13 @@ function initThemeToggle() {
   if (!themeMediaBound) {
     themeMediaBound = true;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    // 无固定偏好时才跟随系统变化（用户点过按钮后即固定）
+    // 默认已是夜间、不再跟随系统；但用户从没选过时，系统切到夜间仍应保持夜间（无操作），
+    // 切到白日也**不跟着变**（默认即夜间）。只有存在显式偏好时才需要响应系统变化。
     const onChange = () => {
-      if (!readPref()) { applySystem(); syncThemeButtons(); }
+      const p = readPref();
+      if (p) applyPref(p);
+      else applyDefault();
+      syncThemeButtons();
     };
     if (mq.addEventListener) mq.addEventListener('change', onChange);
     else if (mq.addListener) mq.addListener(onChange);
@@ -110,7 +116,7 @@ function bindThemeReplay() {
   document.addEventListener('astro:page-load', () => {
     const p = readPref();
     if (p) applyPref(p);
-    else applySystem();
+    else applyDefault();
     syncThemeButtons();
   });
 }

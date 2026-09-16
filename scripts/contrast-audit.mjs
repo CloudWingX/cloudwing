@@ -10,6 +10,7 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
+const THEME = process.argv[3] === 'dark' ? 'dark' : 'light'; // 第二参数：light（默认）| dark
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 const PAGES = ['/', '/works/', '/gallery/', '/about/', '/account/', '/search/'];
 
@@ -34,8 +35,22 @@ const AUDIT_FN = `(() => {
       if (bg && bg.a > 0.001) layers.push(bg);
       n = n.parentElement;
     }
-    layers.push({ c: [255, 255, 255], a: 1 }); // 兜底画布
-    let out = [255, 255, 255];
+    // 兜底画布：body/html 常常是透明的（渐变背景画在 body 上），直接假设白色
+    // 会在深色主题下把一切都算成"白底黑字"，得出满屏假的 1:1 —— 先问 body/html 的实色。
+    let canvas = [255, 255, 255];
+    for (const sel of ['body', 'html']) {
+      const e2 = document.querySelector(sel);
+      if (!e2) continue;
+      const bg = parse(getComputedStyle(e2).backgroundColor);
+      if (bg && bg.a > 0.99) { canvas = bg.c; break; }
+      // 渐变背景（backgroundImage）时 backgroundColor 是透明的：用主题底色兜底
+      if (bg && bg.a > 0.001) canvas = bg.c;
+    }
+    if (canvas[0] === 255 && canvas[1] === 255 && canvas[2] === 255) {
+      canvas = document.documentElement.dataset.theme === 'dark' ? [12, 12, 14] : [255, 255, 255];
+    }
+    layers.push({ c: canvas, a: 1 });
+    let out = canvas;
     for (let i = layers.length - 1; i >= 0; i--) {
       const L = layers[i];
       out = [0, 1, 2].map((k) => L.c[k] * L.a + out[k] * (1 - L.a));
@@ -119,17 +134,19 @@ const main = async () => {
   const failures = [];
   for (const path of PAGES) {
     const res = await withTab(BASE + path, async ({ send }) => {
-      // 无头浏览器 prefers-color-scheme 默认 dark；强制浅色，确保审的是亮色主题
-      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
+      // 无头浏览器 prefers-color-scheme 默认 dark；按参数强制成目标主题
+      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: THEME }] });
+      // 注意这里是被注入到浏览器的源码字符串，必须把 THEME 用 JSON.stringify 内插进去
+      const th = JSON.stringify(THEME);
       await send('Page.addScriptToEvaluateOnNewDocument', {
-        source: `try{localStorage.setItem('cw-theme-pref','light');sessionStorage.setItem('cw-theme-pref','light');document.cookie='cw-theme-pref=light;path=/';}catch(e){}`,
+        source: `try{localStorage.setItem('cw-theme-pref',${th});sessionStorage.setItem('cw-theme-pref',${th});document.cookie='cw-theme-pref='+${th}+';path=/';}catch(e){}`,
       });
       await send('Page.navigate', { url: BASE + path });
       await sleep(2600);
-      // 兜底：若仍是夜间态，直接置位并等重排
+      // 兜底：主题不符就直接置位并等重排
       const t = await send('Runtime.evaluate', { expression: `document.documentElement.dataset.theme`, returnByValue: true });
-      if (t.result.result.value !== 'light') {
-        await send('Runtime.evaluate', { expression: `document.documentElement.dataset.theme='light';document.documentElement.dataset.themePref='light';` });
+      if (t.result.result.value !== THEME) {
+        await send('Runtime.evaluate', { expression: `document.documentElement.dataset.theme=${th};document.documentElement.dataset.themePref=${th};` });
         await sleep(700);
       }
       const r = await send('Runtime.evaluate', { expression: AUDIT_FN, returnByValue: true });
