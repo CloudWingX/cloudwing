@@ -326,9 +326,11 @@ items:
       构建时的 CSS 压缩会把这条**整个丢掉**（实测计算值直接是 `none`，页面看起来没模糊）。
       按 `-webkit-` 在前的顺序写就正常保留。**凡是改完模糊没效果，先去构建产物里搜一下
       这条规则还在不在。**
-    - 结构约定：`.hd` 是定位容器（`position:relative` + `isolation:isolate`），
-      `.hd-glass` 是绝对定位的玻璃层（`z-index:-1`，边框 + `--glass-panel` + 模糊）
-      —— **不要给 `.hd` 加 `overflow:hidden`**，`.nav-sub`（二级菜单）是它的绝对定位后代，会被裁掉。
+    - 结构约定：`.hd` 是**通栏**容器（`position:relative` + `isolation:isolate`，`display:block`），
+      `.hd-glass` 是绝对定位、铺满整条的玻璃层（`z-index:-1`，底边框 + `--glass-panel` + 模糊），
+      `.hd-in` 是内部内容列（`max-width` + `--gutter` 居中，与页面内容对齐）。
+      **不要给 `.hd` 加 `overflow:hidden`**，`.nav-sub`（二级菜单）是它的绝对定位后代，会被裁掉。
+      通栏后不用「四边圆角描边」（那只在悬浮胶囊上成立），改用**底边一条实线**做界定。
       `--glass-panel`（近不透明）用于所有"浮在正文之上、必须盖住底下内容"的面：
       顶栏 / 二级菜单 / 手机抽屉 / 搜索悬浮窗。自检：`node scripts/verify-nav.mjs [url] [light|dark]`。
 

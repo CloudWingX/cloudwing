@@ -34,17 +34,29 @@ await sleep(1500);
 console.log(`=== 导航栏（主题 ${THEME}）===`);
 const bar = await ev(`(()=>{const g=document.querySelector('.hd-glass'); if(!g) return null; const c=getComputedStyle(g);
   const hd=document.querySelector('.hd'); const b=hd.getBoundingClientRect();
-  return {边框:c.borderTopWidth+' '+c.borderTopStyle+' '+c.borderTopColor,
+  const inner=document.querySelector('.hd-in');
+  return {上边框:c.borderTopWidth+' '+c.borderTopStyle+' '+c.borderTopColor,
+    下边框:c.borderBottomWidth+' '+c.borderBottomStyle+' '+c.borderBottomColor,
+    左内边距:c.borderLeftWidth, 右内边距:c.borderRightWidth,
     // 注意：构建时的 CSS 压缩可能只保留 -webkit-backdrop-filter（Chrome 认这个，效果一样），
     // 所以两个属性都读，只读标准属性会误判成 none。
     模糊:c.backdropFilter||c.webkitBackdropFilter||'none',
     背景:(c.backgroundImage||c.backgroundColor||'').slice(0,60),
-    圆角:c.borderRadius, 尺寸:Math.round(b.width)+'×'+Math.round(b.height), pointerEvents:c.pointerEvents};})()`);
+    圆角:c.borderRadius,
+    栏宽:Math.round(b.width), 视口宽:document.documentElement.clientWidth,
+    内容列宽:inner?Math.round(inner.getBoundingClientRect().width):null,
+    内容列左:inner?Math.round(inner.getBoundingClientRect().left):null,
+    pointerEvents:c.pointerEvents};})()`);
 console.log('  ' + JSON.stringify(bar));
-const borderW = parseFloat(String(bar.边框));
-check('导航栏有可见边框', borderW >= 1.5, bar.边框);
-check('导航栏边框不是透明', !/rgba\([^)]*,\s*0\)/.test(String(bar.边框)), bar.边框);
+// 通栏：玻璃层铺满布局视口宽（用 clientWidth 而不是 innerWidth —— 后者含滚动条，
+// 会差出一个滚动条的宽度，误判成"没铺满"）。
+// 边框用底边一条实线做界定（四边描边只在悬浮胶囊上成立）。
+check('导航栏通栏（玻璃层铺满视口宽）', Math.abs(bar.栏宽 - bar.视口宽) <= 2, `栏宽=${bar.栏宽} 视口宽=${bar.视口宽}`);
+const bottomW = parseFloat(String(bar.下边框));
+check('导航栏有可见的分隔边框（底边）', bottomW >= 1.5, bar.下边框);
+check('分隔边框不是透明', !/rgba\([^)]*,\s*0\)/.test(String(bar.下边框)), bar.下边框);
 check('导航栏边框内有高斯模糊', /blur\(\s*\d+/.test(String(bar.模糊)) && parseFloat(String(bar.模糊).match(/blur\((\d+)/)[1]) >= 12, String(bar.模糊));
+check('内容列仍限宽（与页面内容对齐）', bar.内容列宽 !== null && bar.内容列宽 <= bar.视口宽, `内容列=${bar.内容列宽}`);
 check('玻璃层不拦截点击（导航仍可用）', bar.pointerEvents === 'none', String(bar.pointerEvents));
 
 console.log('\n=== 二级菜单（下拉容器）===');

@@ -38,8 +38,10 @@ const pad = (n: number) => String(n).padStart(2, '0');
 ---
 <header class="site-header" data-nav>
   <div class="hd">
-    {/* 玻璃层：边框 + 边框内高斯模糊（见样式里的 .hd-glass） */}
+    {/* 玻璃层：通栏铺满 + 底边框 + 栏内高斯模糊（见样式里的 .hd-glass） */}
     <span class="hd-glass" aria-hidden="true"></span>
+    {/* 内容列：限宽居中，与页面内容左右对齐 */}
+    <div class="hd-in">
     <a class="brand" href="/" aria-label="回到首页">
       <HexMark size={24} fill="var(--ink)" />
       <span class="bname">
@@ -117,6 +119,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
         <span class="b-line"></span>
       </button>
     </div>
+    </div>
   </div>
 
   <!-- 移动端抽屉 -->
@@ -170,11 +173,34 @@ const pad = (n: number) => String(n).padStart(2, '0');
   }
 
   .hd {
-    /* 悬浮玻璃条：视觉层（边框 + 高斯模糊）是 .hd 里的 .hd-glass 元素，
-       内容叠在它上面。这里不要用 overflow:hidden —— .nav-sub（二级菜单）是 .hd 的
-       绝对定位后代，会被一起裁掉。 */
+    /* 通栏玻璃条：视觉层是 .hd 里的 .hd-glass（铺满整条、通栏），
+       内容由内部的 .hd-in 限宽居中，与页面内容列左右对齐。
+       这里不要用 overflow:hidden —— .nav-sub（二级菜单）是 .hd 的绝对定位后代，会被一起裁掉。 */
     position: relative;
     isolation: isolate;
+    display: block;
+  }
+  /* 玻璃层：通栏铺满 + 底边框 + 边框内的高斯模糊。
+     backdrop-filter 会把"本层范围内、元素背后"的内容模糊掉，视觉上就是"栏内磨砂"。
+     用真实元素而不是 ::before —— 伪元素的 backdrop-filter 读不到计算值，没法自检。
+     通栏后不再用「四边圆角描边」（那种框法只在悬浮胶囊上成立），改为底边一条实线做界定。 */
+  .hd-glass {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border: 0;
+    border-bottom: var(--line-w) solid var(--line-2);
+    background: var(--glass-panel);
+    /* 顺序与 .nav-sub 一致（-webkit- 在前）：构建时的 CSS 压缩会合并这两个前缀，
+       顺序不同可能导致合并后把标准属性丢掉（实测过一次，结果计算值是 none）。 */
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    backdrop-filter: blur(22px) saturate(1.5);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 18px rgba(0, 0, 0, 0.14);
+    pointer-events: none;
+  }
+  /* 内容列：限宽 + 左右留白，与 .wrap 同一套（--w-max / --gutter），
+     所以品牌、导航项、右侧按钮的位置和页面内容对齐。 */
+  .hd-in {
     max-width: calc(var(--w-max) + 2 * var(--gutter));
     margin: 0 auto;
     padding: 10px var(--gutter);
@@ -182,23 +208,6 @@ const pad = (n: number) => String(n).padStart(2, '0');
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-  }
-  /* 玻璃层：边框 + 边框内的高斯模糊。
-     backdrop-filter 会把"本层范围内、元素背后"的内容模糊掉，视觉上就是"边框以内磨砂"。
-     用真实元素而不是 ::before —— 伪元素的 backdrop-filter 读不到计算值，没法自检。 */
-  .hd-glass {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border-radius: 18px;
-    border: var(--line-w) solid var(--line-2);
-    background: var(--glass-panel);
-    /* 顺序与 .nav-sub 一致（-webkit- 在前）：构建时的 CSS 压缩会合并这两个前缀，
-       顺序不同可能导致合并后把标准属性丢掉（实测过一次，结果计算值是 none）。 */
-    -webkit-backdrop-filter: blur(22px) saturate(1.5);
-    backdrop-filter: blur(22px) saturate(1.5);
-    box-shadow: var(--shadow-sm);
-    pointer-events: none;
   }
 
   /* —— 品牌 —— */
