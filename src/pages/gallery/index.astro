@@ -133,6 +133,21 @@ const count = String(shots.length);
     gap: 1.1rem;
   }
   .gal-item { display: block; }
+  /* 手机端：40 张图单列会有 1.3 万像素高（≈16 屏），改成两列网格更好扫。
+     注意 .gal-cover 的 aspect-ratio 是行内样式（来自每条内容的 aspect 字段），
+     这里只收紧间距与文案，不强行改比例。 */
+  @media (max-width: 620px) {
+    .gal-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.7rem;
+    }
+    .gal-info { padding: 0.6rem 0.7rem 0.7rem; gap: 0.15rem; }
+    .gal-no { font-size: 0.58rem; letter-spacing: 0.1em; }
+    .gal-title { font-size: 0.82rem; -webkit-line-clamp: 2; }
+    .gal-meta { font-size: 0.66rem; }
+    /* 列表页头部与筛选条收紧，避免首屏几乎全是留白 */
+    .page-head { padding-top: 1.4rem; }
+  }
 
   .gal-card {
     display: flex;

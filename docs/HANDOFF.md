@@ -362,6 +362,25 @@ CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真�
   MiSans 那条 jsDelivr 外链已删除（仓库 404、字体从未生效）。详见 §13「做过但被取消的优化」。
 - 动效：统一在 `prefers-reduced-motion` 下关闭（`.sli`/`[data-ent]`/`page-enter`/粒子/WX 脉冲等）。
 
+### 9.1 手机端（2026-09-15 优化，改窄屏前先读）
+- **三栏侧栏在 <1200px 整体隐藏**（`.shell-left/.shell-right { display:none }`），
+  手机端只有单列正文 + 顶栏汉堡抽屉。也就是说手机端**没有**个人信息卡/天气/统计/更新日历/最近更新。
+- **画廊在 ≤620px 改两列**（原来单列 40 张 → 整页 1.3 万像素高，约 16 屏；两列后约 4600）。
+  `.gal-cover` 的 `aspect-ratio` 是**行内样式**（来自每条内容的 `aspect` 字段），
+  窄屏规则只收紧间距与文案，不覆盖比例。
+- **工牌（Lanyard）在手机端是文档流里的一块**（桌面端才绝对定位贴右上角）。
+  下拉手势仅在 ≥1025px 启用；手机端改为**点一下开关灯**（`onTap`，document 委托），
+  提示文案随断点切换：窄屏「点一下工牌 · 开灯 / 关灯」。ReactBits 的 `.lanyard-wrapper`
+  自带 `min-height:420px`，窄屏容器必须跟着给到 ≥400px，否则会被裁。
+- **顶栏在 ≤620px 收紧**：品牌字号/图标变小并允许省略号，`.acts` 间距 5px，
+  `.pill/.theme-toggle/.burger` 高 36px；≤520px 隐藏 GitHub/搜索文字，≤400px 隐藏品牌副标题。
+- **首页 01 板块的卡片堆（CardSwap）**：手机端带 3D 旋转的卡片视觉外框比容器宽，
+  会被 `.works-block` 的 `overflow:clip` 切掉右边约 11px。容器用 `--deck-dx`（窄屏 -18px）
+  把整叠左移，**由 `step()` 读入并写进 transform**（脚本会覆盖 transform，单靠 CSS 位移无效）。
+  ⚠️ 该 `@media` 块必须放在基础 `.card-swap-container` 规则**之后**，否则 `--deck-dx:0` 会盖掉负值。
+- 自检：`node scripts/mobile-shots.mjs [url] [outDir]` —— 375/390/414 三种视口 ×
+  首页/作品库/画廊/关于/互动，输出截图 + 溢出与几何数据（当前全部 0 横向溢出）。
+
 ---
 
 ## 10. 遗留问题 / 待你决定

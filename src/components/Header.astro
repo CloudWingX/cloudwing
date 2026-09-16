@@ -468,11 +468,28 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .nav { display: none; }
     .burger { display: inline-flex; }
   }
+  /* 手机端：品牌 + 4 个圆按钮挤在一条 40px 高的胶囊里太局促。
+     收紧品牌字号/图标、缩小按钮与间距，并允许品牌在极窄屏被压缩（省略号），
+     避免出现"贴边"或溢出。 */
+  @media (max-width: 620px) {
+    .topbar { gap: 0.5rem; padding: 0.4rem 0.45rem 0.4rem 0.75rem; }
+    .brand { gap: 0.4rem; min-width: 0; overflow: hidden; }
+    .brand .hex { width: 22px; height: 22px; }
+    .brand .bname { font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .brand .bname small { font-size: 0.46rem; letter-spacing: 0.16em; }
+    .acts { gap: 5px; }
+    .pill, .theme-toggle, .burger { height: 36px; }
+    .pill.ext, .pill.search-pill { width: 36px; }
+    .nav-caret { width: 18px; height: 18px; }
+  }
   @media (max-width: 520px) {
     .pill.ext span { display: none; }
-    .pill.ext { width: 40px; padding: 0; }
+    .pill.ext { padding: 0; }
     .pill.search-pill span { display: none; }
-    .pill.search-pill { width: 40px; padding: 0; }
+    .pill.search-pill { padding: 0; }
+  }
+  @media (max-width: 400px) {
+    .brand .bname small { display: none; }  /* 极窄屏先去掉副标题，保住导航按钮 */
   }
   /* 中等宽度（≤960）导航链接隐藏时，搜索胶囊保留文字更易识别 */
   @media (max-width: 960px) and (min-width: 521px) {

@@ -245,6 +245,18 @@ const latestWorks = (await getCollection('works'))
     transform-origin: 100% 100%;
     z-index: 3;
     will-change: opacity, transform;
+    /* 水平微调量：默认 0，手机端在 media 里给负值 */
+    --deck-dx: 0px;
+  }
+  /* 手机端微调（必须放在基础规则之后，否则 --deck-dx:0 会把下面的负值盖掉）：
+     带 3D 旋转的卡片视觉外框比容器宽，靠 right 让不干净，需要整体左移，
+     否则右边会被 .works-block 的 overflow:clip 切掉一条。 */
+  @media (max-width: 620px) {
+    .works-block :global(.card-swap-container) {
+      right: clamp(10px, 3vw, 18px);
+      bottom: clamp(2rem, 5vh, 3.5rem);
+      --deck-dx: -18px;
+    }
   }
   /* 磨砂玻璃卡片材质（去分界线后取消大外投影，避免在留白上投出突兀暗影） */
   .works-block :global(.card) {
@@ -286,9 +298,12 @@ const latestWorks = (await getCollection('works'))
 
     const o = pIn * pOut;
     const lift = (1 - o) * 34;
-    const sc = window.innerWidth <= 520 ? 0.6 : window.innerWidth <= 900 ? 0.82 : 1;
+    // 手机端卡片带 3D 旋转，视觉外框比容器宽（390px 下会超出右边缘约 11px 被裁），
+    // 缩小整叠并整体左移，保证完整落在屏内。偏移量由 CSS 的 --deck-dx 提供。
+    const sc = window.innerWidth <= 620 ? 0.6 : window.innerWidth <= 900 ? 0.82 : 1;
+    const dx = parseFloat(getComputedStyle(deck).getPropertyValue('--deck-dx')) || 0;
     deck.style.opacity = o.toFixed(3);
-    deck.style.transform = `translateY(${lift.toFixed(1)}px) scale(${sc})`;
+    deck.style.transform = `translate(${dx}px, ${lift.toFixed(1)}px) scale(${sc})`;
     deck.style.pointerEvents = o > 0.05 ? 'auto' : 'none';
   };
 
