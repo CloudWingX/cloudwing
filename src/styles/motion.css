@@ -460,6 +460,19 @@ body {
   0%   { background-position: 0% 0%; }
   100% { background-position: 100% 100%; }
 }
+/* ============================================================
+   背景视频模式（body.has-video-bg，见 components/VideoBackground.astro）
+   —— 设计取舍：**不动任何文字颜色**。
+      做法是把视频层做成半透明（site.ts 的 VIDEO_BG.opacity*，暗 0.42 / 浅 0.30），
+      铺在"页面底色之下"，页面底色仍是主调 ——
+      于是浅色主题的深色文字、深色主题的浅色文字都继续成立，
+      不必为了放视频去重做一套配色。
+      这里只做一件事：停掉底色的位移动画（视频自己在动，再叠流动会乱，
+      而且动画会不断重绘整页背景，白耗 GPU）。
+   ============================================================ */
+body.has-video-bg {
+  animation: none;
+}
 .grid-bg::before {
   background: radial-gradient(closest-side, rgba(0, 0, 0, 0.11), transparent);
   animation: drift-a 16s ease-in-out infinite alternate;

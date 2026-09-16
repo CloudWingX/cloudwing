@@ -18,6 +18,25 @@ export const WEATHER_CITY = '';
 // 也可填外部直链（注意跨域与稳定性）。多条即为播放列表，支持上一首/下一首。
 export const MUSIC: { title: string; artist?: string; src: string }[] = [];
 
+// 全站背景视频（见 components/VideoBackground.astro）。
+// 文件放在 public/media/ 随站点打包（不走外部 CDN，避免第三方挂掉/被墙）。
+// 置为 '' 即关闭视频背景，恢复原来的渐变底。
+//   mute: 必为静音（浏览器只允许静音视频自动播放）
+//   scrim: 视频之上的遮罩浓度 0~1，调大=文字更清楚、视频更淡
+export const VIDEO_BG = {
+  src: '/media/bg-loop.mp4',
+  poster: '',
+  // 视频层浓度 0~1（越小越淡）
+  opacityDark: 0.42,
+  opacityLight: 0.3,
+  // 视频之上的遮罩：用来压住素材里的**高光区**。
+  // 只用透明度是不够的 —— 素材亮部（约 0.95 亮度）即使按 0.3 叠加，
+  // 合成后仍有 ~0.66 亮度，浅色主题的深色正文压不住（实测 hero 副标题只有 ~3.6:1）。
+  // 所以浅色主题在视频上再盖一层白色薄膜，把整体抬到"浅底"该有的亮度。
+  scrimDark: 0.45,
+  scrimLight: 0.55,
+};
+
 export const SITE = {
   // 站点名（正文里显示，中文）
   title: '云翼',

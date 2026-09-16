@@ -1,0 +1,108 @@
+---
+// 全站背景视频（fixed 铺满视口，位于所有内容之下）。
+//
+// 层次（z-index，见 global.css 的「背景层次」注释）：
+//   .video-bg          -5   视频本体
+//   .video-bg::after   -4   遮罩（把视频压暗，保证正文对比度）
+//   body::before       -3   原有光斑
+//   .grid-bg           -2   原有漂移光晕
+//   .pparticles-layer  -1   粒子
+//   内容                0+
+//
+// 两个健壮性处理：
+//   1) prefers-reduced-motion：暂停播放（只显示首帧），尊重系统设置。
+//   2) 自动播放被拦（省电模式等）：回落到 poster/首帧，页面照常可用，不报错。
+import { VIDEO_BG } from '../site';
+const on = Boolean(VIDEO_BG.src);
+---
+{
+  on && (
+    <div
+      class="video-bg"
+      aria-hidden="true"
+      style={`--vid-opacity-dark:${VIDEO_BG.opacityDark};--vid-opacity-light:${VIDEO_BG.opacityLight};--vid-scrim-dark:${VIDEO_BG.scrimDark};--vid-scrim-light:${VIDEO_BG.scrimLight};`}
+    >
+      <video
+        class="video-bg__el"
+        src={VIDEO_BG.src}
+        poster={VIDEO_BG.poster || undefined}
+        autoplay
+        loop
+        muted
+        playsinline
+        preload="metadata"
+        disablepictureinpicture
+        tabindex="-1"
+      ></video>
+    </div>
+  )
+}
+
+<style>
+  .video-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -5; /* 在所有背景层之后（见文件头注释） */
+    pointer-events: none;
+    overflow: hidden;
+  }
+  /* 视频本身**半透明**：让它像一层"会动的纹理"叠在页面底色下面。
+     这样页面底色仍是主调，浅色主题的深色文字 / 深色主题的浅色文字
+     都继续成立 —— 不需要为了放视频去改任何文字颜色。
+     浓度由 site.ts 的 VIDEO_BG.opacity* 控制。 */
+  .video-bg__el {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 任意画幅都铺满视口，不留黑边 */
+    opacity: var(--vid-opacity-dark, 0.42);
+  }
+  html[data-theme='light'] .video-bg__el {
+    opacity: var(--vid-opacity-light, 0.3);
+  }
+  /* 视频之上的遮罩（压高光，保证正文对比度）。层次：视频 → 本层 → 页面底色之上的一切。
+     浅色主题用**白色**薄膜（把整体抬亮，深色文字才压得住）；
+     深色主题用**黑色**薄膜（压住素材高光，避免出现刺眼的白块）。
+     两层都只是"薄膜"，视频依然可见、依然在动。 */
+  .video-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, var(--vid-scrim-dark, 0.45));
+  }
+  html[data-theme='light'] .video-bg::after {
+    background: rgba(255, 255, 255, var(--vid-scrim-light, 0.55));
+  }
+</style>
+
+<script>
+  // 背景视频的健壮性处理（幂等标记挂在元素上：软导航是同一个节点，不会重复绑定）。
+  // 用纯 JS 写，避免在 Astro 的 <script> 里引入类型断言带来的编译风险。
+  function initVideoBg() {
+    var v = document.querySelector('.video-bg__el');
+    if (!v || v.__cwWired) return;
+    v.__cwWired = true;
+
+    // 尊重「减少动态效果」：只显示首帧，不循环播放
+    var rm = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var apply = function () {
+      if (rm.matches) {
+        v.pause();
+        v.autoplay = false;
+      } else if (v.paused) {
+        // 自动播放可能被省电模式拦截；失败就保持首帧，不影响页面
+        var p = v.play();
+        if (p && typeof p.catch === 'function') p.catch(function () {});
+      }
+    };
+    apply();
+    if (rm.addEventListener) rm.addEventListener('change', apply);
+
+    // 标签页切到后台时暂停，省电省流量
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) v.pause();
+      else apply();
+    });
+  }
+  initVideoBg();
+  document.addEventListener('astro:page-load', initVideoBg);
+</script>
