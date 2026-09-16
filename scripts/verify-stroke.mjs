@@ -35,12 +35,14 @@ await s('Page.addScriptToEvaluateOnNewDocument', {
   source: `window.__strokeLog=[];
     (function tick(){
       try{
-        const tp=document.querySelector('[data-stroke-char]');
+        const rows=[...document.querySelectorAll('.display .stroke-line')].map((root)=>{
+          const tp=root.querySelector('[data-stroke-char]');
+          if(!tp) return -1; // 还没挂载
+          return +(parseFloat(getComputedStyle(tp).strokeDashoffset)||0).toFixed(0);
+        });
         const rect=document.querySelector('clipPath rect');
-        if(tp) window.__strokeLog.push([
-          +(parseFloat(getComputedStyle(tp).strokeDashoffset)||0).toFixed(0),
-          rect ? +(parseFloat(rect.getAttribute('width'))||0).toFixed(0) : -1
-        ]);
+        if(rows.length) window.__strokeLog.push([rows[0], rows[1] !== undefined ? rows[1] : -1,
+          rect ? +(parseFloat(rect.getAttribute('width'))||0).toFixed(0) : -1]);
       }catch(e){}
       requestAnimationFrame(tick);
     })();`,
@@ -66,32 +68,33 @@ const results = [];
 const check = (n, ok, d = '') => { results.push({ n, ok }); console.log(`  ${ok ? '✅' : '❌'} ${n}${d ? '  —— ' + d : ''}`); };
 
 const geom = () => ev(`(()=>{
-  const l1=document.querySelector('.display .line1');
-  const host=document.querySelector('.display .stroke-line');
+  const hosts=[...document.querySelectorAll('.display .stroke-line')];
   const svg=document.querySelector('.display .stroke-line .stroke-text__svg');
   const st=document.querySelector('.stroke-text__stroke');
   const fi=document.querySelector('.stroke-text__fill');
   const disp=document.querySelector('.display');
+  const l1=document.querySelector('.display .line1');
   const r=(e)=>{ if(!e) return null; const b=e.getBoundingClientRect(); return {x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),h:Math.round(b.height)}; };
   return {
-    h1:r(disp), line1:r(l1), host:r(host), svg:r(svg),
+    h1:r(disp), line1:r(l1), host:r(hosts[1]||hosts[0]), svg:r(svg),
+    行数: hosts.length,
+    行高: hosts.map(e=>Math.round(e.getBoundingClientRect().height)),
+    行文本: hosts.map(e=>e.getAttribute('aria-label')),
     dispFont: disp?getComputedStyle(disp).fontSize:null,
-    hostFont: host?getComputedStyle(host).fontSize:null,
-    svgH: svg?getComputedStyle(svg).height:null,
+    hostFont: hosts[0]?getComputedStyle(hosts[0]).fontSize:null,
     viewBox: svg?svg.getAttribute('viewBox'):null,
     strokeColor: st?getComputedStyle(st).stroke:null,
     fillColor: fi?getComputedStyle(fi).fill:null,
-    ariaLabel: host?host.getAttribute('aria-label'):null,
-    strokeDash: st?st.style.strokeDashoffset||getComputedStyle(st).strokeDashoffset:null,
   };})()`);
 
 console.log('=== 几何与配色 ===');
 const g0 = await geom();
 console.log('  ' + JSON.stringify(g0, null, 1));
-check('StrokeText 根节点已渲染', !!g0.host);
-check('第一行与标题同级存在', !!g0.line1);
-check('两行高度接近（不出现明显错位）', g0.host && g0.line1 && Math.abs(g0.host.h - g0.line1.h) <= 22, `line1=${g0.line1 && g0.line1.h} host=${g0.host && g0.host.h}`);
-check('aria-label 正确', g0.ariaLabel === 'CloudWing', String(g0.ariaLabel));
+check('整个大标题两行都是 StrokeText', g0.行数 === 2, `行数=${g0.行数}，文本=${JSON.stringify(g0.行文本)}`);
+check('两行都渲染出了 SVG 字形', g0.host && g0.host.h > 0, `第二行高=${g0.host && g0.host.h}`);
+check('两行高度一致（不出现错位）', g0.行高 && g0.行高.length === 2 && Math.abs(g0.行高[0] - g0.行高[1]) <= 4, `行高=${JSON.stringify(g0.行高)}`);
+check('第一行文案正确', (g0.行文本 || [])[0] === 'HELLO THIS IS', String((g0.行文本 || [])[0]));
+check('第二行文案正确', (g0.行文本 || [])[1] === 'CloudWing', String((g0.行文本 || [])[1]));
 check('描边色来自令牌（非官方紫）', !!g0.strokeColor && !/A78BFA|167,\s*139,\s*250/i.test(g0.strokeColor), String(g0.strokeColor));
 check('填充色已设置', !!g0.fillColor, String(g0.fillColor));
 
@@ -99,12 +102,19 @@ console.log('\n=== 画字动画过程（页面内逐帧记录，从加载瞬间�
 // 记录器已在首次导航前注入（见文件开头）。这里只读取结果——
 // 注意：若在此处再 Page.navigate 一次，会变成第二次加载，数据反而可能为空。
 const log = await ev(`(()=>{const L=window.__strokeLog||[];
-  const dash=[...new Set(L.map(x=>x[0]))];
-  const wipe=[...new Set(L.map(x=>x[1]))];
-  return {帧数:L.length, 描边出现过的值:dash.slice(0,8), 描边不同值数:dash.length,
-          wipe起始:wipe.slice(0,4), wipe最大:Math.max(...wipe)};})()`);
+  const r0=[...new Set(L.map(x=>x[0]))], r1=[...new Set(L.map(x=>x[1]))];
+  const wipe=[...new Set(L.map(x=>x[2]))];
+  // 第一行出现动画的帧号 vs 第二行出现动画的帧号 → 看级联
+  const first = (idx, skipNeg) => { const i = L.findIndex(x => skipNeg ? (x[idx] > 0 && x[idx] < 6999) : (x[idx] >= 0)); return i; };
+  return {帧数:L.length,
+          第一行不同值数:r0.length, 第二行不同值数:r1.length,
+          第一行起始:r0[0], 第二行起始:r1.find(v=>v>=0),
+          第一行动画首帧:first(0), 第二行挂载首帧:first(1, false),
+          wipe最大:Math.max(...wipe)};})()`);
 console.log('  ' + JSON.stringify(log));
-check('描边有动画（dashoffset 从大值收到 0）', log && log.描边不同值数 > 1, `不同值 ${log && log.描边不同值数} 个：${log && log.描边出现过的值}`);
+check('第一行有描边动画', log && log.第一行不同值数 > 1, `${log && log.第一行不同值数} 个不同值`);
+check('第二行也有描边动画（整个标题都生效）', log && log.第二行不同值数 > 1, `${log && log.第二行不同值数} 个不同值`);
+check('第二行是级联（比第一行晚开始）', log && log.第二行挂载首帧 > log.第一行动画首帧, `第一行首帧=${log && log.第一行动画首帧}，第二行首帧=${log && log.第二行挂载首帧}`);
 check('填充走 wipe（rect 宽度增长到全宽）', log && log.wipe最大 > 0, `max=${log && log.wipe最大}`);
 
 console.log('\n=== 与既有动效共存 ===');

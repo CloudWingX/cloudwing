@@ -244,11 +244,18 @@ items:
     另外：组件量测用的是**内部坐标系**（本项目 fontSize=1000 提高精度），
     视觉大小由外部 `font-size` 决定 —— 所以把 SVG 高度从官方写死的 `fontSize*1.3`
     覆盖成 `1em`（`.stroke-line .stroke-text__svg`），它就会跟相邻行一起随 `clamp()` 缩放。
+    4. **`delay` 形参声明了但组件内部没用**（2026-09-15 接两行时发现）：
+       时间线固定 `paused: true` + `play(0)`，传 `delay` 不会有任何效果。
+       要"两行依次出现"，只能在**宿主层**让后一行延迟挂载（`HomeStrokeTitle.jsx` 的做法：
+       `setTimeout` 后才渲染 `<StrokeText>`，挂载即开始画）。
+       首页现在是**两行都走 StrokeText**（`lines={['HELLO THIS IS', lastWord]}`，
+       第二行延后 0.9s），各自带 `.line1` / `.stroke` 类名，所以两套视差、3D 倾斜照旧。
     首页大标题的动效分层（**改这里前先读**）：外层 `<h1 class="display display-tilt">` 是
     3D 光标跟随的宿主（ui.js 的 `startTitleTilt` 下发 `--bkx/--bky/--frx/--fry`）；
-    `.line1` 与 `.stroke-line` 各自吃一套视差变量做前后分层；`<StrokeText />` 只负责"画字"，
+    `.line1` 与 `.stroke` 各自吃一套视差变量做前后分层；`<StrokeText />` 只负责"画字"，
     **不碰 transform** —— 三者互不干扰。
-    自检：`node scripts/verify-stroke.mjs [url]`（几何是否与第一行齐、描边/填充是否都在跑）。
+    自检：`node scripts/verify-stroke.mjs [url]`（两行是否都渲染、几何是否齐、
+    两行描边/填充动画是否都在跑、第二行是否确实晚于第一行）。
 
 ---
 

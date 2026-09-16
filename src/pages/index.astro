@@ -29,12 +29,10 @@ const latestWorks = (await getCollection('works'))
     <header class="hero" id="top">
       <div class="wrap">
         <h1 class="display display-tilt" data-ent style="--ad:.12s">
-          <span class="line1">HELLO THIS IS</span>
-          {/* 第二行改用 ReactBits <StrokeText />：先描边画出、再从左往右填满。
-              外层 <span class="stroke"> 保留原有类名与层级，避免影响既有版式/视差规则。 */}
-          <span class="stroke">
-            <HomeStrokeTitle client:load text={lastWord} />
-          </span>
+          {/* 整个大标题都走 ReactBits <StrokeText />：两行各自"画一遍再填满"，
+              第二行延后 0.9s 形成级联。外层 h1 仍是 3D 倾斜宿主，
+              两行各自吃一套视差变量（.line1 / .stroke），互不干扰。 */}
+          <HomeStrokeTitle client:load lines={['HELLO THIS IS', lastWord]} />
         </h1>
         <TextType
           className="typed-hero"
