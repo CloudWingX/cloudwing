@@ -202,7 +202,18 @@ const StrokeText = ({
       role="img"
       aria-label={String(text ?? '')}
     >
-      <svg className="stroke-text__svg" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      {/* ★宿主改动★ 量测（getBBox）完成前先隐藏 SVG。
+          官方在 box 为 null 时用兜底 viewBox「0 -fontSize 600 fontSize*1.3」渲染，
+          于是首帧字形被 preserveAspectRatio 缩成极小尺寸、量测完再跳回正常大小
+          —— 表现为"大标题加载出来之前错位一下"。
+          这里只是加 visibility 控制，不改任何动画逻辑；量测后立刻可见。 */}
+      <svg
+        className="stroke-text__svg"
+        viewBox={viewBox}
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
+        style={{ visibility: box ? 'visible' : 'hidden' }}
+      >
         {fillMode === 'wipe' && box && (
           <defs>
             <clipPath id={wipeId} clipPathUnits="userSpaceOnUse">

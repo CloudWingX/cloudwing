@@ -31,7 +31,8 @@ function Line({ text, delay = 0, className, lineKey }) {
     return () => clearTimeout(t);
   }, [delay]);
 
-  // 占位与正式渲染都保持同样的容器（高度由 CSS 的 1em 决定），换入时不跳版
+  // 占位与正式渲染用同一个容器、同一套 CSS（高度由 .stroke-line 的 1em 决定），
+  // 所以第二行延迟挂载时下方内容不会被顶动。
   const cls = `stroke-line ${className}`.trim();
   if (!on) return <span className={cls} aria-hidden="true" />;
 

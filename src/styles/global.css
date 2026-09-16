@@ -77,6 +77,9 @@
 
   /* 布局 */
   --gutter: clamp(1.25rem, 5vw, 3.25rem);
+  /* 大标题字号（.display 与首页两行描边字共用；见 §9）。
+     原来 2.5rem/8.6vw/6rem，2026-09-15 按要求放大一档。 */
+  --display-size: clamp(3rem, 10vw, 7.5rem);
   --w-max: 1140px;
   --w-text: 46em;
   --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
@@ -297,7 +300,9 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
 
 .display {
   font-family: var(--font-display);
-  font-size: clamp(2.5rem, 8.6vw, 6rem); /* 略缩小（V30） */
+  /* 大标题字号：首页两行描边字（.stroke-line）也读这个变量，改一处即可全站生效。
+     2026-09-15 放大一档：2.5rem/8.6vw/6rem → 3rem/10vw/7.5rem。 */
+  font-size: var(--display-size, clamp(3rem, 10vw, 7.5rem));
   line-height: 0.98; letter-spacing: -0.015em; margin: 0 0 0.4em;
   text-transform: uppercase; color: var(--ink);
 }

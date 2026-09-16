@@ -244,6 +244,14 @@ items:
     另外：组件量测用的是**内部坐标系**（本项目 fontSize=1000 提高精度），
     视觉大小由外部 `font-size` 决定 —— 所以把 SVG 高度从官方写死的 `fontSize*1.3`
     覆盖成 `1em`（`.stroke-line .stroke-text__svg`），它就会跟相邻行一起随 `clamp()` 缩放。
+    **大标题字号**：统一走 `--display-size`（`global.css` 的 `:root`，当前 `clamp(3rem,10vw,7.5rem)`），
+    `.display` 与 `.stroke-line` 都读它 —— 改字号只改这一处。
+    5. **★量测完成前会"错位"一下★**（2026-09-15 修）：官方在 `box` 为 `null` 时用兜底
+       viewBox「`0 -fontSize 600 fontSize*1.3`」渲染，于是**首帧字形被 preserveAspectRatio
+       缩成极小尺寸**（实测 13 个字形挤在一小块），量测完才跳回正常大小 ——
+       观感就是"大标题加载出来之前错位"。修法：宿主在量测完成前把 SVG 设
+       `visibility: hidden`（`box ? 'visible' : 'hidden'`），量测后立刻可见，动画逻辑不动。
+       同时第二行"延迟挂载"的占位要 `min-height: 1em`，否则挂载瞬间会把下方内容顶下去。
     4. **`delay` 形参声明了但组件内部没用**（2026-09-15 接两行时发现）：
        时间线固定 `paused: true` + `play(0)`，传 `delay` 不会有任何效果。
        要"两行依次出现"，只能在**宿主层**让后一行延迟挂载（`HomeStrokeTitle.jsx` 的做法：

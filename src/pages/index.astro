@@ -121,8 +121,12 @@ const latestWorks = (await getCollection('works'))
      用 .stroke-line 根节点的负外边距收回，避免两行之间被撑开。 */
   :global(.home .display .stroke-line) {
     display: block;
-    /* 与 .display 的 font-size: clamp(2.5rem, 8.6vw, 6rem) 完全一致 */
-    font-size: clamp(2.5rem, 8.6vw, 6rem);
+    /* 大标题字号：这里与 .display 的 clamp 保持一致（改字号两处一起改）。
+       比原来放大一档：2.5rem/8.6vw/6rem → 3rem/10vw/7.5rem。 */
+    font-size: var(--display-size);
+    /* 占位（第二行延迟挂载时）也要占住高度：否则挂载瞬间会把下方内容顶下去，
+       表现为"加载出来前错位"。1em 与 SVG 高度一致。 */
+    min-height: 1em;
     margin: -0.08em 0 -0.02em;
   }
   :global(.home .display .stroke-line .stroke-text__svg) {
