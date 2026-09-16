@@ -3,6 +3,7 @@
 // 背景：全站统一 React Bits <Particles /> 粒子背景（Base.astro 渲染，fixed 全页）
 import Base from '../layouts/Base.astro';
 import TextType from '../components/TextType.astro';
+import HomeStrokeTitle from '../components/HomeStrokeTitle.jsx';
 import HomeWorksCardSwap from '../components/HomeWorksCardSwap.jsx';
 import HomeGalleryAccordion from '../components/HomeGalleryAccordion.jsx';
 import { getCollection } from 'astro:content';
@@ -29,7 +30,11 @@ const latestWorks = (await getCollection('works'))
       <div class="wrap">
         <h1 class="display display-tilt" data-ent style="--ad:.12s">
           <span class="line1">HELLO THIS IS</span>
-          <span class="stroke">{lastWord}</span>
+          {/* 第二行改用 ReactBits <StrokeText />：先描边画出、再从左往右填满。
+              外层 <span class="stroke"> 保留原有类名与层级，避免影响既有版式/视差规则。 */}
+          <span class="stroke">
+            <HomeStrokeTitle client:load text={lastWord} />
+          </span>
         </h1>
         <TextType
           className="typed-hero"
@@ -109,6 +114,26 @@ const latestWorks = (await getCollection('works'))
   .home .display .line1 { opacity: 0.94; }
   .home .display .stroke {
     filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18));
+  }
+  /* —— ReactBits <StrokeText /> 适配（首页大标题第二行）——
+     官方组件量测/描边都在"内部坐标"里做，视觉大小由外部 font-size 决定：
+     这里让根节点继承大标题字号，并把 SVG 高度从官方写死的 fontSize*1.3 改成 1em，
+     这样宽高与相邻的 .line1 同量级、且随 clamp() 一起响应式缩放。
+     竖直方向有 pad（strokeWidth 与 fontSize*0.1 取大者）造成的余量，
+     用 .stroke-line 根节点的负外边距收回，避免两行之间被撑开。 */
+  :global(.home .display .stroke-line) {
+    display: block;
+    /* 与 .display 的 font-size: clamp(2.5rem, 8.6vw, 6rem) 完全一致 */
+    font-size: clamp(2.5rem, 8.6vw, 6rem);
+    margin: -0.08em 0 -0.02em;
+  }
+  :global(.home .display .stroke-line .stroke-text__svg) {
+    height: 1em;
+  }
+  :global(.home .display .stroke-line .stroke-text__stroke),
+  :global(.home .display .stroke-line .stroke-text__fill) {
+    /* 与 .display 的字体族/字重保持一致（SVG text 会继承 color，但字体需显式给出） */
+    font-family: var(--font-display);
   }
   :global(.home .typed-hero) { color: var(--ink-2); }
   :global(.home .typed-hero .typed-caret) { color: var(--accent-deep); }

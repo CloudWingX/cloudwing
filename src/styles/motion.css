@@ -406,12 +406,15 @@ html.js .sli.in {
   transform: translate3d(var(--bkx, 0px), var(--bky, 0px), -40px);
   opacity: 0.92;
 }
-.display .stroke {
+/* 第二行可能是纯文本（其它页面复用 .stroke）也可能是 <StrokeText /> 岛：
+   两者都吃同一套视差变量，保持"前后分层"的既有观感。 */
+.display .stroke,
+.display .stroke-line {
   transform: translate3d(var(--frx, 0px), var(--fry, 0px), 56px);
   filter: drop-shadow(0 10px 18px color-mix(in srgb, var(--accent-ink) 22%, transparent));
 }
 @media (prefers-reduced-motion: reduce) {
-  .display .line1, .display .stroke { transform: none; filter: none; }
+  .display .line1, .display .stroke, .display .stroke-line { transform: none; filter: none; }
 }
 
 /* ============================================================

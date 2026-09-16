@@ -73,6 +73,7 @@ endfield-blog/
 │   ├─ SidebarNav.astro      # 左栏：个人信息卡 + 天气卡 + 导航树（作品库/分类/站点/画廊）
 │   ├─ SidebarWidgets.astro  # 右栏：站点统计 / 更新日历 / 最近更新 / 今日一言
 │   ├─ SidebarStatValue.jsx  # 宿主：统计数字的计数动画（包 ReactBits/CountUp，见 §6.15）
+│   ├─ HomeStrokeTitle.jsx   # 宿主：首页大标题描边动画（包 ReactBits/StrokeText，见 §6.18）
 │   ├─ MusicPlayer.astro     # 左栏底部音乐播放器（歌曲在 site.ts 的 MUSIC，见 §6.17）
 │   ├─ WeatherCard.astro     # 天气卡骨架（数据由 ui.js 在浏览器端填）
 │   ├─ GiscusComments.astro  # 留言板/评论区（主题跟随、防重复注入）
@@ -228,6 +229,24 @@ items:
     音频元素挂在 `document.body` 上并在 `window.__cwMusic` 里存单例，
     控制按钮走 document 事件委托 → 切页不断播、按钮也不失效。
     **任何"跨页连续"的媒体/状态都该用这个模式。** 自检：`node scripts/verify-music.mjs [url]`。
+
+18. **接 ReactBits 的 SVG 动画组件（以 StrokeText 为例，2026-09-15 接）**：三个具体坑。
+    1. **配色可以传 `var(--…)`**：SVG 表现属性（`stroke=` / `fill=`）里写 CSS 变量，
+       Chrome 会解析（实测 computed 得到真实 rgb）。所以宿主直接传
+       `strokeColor="var(--ink)"` 就能跟随深浅主题，**不必**引入官方默认的紫色（与本站黑白灰冲突）。
+    2. **GSAP 把 `stroke-dasharray/offset` 设在每个 `<tspan>` 上，不是外层 `<text>`**。
+       验证/排查时盯 `<text>` 会看到 `dasharray: none` 而误判"没有描边动画"（我踩过）。
+       自检脚本要取 `[data-stroke-char]` 的 computed 值。
+    3. **动画在挂载后 1~2s 就画完**：脚本里事后采样只能看到终态。
+       要验过程就在 `Page.addScriptToEvaluateOnNewDocument` 里装按帧记录器，导航后立刻采集。
+    另外：组件量测用的是**内部坐标系**（本项目 fontSize=1000 提高精度），
+    视觉大小由外部 `font-size` 决定 —— 所以把 SVG 高度从官方写死的 `fontSize*1.3`
+    覆盖成 `1em`（`.stroke-line .stroke-text__svg`），它就会跟相邻行一起随 `clamp()` 缩放。
+    首页大标题的动效分层（**改这里前先读**）：外层 `<h1 class="display display-tilt">` 是
+    3D 光标跟随的宿主（ui.js 的 `startTitleTilt` 下发 `--bkx/--bky/--frx/--fry`）；
+    `.line1` 与 `.stroke-line` 各自吃一套视差变量做前后分层；`<StrokeText />` 只负责"画字"，
+    **不碰 transform** —— 三者互不干扰。
+    自检：`node scripts/verify-stroke.mjs [url]`（几何是否与第一行齐、描边/填充是否都在跑）。
 
 ---
 
