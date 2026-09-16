@@ -137,9 +137,8 @@ const quote = QUOTES[dayIndex % QUOTES.length];
       {stats.map((s) => (
         <li>
           <span class="k">{s.k}</span>
-          {/* React 岛：数字带 CountUp 计数动画（ReactBits 原码，宿主见 SidebarStatValue.jsx）。
-              client:visible —— 侧栏进入视口即开始计数；每次加载/刷新/软导航都会重放。 */}
-          <SidebarStatValue client:visible value={s.v} suffix={s.suffix ?? ''} />
+          {/* 排查开关：暂时输静态文本，隔离 React #424 是否来自本岛 */}
+          <SidebarStatValue client:idle value={s.v} suffix={s.suffix ?? ''} />
         </li>
       ))}
     </ul>

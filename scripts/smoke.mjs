@@ -172,7 +172,20 @@ const main = async () => {
   console.log('\n[3] 软导航往返后的交互');
   await withTab(BASE + '/works/', async ({ send, evaluate, errors }) => {
     await setup(send, 1440, 900);
-    await sleep(6000);
+    // 二级菜单是 JS 生成的（ui.js 的 navSub()），日历面板也由 JS 渲染。
+    // 固定 6s 在线上会赶在它们生成之前就查询 → 误报"未找到 ?tag= 链接 / 无日历"。
+    // 这里轮询等到它们出现再断言。
+    const waitFor = async (expr, ms = 30000) => {
+      const t0 = Date.now();
+      while (Date.now() - t0 < ms) {
+        const ok = await evaluate(expr);
+        if (ok) return true;
+        await sleep(500);
+      }
+      return false;
+    };
+    await waitFor(`[...document.querySelectorAll('.nav-sub a')].some((x) => x.search && x.search.includes('tag='))`);
+    await waitFor(`!!document.querySelector('[data-cal-day]')`);
     // 点导航栏「作品库」二级菜单里的第一个分类
     const href = await evaluate(`(() => {
       const a = [...document.querySelectorAll('.nav-sub a')].find((x) => x.search && x.search.includes('tag='));
@@ -196,8 +209,7 @@ const main = async () => {
     }
     // 更新日历：点有记录的日期应展开明细
     await evaluate(`document.querySelector('[data-cal-day]')?.click()`);
-    await sleep(800);
-    const cal = await evaluate(`(() => { const p = document.querySelector('[data-cal-panel]');
+    await sleep(800);    const cal = await evaluate(`(() => { const p = document.querySelector('[data-cal-panel]');
       return p ? { open: !p.hidden, items: p.querySelectorAll('li').length } : null; })()`);
     check('侧栏更新日历可展开当天记录', !!cal && cal.open && cal.items > 0, cal ? `${cal.items} 条` : '无日历');
     check('交互过程无 JS 异常', errors.length === 0, errors[0] || '');

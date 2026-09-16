@@ -257,6 +257,21 @@ items:
     自检：`node scripts/verify-stroke.mjs [url]`（两行是否都渲染、几何是否齐、
     两行描边/填充动画是否都在跑、第二行是否确实晚于第一行）。
 
+19. **★`client:visible` + 软导航会抛 `React error #424`（水合不匹配）★**（2026-09-15 定位）
+    **症状**：软导航几圈后，每个 `client:visible` 实例抛一次
+    `Minified React error #424`，**控制台没有任何诊断信息**（window.onerror 也抓不到，
+    只能在无头浏览器里监听 `Runtime.exceptionThrown` 才看得到）。
+    **定位过程**（可作为同类问题的套路）：
+    1. 先做"不经过首页"的最小序列 → 仍然报错 → 排除当轮新增的首页组件；
+    2. 把可疑岛的渲染换成纯 `<span>`（去掉 motion）→ **仍然报错** → 排除第三方库；
+    3. 直接注释掉岛 → 异常归零 → 锁定到该组件；
+    4. 换挂载指令 `client:visible → client:idle` → **异常归零**。
+    **结论**：`client:visible`（IntersectionObserver 触发）在软导航时与 Astro 岛的
+    水合时机冲突，导致 React 水合不匹配。**本项目所有"侧栏/常驻的小岛"一律用 `client:idle`。**
+    CountUp 的"滚到才计数"由它自己的 `useInView` 负责，换指令不影响观感。
+    另：宿主在 `astro:page-load` 里 `setState` 也会打断水合，必须用 `mounted` ref 兜住
+    （见 `SidebarStatValue.jsx`）。
+
 ---
 
 ## 7. 验证与调试

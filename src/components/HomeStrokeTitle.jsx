@@ -10,7 +10,7 @@
 //   4) 两行级联：官方组件的 `delay` 形参**声明了但没被使用**（时间线固定为暂停+play(0)），
 //      所以级联只能由宿主实现 —— 第二行延迟挂载，挂载即开始画。
 //   5) 软导航回首页时重挂载，动画重放。
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import StrokeText from './ReactBits/StrokeText';
 
 const BASE = {
@@ -58,12 +58,24 @@ function Line({ text, delay = 0, className, lineKey }) {
 }
 
 export default function HomeStrokeTitle({ lines = [], cascade = 0.9 }) {
-  // 软导航切回首页时重挂载，让"画字"重放一次（与 CountUp 用的是同一套思路）
+  // 软导航切回首页时重挂载，让"画字"重放一次。
+  //
+  // ⚠️ 与 SidebarStatValue 同一个坑：`astro:page-load` 在软导航换页时**与 Astro 岛的
+  // 水合同时发生**，此刻 setState 会抛 `Minified React error #424`（水合不匹配）。
+  // 用 mounted ref 保证"本次水合结束后"才允许重播。
   const [runId, setRunId] = useState(0);
+  const mounted = useRef(false);
   useEffect(() => {
-    const replay = () => setRunId((n) => n + 1);
+    mounted.current = true;
+    const replay = () => {
+      if (!mounted.current) return;
+      setRunId((n) => n + 1);
+    };
     document.addEventListener('astro:page-load', replay);
-    return () => document.removeEventListener('astro:page-load', replay);
+    return () => {
+      mounted.current = false;
+      document.removeEventListener('astro:page-load', replay);
+    };
   }, []);
 
   return (
