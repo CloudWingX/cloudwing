@@ -317,6 +317,21 @@ items:
     - 组件按容器实测宽度反解所有尺寸与字号（`HomeWorksCardSwap.jsx` 的 `R` 比例表），
       所以换列宽/断点都不用改数值。自检：`node scripts/verify-deck.mjs [url]`。
 
+22. **导航栏/下拉的玻璃与两个 CSS 陷阱**（2026-09-15）：
+    - **`.topbar` 是死代码**：motion.css 里有 3 处 `.topbar{…}`（背景/边框/模糊都在那儿），
+      但 Header 的标记早就是 `.hd` + `.hd-glass`，所以那些规则一条都不生效 ——
+      顶栏曾经因此**完全没有背景/边框/模糊**。改顶栏外观要改 `.hd` / `.hd-glass`。
+    - **`backdrop-filter` 的书写顺序会影响构建产物**：写成
+      `backdrop-filter: …; -webkit-backdrop-filter: …;`（标准属性在前）时，
+      构建时的 CSS 压缩会把这条**整个丢掉**（实测计算值直接是 `none`，页面看起来没模糊）。
+      按 `-webkit-` 在前的顺序写就正常保留。**凡是改完模糊没效果，先去构建产物里搜一下
+      这条规则还在不在。**
+    - 结构约定：`.hd` 是定位容器（`position:relative` + `isolation:isolate`），
+      `.hd-glass` 是绝对定位的玻璃层（`z-index:-1`，边框 + `--glass-panel` + 模糊）
+      —— **不要给 `.hd` 加 `overflow:hidden`**，`.nav-sub`（二级菜单）是它的绝对定位后代，会被裁掉。
+      `--glass-panel`（近不透明）用于所有"浮在正文之上、必须盖住底下内容"的面：
+      顶栏 / 二级菜单 / 手机抽屉 / 搜索悬浮窗。自检：`node scripts/verify-nav.mjs [url] [light|dark]`。
+
 ---
 
 ## 7. 验证与调试

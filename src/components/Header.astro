@@ -38,6 +38,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
 ---
 <header class="site-header" data-nav>
   <div class="hd">
+    {/* 玻璃层：边框 + 边框内高斯模糊（见样式里的 .hd-glass） */}
+    <span class="hd-glass" aria-hidden="true"></span>
     <a class="brand" href="/" aria-label="回到首页">
       <HexMark size={24} fill="var(--ink)" />
       <span class="bname">
@@ -168,13 +170,35 @@ const pad = (n: number) => String(n).padStart(2, '0');
   }
 
   .hd {
+    /* 悬浮玻璃条：视觉层（边框 + 高斯模糊）是 .hd 里的 .hd-glass 元素，
+       内容叠在它上面。这里不要用 overflow:hidden —— .nav-sub（二级菜单）是 .hd 的
+       绝对定位后代，会被一起裁掉。 */
+    position: relative;
+    isolation: isolate;
     max-width: calc(var(--w-max) + 2 * var(--gutter));
     margin: 0 auto;
-    padding: 12px var(--gutter);
+    padding: 10px var(--gutter);
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
+  }
+  /* 玻璃层：边框 + 边框内的高斯模糊。
+     backdrop-filter 会把"本层范围内、元素背后"的内容模糊掉，视觉上就是"边框以内磨砂"。
+     用真实元素而不是 ::before —— 伪元素的 backdrop-filter 读不到计算值，没法自检。 */
+  .hd-glass {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 18px;
+    border: var(--line-w) solid var(--line-2);
+    background: var(--glass-panel);
+    /* 顺序与 .nav-sub 一致（-webkit- 在前）：构建时的 CSS 压缩会合并这两个前缀，
+       顺序不同可能导致合并后把标准属性丢掉（实测过一次，结果计算值是 none）。 */
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    backdrop-filter: blur(22px) saturate(1.5);
+    box-shadow: var(--shadow-sm);
+    pointer-events: none;
   }
 
   /* —— 品牌 —— */
@@ -278,11 +302,14 @@ const pad = (n: number) => String(n).padStart(2, '0');
     margin: 0;
     padding: 0.4rem;
     list-style: none;
+    /* 与顶栏同一套玻璃：明显的边框 + 边框内高斯模糊。
+       背景用 --glass-panel（比 --glass-strong 更实）：二级菜单浮在正文/卡片之上，
+       太透会让底下的内容透进来、看起来像渲染错乱（实测就是这个症状）。 */
     border: var(--line-w) solid var(--line-2);
     border-radius: 14px;
-    background: var(--glass-strong);
-    -webkit-backdrop-filter: blur(20px) saturate(1.5);
-    backdrop-filter: blur(20px) saturate(1.5);
+    background: var(--glass-panel);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    backdrop-filter: blur(24px) saturate(1.6);
     box-shadow: var(--shadow-lg);
     opacity: 0;
     visibility: hidden;
@@ -409,9 +436,11 @@ const pad = (n: number) => String(n).padStart(2, '0');
     padding: 10px;
     border-radius: 18px;
     border: var(--line-w) solid var(--line-2);
-    background: var(--glass-strong);
-    backdrop-filter: blur(24px) saturate(1.5);
+    /* 与顶栏/二级菜单同一套玻璃：更实的底 + 边框内高斯模糊
+       （太透会让底下的页面内容透进来） */
+    background: var(--glass-panel);
     -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    backdrop-filter: blur(24px) saturate(1.5);
     box-shadow: var(--shadow-lg);
     animation: nav-in 0.22s var(--ease);
   }
