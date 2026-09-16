@@ -4,6 +4,7 @@
 // 数据全部来自站内内容集合与 site.ts，不依赖任何外部接口，所以任何子页面看到的都一样。
 import { getCollection } from 'astro:content';
 import { SITE } from '../site';
+import SidebarStatValue from './SidebarStatValue.jsx';
 
 const works = (await getCollection('works')).sort(
   (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
@@ -18,11 +19,12 @@ const wordCount = works.reduce((n, w) => n + (w.body ?? '').replace(/\s/g, '').l
 const sinceDate = new Date(`${SITE.since}-01-01T00:00:00`);
 const runningDays = Math.max(1, Math.round((Date.now() - sinceDate.getTime()) / 86400000));
 const stats = [
-  { k: '作品', v: String(works.length) },
-  { k: '截图', v: String(shots.length) },
-  { k: '分类', v: String(tagSet.size) },
-  { k: '字数', v: wordCount > 999 ? (wordCount / 1000).toFixed(1) + 'k' : String(wordCount) },
-  { k: '运行', v: runningDays + ' 天' },
+  { k: '作品', v: works.length },
+  { k: '截图', v: shots.length },
+  { k: '分类', v: tagSet.size },
+  // 字数超千显示成 1.8k：数值给 1.8、后缀给 k，动画只跑数字部分
+  { k: '字数', v: wordCount > 999 ? Number((wordCount / 1000).toFixed(1)) : wordCount, suffix: wordCount > 999 ? 'k' : '' },
+  { k: '运行', v: runningDays, suffix: ' 天' },
 ];
 const lastActive = [...works, ...shots]
   .map((e) => new Date(e.data.date).getTime())
@@ -135,7 +137,9 @@ const quote = QUOTES[dayIndex % QUOTES.length];
       {stats.map((s) => (
         <li>
           <span class="k">{s.k}</span>
-          <span class="v">{s.v}</span>
+          {/* React 岛：数字带 CountUp 计数动画（ReactBits 原码，宿主见 SidebarStatValue.jsx）。
+              client:visible —— 侧栏进入视口即开始计数；每次加载/刷新/软导航都会重放。 */}
+          <SidebarStatValue client:visible value={s.v} suffix={s.suffix ?? ''} />
         </li>
       ))}
     </ul>

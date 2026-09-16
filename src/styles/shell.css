@@ -645,6 +645,14 @@
   color: var(--accent-deep);
   font-variant-numeric: tabular-nums;
 }
+/* 计数动画的数字后面跟的单位（「天」/「k」）：比数字略小、弱一档，
+   且不参与 CountUp 动画（后缀单独渲染，见 SidebarStatValue.jsx） */
+.sw-stats .v-suffix {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--ink-3);
+  margin-left: 0.1em;
+}
 .sw-last {
   margin: 0;
   font-family: var(--font-mono);

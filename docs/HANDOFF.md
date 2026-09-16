@@ -72,6 +72,7 @@ endfield-blog/
 │   ├─ Header.astro          # 顶部导航：品牌、导航项+分类二级菜单、主题开关、搜索、汉堡抽屉
 │   ├─ SidebarNav.astro      # 左栏：个人信息卡 + 天气卡 + 导航树（作品库/分类/站点/画廊）
 │   ├─ SidebarWidgets.astro  # 右栏：站点统计 / 更新日历 / 最近更新 / 今日一言
+│   ├─ SidebarStatValue.jsx  # 宿主：统计数字的计数动画（包 ReactBits/CountUp，见 §6.15）
 │   ├─ WeatherCard.astro     # 天气卡骨架（数据由 ui.js 在浏览器端填）
 │   ├─ GiscusComments.astro  # 留言板/评论区（主题跟随、防重复注入）
 │   ├─ WorkCard.astro 等     # 作品卡、HexMark、页脚、打字机等小件
@@ -203,6 +204,15 @@ items:
     （WCAG AA 小字要求 4.5:1），全站 32 处（kicker / 日期 / 编号 / 画廊编号 / 页脚…）都看不清。
     已压深到 `#63656d`（页底 4.87:1、玻璃 5.56:1），`--ink-2` 同步 `#55575e → #45474e`（7.77:1）；
     暗色 `--ink-3` 由 `#818389`（3.93:1）提到 `#8e9096`（4.66:1）。**不要再往浅了调。**
+
+15. **ReactBits 的动画组件「只在挂载时触发一次」**（2026-09 接 CountUp 时踩到）：
+    `<CountUp />` 的入场动画由 `useInView(ref, { once: true })` 驱动，**只在组件挂载时跑一次**；
+    而侧栏在 Astro 软导航时不一定重建 → 不处理就只会在首次进入时数一遍。
+    现方案：宿主 `src/components/SidebarStatValue.jsx` 监听 `astro:page-load` / `astro:after-swap`，
+    用递增的 `key` 强制重挂载 → 每次加载 / 刷新 / 软导航都重放。
+    **其它"进场一次"的 ReactBits 动画（DomeGallery/ShapeGrid 之类）若要每次重放，用同一套写法。**
+    CountUp 自己不要改（官方原码）；单位（`1.8k` 的 k、`623 天` 的天）必须**单独渲染**，
+    不能塞进 `to`，否则动画会去数一个非数字。自检：`node scripts/verify-countup.mjs [url]`。
 
 ---
 
