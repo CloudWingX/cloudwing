@@ -35,11 +35,20 @@ const clearPref = async () => {
 
 // 开局先清干净：否则同一个调试浏览器里上一次测试留下的偏好会让"默认值"断言全部误判
 // （实测踩过：跑完 contrast-audit light 后残留 cw-theme-pref=light，本脚本前 3 项全红）。
+// 注意：清完要**回读确认**——页面还在导航中时执行清理会清了个空，导致下一次运行才正常
+// （实测第一遍 5/14、第二遍 14/14，就是这里没确认）。
 await send('Network.enable');
 await send('Network.clearBrowserCookies');
-await send('Page.navigate', { url: BASE + '/works/' });
-await sleep(2500);
-await clearPref();
+let cleared = false;
+for (let i = 0; i < 12 && !cleared; i++) {
+  await send('Page.navigate', { url: BASE + '/works/' });
+  await sleep(2000);
+  await clearPref();
+  const left = await ev(`(()=>{try{return String(localStorage.getItem('cw-theme-pref'))}catch(e){return 'err'}})()`);
+  cleared = left === 'null';
+  if (!cleared) await sleep(800);
+}
+if (!cleared) console.log('  ⚠️ 预置清理未确认成功，默认值断言可能受残留影响');
 await send('Page.navigate', { url: 'about:blank' });
 await sleep(400);
 
@@ -48,12 +57,24 @@ const osScheme = (v) => send('Emulation.setEmulatedMedia', { features: [{ name: 
 
 const themeNow = () => ev(`document.documentElement.dataset.theme`);
 
+// 轮询等待主题被解析出来。
+// ⚠️ 固定 sleep 在无头浏览器里不可靠：页面慢一点就读到 `undefined`，
+//    于是"默认值"断言整片变红（实测第一遍 5/14、第二遍 14/14 就是这么来的）。
+const waitTheme = async (ms = 20000) => {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    const t = await ev(`document.documentElement.dataset.theme || null`);
+    if (t) return t;
+    await sleep(300);
+  }
+  return null;
+};
+
 console.log('=== 1) 全新访客：系统偏好「浅色」，站点应仍为夜间 ===');
 await osScheme('light');
 // 存储已在上面的预置步骤里清干净了（且此刻停在 about:blank，同源操作不可用）
 await send('Page.navigate', { url: BASE + '/works/' });
-await sleep(3500);
-const t1 = await themeNow();
+const t1 = await waitTheme();
 check('默认主题为 dark', t1 === 'dark', String(t1));
 const tc = await ev(`[...document.querySelectorAll('meta[name=theme-color]')].map(m=>m.content).join(',')`);
 check('浏览器 UI 颜色跟随实际主题（暗）', String(tc).includes('#0c0c0e'), String(tc));
@@ -64,15 +85,13 @@ console.log('\n=== 2) 全新访客：系统偏好「深色」，站点应为夜�
 await osScheme('dark');
 await clearPref();
 await send('Page.navigate', { url: BASE + '/works/' });
-await sleep(3000);
-check('系统深色时也是 dark', (await themeNow()) === 'dark');
+check('系统深色时也是 dark', (await waitTheme()) === 'dark');
 
 console.log('\n=== 3) 用户显式选过「浅色」：系统深色也必须保持浅色 ===');
 await ev(`(()=>{try{localStorage.setItem('cw-theme-pref','light')}catch(e){}})()`);
 await osScheme('dark');
 await send('Page.navigate', { url: BASE + '/works/' });
-await sleep(3000);
-const t3 = await themeNow();
+const t3 = await waitTheme();
 check('尊重用户的 light 选择', t3 === 'light', String(t3));
 
 console.log('\n=== 4) 点主题开关：切换并落盘 ===');
@@ -87,8 +106,7 @@ check('偏好已落盘为 light', (await ev(`localStorage.getItem('cw-theme-pref
 
 console.log('\n=== 5) 用户选过 light 后，软导航到别的页面仍是 light ===');
 await ev(`[...document.querySelectorAll('a')].find(a=>a.getAttribute('href')==='/gallery/')?.click()`);
-await sleep(3500);
-check('软导航后仍为 light', (await themeNow()) === 'light');
+check('软导航后仍为 light', (await waitTheme()) === 'light');
 
 console.log('\n=== 6) 首屏是否闪过浅色（默认夜间、用户没选过）===');
 await clearPref();
@@ -101,9 +119,17 @@ await send('Page.addScriptToEvaluateOnNewDocument', {
     requestAnimationFrame(tick);
   })();`,
 });
-await send('Page.navigate', { url: BASE + '/gallery/' });
-await sleep(2600);
-const seen = await ev(`(()=>{const s=window.__seen||[]; return {总数:s.length, 浅色帧:s.filter(x=>x==='light').length, 空帧:s.filter(x=>x==='(空)').length, 首帧:s[0]||null};})()`);
+// 采样偶尔会 0 帧（无头浏览器里导航/注入的时序问题）：重试直到真的采到帧，
+// 否则会误报成"没有采到帧"这种与站点无关的失败。
+const readSeen = () => ev(`(()=>{const s=window.__seen||[]; return {总数:s.length, 浅色帧:s.filter(x=>x==='light').length, 空帧:s.filter(x=>x==='(空)').length, 首帧:s[0]||null};})()`);
+let seen = null;
+for (let i = 0; i < 5; i++) {
+  await send('Page.navigate', { url: BASE + '/gallery/' });
+  await sleep(2600);
+  seen = await readSeen();
+  if (seen && seen.总数 > 20) break;
+  await sleep(600);
+}
 console.log('  ' + JSON.stringify(seen));
 check('采到足够帧数', seen && seen.总数 > 20, `帧数=${seen && seen.总数}`);
 check('从未出现 light 帧', seen && seen.浅色帧 === 0, `light 帧=${seen && seen.浅色帧}`);

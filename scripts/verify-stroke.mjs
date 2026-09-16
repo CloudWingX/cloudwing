@@ -8,7 +8,10 @@ const OUT = 'D:\\deep seek workplace\\_shots';
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 mkdirSync(OUT, { recursive: true });
 
-const tab = await (await fetch(`${CDP}/json/new?` + encodeURIComponent(BASE + '/'), { method: 'PUT' })).json();
+// 用 about:blank 开标签页，再显式导航一次。
+// （若开页时就指向目标地址、随后又 Page.navigate，会变成"两次加载"，实测会出现
+//   时而查不到 DOM、时而记录器采不到帧的抽风结果。）
+const tab = await (await fetch(`${CDP}/json/new?about:blank`, { method: 'PUT' })).json();
 const ws = new WebSocket(tab.webSocketDebuggerUrl);
 await new Promise((r, j) => { ws.onopen = r; ws.onerror = j; });
 let id = 0; const p = new Map(); const errs = [];
@@ -21,12 +24,44 @@ ws.onmessage = (e) => {
 await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] });
-// 先真正打开页面再断言：withTab 的初始 url 在 about:blank 上不执行，
-// 直接查询会拿到一整排 null（踩过一次）。
-await s('Page.navigate', { url: BASE + '/' });
-await sleep(4000);
 
 const ev = async (x) => (await s('Runtime.evaluate', { expression: x, returnByValue: true })).result?.result?.value;
+
+// 逐帧记录器必须在**首次导航之前**注入（记录描边 dashoffset 与 wipe 宽度）。
+// 注意两个已踩过的坑：
+//   · GSAP 把 stroke-dasharray/offset 设在每个 <tspan> 上，盯外层 <text> 会看到 none；
+//   · 动画在加载后 ~1.4s 就画完，事后采样只能看到终态。
+await s('Page.addScriptToEvaluateOnNewDocument', {
+  source: `window.__strokeLog=[];
+    (function tick(){
+      try{
+        const tp=document.querySelector('[data-stroke-char]');
+        const rect=document.querySelector('clipPath rect');
+        if(tp) window.__strokeLog.push([
+          +(parseFloat(getComputedStyle(tp).strokeDashoffset)||0).toFixed(0),
+          rect ? +(parseFloat(rect.getAttribute('width'))||0).toFixed(0) : -1
+        ]);
+      }catch(e){}
+      requestAnimationFrame(tick);
+    })();`,
+});
+
+// 打开页面并**等到 hero 真的在 DOM 里**再断言。
+// 固定 sleep 在线上不可靠：网络慢一点就会查询到空文档，得到一整排 null 的假失败
+// （实测线上 4s 不够、本地够，于是同一份代码两边结果不一致）。
+await s('Page.navigate', { url: BASE + '/' });
+let ready = false;
+// 首页有个 WebGL 粒子层，首屏渲染偏慢（实测线上要 10~20s 才把 hero 量出来）。
+// 这里等到"元素存在且有高度"，最多 40s；超时也继续断言（真失败仍会暴露）。
+for (let i = 0; i < 80; i++) {
+  await sleep(500);
+  const ok = await ev(`(()=>{const e=document.querySelector('.display .line1'); return !!e && e.getBoundingClientRect().height>0;})()`);
+  if (ok) { ready = true; break; }
+}
+if (!ready) console.log('  · hero 等待较久（>40s），继续按当前状态断言');
+// 再等动画画完（同一帧记录器还在跑）
+await sleep(3500);
+
 const results = [];
 const check = (n, ok, d = '') => { results.push({ n, ok }); console.log(`  ${ok ? '✅' : '❌'} ${n}${d ? '  —— ' + d : ''}`); };
 
@@ -61,25 +96,8 @@ check('描边色来自令牌（非官方紫）', !!g0.strokeColor && !/A78BFA|16
 check('填充色已设置', !!g0.fillColor, String(g0.fillColor));
 
 console.log('\n=== 画字动画过程（页面内逐帧记录，从加载瞬间开始）===');
-// 关键1：动画在页面加载后 1.4s 左右就画完，事后采样只能看到终态。
-// 关键2：GSAP 把 stroke-dasharray/offset 设在**每个 <tspan>** 上（不是外层 <text>），
-//        盯 <text> 会看到 "none" 而误判"没有描边动画"（踩过一次）。
-await s('Page.addScriptToEvaluateOnNewDocument', {
-  source: `window.__strokeLog=[];
-    (function tick(){
-      try{
-        const tp=document.querySelector('[data-stroke-char]');
-        const rect=document.querySelector('clipPath rect');
-        if(tp) window.__strokeLog.push([
-          +(parseFloat(getComputedStyle(tp).strokeDashoffset)||0).toFixed(0),
-          rect ? +(parseFloat(rect.getAttribute('width'))||0).toFixed(0) : -1
-        ]);
-      }catch(e){}
-      requestAnimationFrame(tick);
-    })();`,
-});
-await s('Page.navigate', { url: BASE + '/' });
-await sleep(4200);
+// 记录器已在首次导航前注入（见文件开头）。这里只读取结果——
+// 注意：若在此处再 Page.navigate 一次，会变成第二次加载，数据反而可能为空。
 const log = await ev(`(()=>{const L=window.__strokeLog||[];
   const dash=[...new Set(L.map(x=>x[0]))];
   const wipe=[...new Set(L.map(x=>x[1]))];
@@ -90,7 +108,7 @@ check('描边有动画（dashoffset 从大值收到 0）', log && log.描边不�
 check('填充走 wipe（rect 宽度增长到全宽）', log && log.wipe最大 > 0, `max=${log && log.wipe最大}`);
 
 console.log('\n=== 与既有动效共存 ===');
-check('外层 h1 仍是 .display-tilt（3D 倾斜宿主）', (await ev(`!!document.querySelector('.display-tilt')`)) === true);
+check('外层 h1 仍带 display-tilt（3D 倾斜宿主）', (await ev(`!!document.querySelector('h1.display.display-tilt')`)) === true);
 check('视差变量仍在下发（--frx）', (await ev(`(()=>{const e=document.querySelector('.display-tilt'); return getComputedStyle(e).getPropertyValue('--frx').trim();})()`)) !== '');
 check('无 JS 异常', errs.length === 0, errs[0] || '');
 
