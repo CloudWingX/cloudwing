@@ -7,17 +7,36 @@ import { imgUrl } from '../../site';
 
 const fmt = (d: Date) => new Date(d).toISOString().slice(0, 10);
 const all = await getCollection('shots');
+
+// 内容里的 title 清一色是「2024-06-25 · MC」——和 date + game 完全重复。
+// 这里不再把它当标题显示（否则卡片上日期出现两遍），改成按「同一天同游戏」分组
+// 生成有用的标签：Minecraft · 03/06。**不改内容文件**，只改展示层。
+const groups = new Map();
+for (const e of all) {
+  const k = fmt(e.data.date) + '|' + e.data.game;
+  if (!groups.has(k)) groups.set(k, []);
+  groups.get(k).push(String(e.id));
+}
+for (const ids of groups.values()) ids.sort();
+
 const shots = all
   .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
-  .map((e) => ({
-    no: String(e.id).toUpperCase(),
-    title: e.data.title,
-    date: fmt(e.data.date),
-    game: e.data.game,
-    note: e.data.note,
-    image: imgUrl(e.data.image), // 图片走 IMG_CDN（图床开关）
-    aspect: e.data.aspect ?? '16:9',
-  }));
+  .map((e) => {
+    const no = String(e.id);
+    const ids = groups.get(fmt(e.data.date) + '|' + e.data.game) ?? [no];
+    const seq = ids.indexOf(no) + 1;
+    // 同组多于一张才带序号（01/06），否则只用游戏名
+    const label = ids.length > 1 ? `${e.data.game} · ${String(seq).padStart(2, '0')}/${String(ids.length).padStart(2, '0')}` : e.data.game;
+    return {
+      no: no.toUpperCase(),
+      label,
+      date: fmt(e.data.date),
+      game: e.data.game,
+      note: e.data.note,
+      image: imgUrl(e.data.image), // 图片走 IMG_CDN（图床开关）
+      aspect: e.data.aspect ?? '16:9',
+    };
+  });
 const count = String(shots.length);
 // 分类（游戏/场景）在导航栏「画廊」二级菜单里：点分类 → /gallery/?game=xxx。
 // 静态站构建时拿不到查询串，所以过滤在浏览器端做（见页面底部脚本）。
@@ -41,19 +60,19 @@ const count = String(shots.length);
           shots.map((s, i) => (
             <li class="gal-item" id={s.no} data-game={s.game} data-ent style={`--ad:${(i % 10) * 70}ms`}>
               <button class="gal-card" type="button" data-gal-open
-                data-title={s.title}
+                data-title={s.label}
                 data-meta={`${s.no} · ${s.date} · ${s.game}`}
                 data-note={s.note || ''}
                 data-img={s.image}
-                aria-label={`查看大图：${s.title}`}
+                aria-label={`查看大图：${s.date} ${s.game}（${s.no}）`}
               >
                 <span class="gal-cover" style={`aspect-ratio:${s.aspect.replace(':', ' / ')}`}>
-                  <img src={s.image} alt={s.title} loading="lazy" />
+                  <img src={s.image} alt={`${s.date} ${s.game} 截图`} loading="lazy" />
                 </span>
                 <span class="gal-info">
                   <span class="gal-no">{s.no}</span>
-                  <span class="gal-title">{s.title}</span>
-                  <span class="gal-meta">{s.date} · {s.game}</span>
+                  <span class="gal-title">{s.label}</span>
+                  <span class="gal-meta">{s.date}</span>
                 </span>
               </button>
             </li>

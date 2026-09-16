@@ -42,7 +42,9 @@ const worksEvents = works.map((e) => ({
 const shotEvents = shots.map((e) => ({
   date: new Date(e.data.date).toISOString().slice(0, 10),
   kind: '截图',
-  title: e.data.title ?? '未命名截图',
+  // 内容里的 title 是「2026-08-18 · MC」，点击后的日期面板本来按天分组，日期会重复；
+  // 这里同样只留游戏名。
+  title: e.data.game ?? '未命名截图',
   url: `/gallery/#${String(e.id).toUpperCase()}`,
 }));
 const logEvents = (await getCollection('changelog')).flatMap((e) =>
@@ -101,7 +103,9 @@ const recent = [
   })),
   ...shots.map((e) => ({
     kind: '截图',
-    title: e.data.title ?? '未命名截图',
+    // 截图的 title 内容里就是「2026-08-18 · MC」，而这一行的日期已单独显示（右侧），
+    // 直接用它会让日期出现两遍；这里只留游戏名。
+    title: e.data.game ?? '未命名截图',
     date: new Date(e.data.date).toISOString().slice(0, 10),
     url: `/gallery/#${String(e.id).toUpperCase()}`,
   })),
