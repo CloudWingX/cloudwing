@@ -69,38 +69,33 @@ const topTools = [...toolCount.entries()]
   .map(([t]) => t);
 const stackTop = topTools.length ? topTools : ['Java', 'Spring Boot', 'MySQL', 'Git'];
 
-/* 展示卡片里的代码段（照参考的 code-card 形态）。
-   取的是一段**真实关键代码**：本站背景视频层是怎么用"雾蓝强调色 + 玻璃材质"这套
-   设计令牌落地的 —— 与左侧文案同一主题，纯展示用、不参与运行。
-   高亮类名沿用参考（code-keyword / code-string / …），颜色换成站点令牌。
-   ★代码段内一律用英文★（注释也不例外）：代码卡片里混中文会显得像文案而不是代码，
-   也与参考卡片的观感不一致 —— 想改成中文请先确认。
-   ★最长行请控制在 47 字符以内★：手机端字号是按最长行反解出来的
-   （见样式的 .code-body 注释），行太长就只能把字缩小，反而更难读。 */
+/* 展示卡片里的代码段（照参考站的 code-card 形态）。
+   写的是本站真实的一段：背景视频层怎么用"强调色 + 玻璃材质"落地，纯展示、不参与运行。
+   高亮类名沿用参考（keyword / string / function / component / attr / number / punc / comment），
+   颜色换成站点令牌，随色卡一起补间。
+   ★代码段内一律用英文★（注释也不例外）：混中文会显得像文案而不是代码。
+   ★最长行请控制在 47 字符以内★：手机端字号按最长行反解（见 .code-body 注释）。
+   ★两条会随色卡变色的行★：带 data-accent-line 的那行会被脚本改写 ——
+     .ln-var 换成当前强调色（对应参考里带色块的那个入参），
+     .ln-num 换成当前的遮罩数值（照参考"每个数值随预设变"的做法）。 */
 const codeSample = [
-  '<span class="code-comment">{/* backdrop video layer · tokens → frame */}</span>',
-  '<span class="code-keyword">const</span> <span class="code-function">VIDEO_BG</span> = {',
-  '  <span class="code-prop">src</span>: <span class="code-string">\'/media/bg-loop.mp4\'</span>,',
-  '  <span class="code-prop">opacity</span>: <span class="code-number">0.50</span>, <span class="code-comment">// video as texture</span>',
-  '  <span class="code-prop">scrim</span>: <span class="code-string">\'0.35 → 0.58 → 0.82\'</span>, <span class="code-comment">// mask</span>',
-  '};',
-  '',
+  '<span class="code-comment">/* backdrop video layer */</span>',
   '<span class="code-keyword">export default function</span> <span class="code-function">VideoBackground</span>() {',
   '  <span class="code-keyword">return</span> (',
-  '    &lt;<span class="code-component">div</span> <span class="code-prop">class</span>=<span class="code-string">"video-bg"</span>&gt;',
-  '      &lt;<span class="code-component">video</span> <span class="code-prop">src</span>={<span class="code-function">VIDEO_BG</span>.<span class="code-prop">src</span>} <span class="code-prop">muted</span> /&gt;',
+  '    &lt;<span class="code-component">div</span> <span class="code-attr">class</span><span class="code-punc">=</span><span class="code-string">"video-bg"</span>&gt;',
+  '      &lt;<span class="code-component">video</span> <span class="code-attr">src</span><span class="code-punc">=</span><span class="code-punc">{</span><span class="code-fn">VIDEO_BG</span><span class="code-punc">.</span><span class="code-attr">src</span><span class="code-punc">}</span>',
+  '        <span class="code-attr">color</span><span class="code-punc">=</span><span class="ln-val"><span class="ln-swatch"></span><span class="ln-var">#9FD3E8</span></span>',
+  '        <span class="code-attr">opacity</span><span class="code-punc">=</span><span class="code-punc">{</span><span class="code-number ln-num">0.50</span><span class="code-punc">}</span> <span class="code-attr">hue</span><span class="code-punc">=</span><span class="code-punc">{</span><span class="code-number ln-num">0</span><span class="code-punc">}</span> <span class="code-punc">/&gt;</span>',
   '    &lt;/<span class="code-component">div</span>&gt;',
   '  );',
   '}',
   '',
   '<span class="code-comment">/* glass: accent as highlight */</span>',
-  '<span class="code-component">.video-bg</span> {',
-  '  <span class="code-prop">position</span>: <span class="code-keyword">fixed</span>; <span class="code-prop">inset</span>: <span class="code-number">0</span>;',
-  '  <span class="code-prop">z-index</span>: <span class="code-number">-4</span>;',
-  '  <span class="code-prop">backdrop-filter</span>: <span class="code-function">var</span>(<span class="code-prop">--glass-blur</span>);',
-  '  <span class="code-prop">border-radius</span>: <span class="code-function">var</span>(<span class="code-prop">--r-l</span>);',
-  '  <span class="code-prop">color</span>: <span class="code-function">var</span>(<span class="code-prop">--accent</span>);',
-  '}',
+  '<span class="code-component">.video-bg</span> <span class="code-punc">{</span>',
+  '  <span class="code-attr">position</span><span class="code-punc">:</span> <span class="code-keyword">fixed</span><span class="code-punc">;</span> <span class="code-attr">z-index</span><span class="code-punc">:</span> <span class="code-number">-4</span><span class="code-punc">;</span>',
+  '  <span class="code-attr">backdrop-filter</span><span class="code-punc">:</span> <span class="code-fn">var</span><span class="code-punc">(</span><span class="code-attr">--glass-blur</span><span class="code-punc">);</span>',
+  '  <span class="code-attr">color</span><span class="code-punc">:</span> <span class="code-fn">var</span><span class="code-punc">(</span><span class="code-attr">--accent</span><span class="code-punc">);</span>',
+  '<span class="code-punc">}</span>',
 ].join('\n');
 ---
 
@@ -340,11 +335,18 @@ const codeSample = [
     max-width: 1280px;
     margin: 0 auto;
     /* 参考用 px 定值；站点 --gutter 是 clamp(1.25rem,5vw,3.25rem)，会算出 64px，
-       所以这里必须显式写死左右内边距（断点里分别 24/20）。 */
-    padding: 0 32px;
+       所以这里必须显式写死左右内边距（断点里分别 24/20）。
+       顶部 96px 是"最小呼吸位"：内容比视口矮时居中即可（此时留白远大于 96），
+       内容更高时 min-height 失效、就靠这 96px 保证徽标不被固定导航栏压住。 */
+    padding: 96px 32px 48px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    /* 用户要求"大标题与卡片顶部齐平"：从居中改为顶对齐。
+       左栏第一块是标题（badge 在标题上方？不 —— 顺序是 badge→标题→…），
+       所以齐平比较的是"卡片顶"与"左栏顶"；两栏现在都从同一基线开始。 */
+    align-items: flex-start;
+    /* 竖向居中：卡片比左栏高，俩都顶对齐后整块居中，徽标才不会被导航栏压住。
+       内容比视口高时 100vh 的 min-height 会失效、下面照常滚动。 */
+    justify-content: center;
     gap: 80px;
     overflow: hidden;
     /* 参考的 body line-height 是 normal；站点全局 1.8 会把各块撑高 */
@@ -374,6 +376,9 @@ const codeSample = [
        （踩过）。放开之后两栏才真的按 645:520 分。 */
     flex: 1 1 0;
     min-width: 0;
+    /* 用户要求"缩小卡片"：卡片上限 440。
+       左栏保持 645 的弹性上限（760px 上限会把 1440 下的卡片挤到 388），
+       剩余宽由 flex 分给卡片。 */
     max-width: 645px;
     text-align: left;
   }
@@ -510,9 +515,17 @@ const codeSample = [
   .code-card {
     position: relative;
     z-index: 1;
+    /* 必须 flex:1 1 0（不是 0 1 auto）：auto 时卡片停在自身内容宽（实测 388），
+       撑不到 440 的上限。min-width:0 见左栏注释。 */
     flex: 1 1 0;
-    min-width: 0; /* 同上：不加的话代码卡片的 min-content 会把自己顶宽，比例失真 */
-    max-width: 520px;
+    min-width: 0;
+    /* "缩小卡片"的目标宽度。左栏保持 645 的弹性上限，
+       剩余空间由 flex 分给卡片（1440 下 ≈440），宽屏时两栏各自顶到上限、中间自动留白。 */
+    max-width: 440px;
+    /* "大标题与卡片顶部齐平"：左栏第一块是徽标胶囊、标题在其下方，
+       所以给卡片加一个下移量 = 徽标高度 + 其下边距，让卡片顶与标题顶对齐。
+       这个值由 scripts/hero-theme.js 实测写入 --card-align（写死会随断点失准）。 */
+    margin-top: var(--card-align, 0px);
     background: rgba(18, 18, 26, 0.7);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
@@ -544,8 +557,8 @@ const codeSample = [
     padding: 20px 22px 22px 26px; /* 左侧多留一点：等宽字形起始位偏左，20px 时首列会被切 */
     font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
     font-size: 13px;
-    /* 22.1/13 = 1.7，与参考的代码卡片行距一致 */
-    line-height: 1.7;
+    /* 行高走令牌（见 :root 的 --code-lh 注释） */
+    line-height: var(--code-lh, 1.55);
     color: var(--brand-cloud); /* 代码正文：品牌纸白 */
     white-space: pre; /* 保留缩进与单行不折行（照参考） */
     overflow-x: auto;
@@ -565,11 +578,16 @@ const codeSample = [
     /* 色膜：默认浓度 0 = 完全没有颜色滤镜（默认态画面与之前一模一样） */
     --tint-c: #9fd3e8;
     --tint-a: 0;
+    /* 代码行高：卡片缩到 440 后代码行数变多，用参考的 1.7 会让卡片高到把 hero 顶出视口，
+       收到 1.55 压回来（参考卡片更宽、代码更短，所以它用 1.7 也不会超）。
+       这个值也决定了"卡片能否与标题齐平后仍留在视口内"，改动前先量 1440 下的卡片高。 */
+    --code-lh: 1.55;
     /* 强调色的 RGB 分量：给 rgba(var(--accent-rgb), a) 用。
        色卡切换时由 hero-theme.js 一并补间，所以半透明底也会跟着平滑变色。 */
     --accent-rgb: 159, 211, 232;
     /* 代码高亮（由强调色派生，切换色卡时补间这几个） */
     --code-key: color-mix(in srgb, var(--accent) 82%, #ffffff);
+    --code-attr: color-mix(in srgb, var(--accent) 88%, #ffffff);
     --code-str: color-mix(in srgb, var(--accent) 58%, #7fd6a8);
     --code-fn: color-mix(in srgb, var(--accent) 72%, #8fb4f0);
     --code-comp: color-mix(in srgb, var(--accent) 42%, #ffffff);
@@ -577,19 +595,37 @@ const codeSample = [
     --code-dim: #9aa7b6;
   }
 
-  /* ── 语法高亮：全部由强调色派生（--code-*），这样色卡切换时
-       只要补间这几个变量，代码段就会跟着一起变色（含中间色过渡）。
-       色相分工：关键字/属性=强调色本体、字符串=偏绿、函数/变量=偏冷、
-       标签/选择器=提亮、数字=偏暖黄、注释=中性灰。
-       ⚠️ 必须用 :global()：这段代码是用 set:html 注入的，元素上没有 Astro 的
-       作用域属性（data-astro-cid-*），普通作用域选择器匹配不到 → 高亮会失效。 */
-  .code-body :global(.code-keyword),
-  .code-body :global(.code-prop) { color: var(--code-key); }
+  /* ── 语法高亮：全部由强调色派生（--code-*），色卡切换时补间这几个变量，
+       代码段就会跟着一起变色（含中间色过渡）。
+       类名照参考站：keyword / string / function / component / attr / number / punc / comment。
+       ⚠️ 必须 :global()：代码是 set:html 注入的，元素上没有 Astro 作用域属性。 */
+  .code-body :global(.code-keyword) { color: var(--code-key); }
+  .code-body :global(.code-attr) { color: var(--code-attr); }
   .code-body :global(.code-string) { color: var(--code-str); }
+  .code-body :global(.code-fn),
   .code-body :global(.code-function) { color: var(--code-fn); }
   .code-body :global(.code-component) { color: var(--code-comp); font-weight: 500; }
   .code-body :global(.code-number) { color: var(--code-num); }
+  .code-body :global(.code-punc) { color: rgba(255, 255, 255, 0.62); }
   .code-body :global(.code-comment) { color: var(--code-dim); font-style: italic; }
+  /* 会随色卡变色的那个"色值胶囊"（照参考的 swatch + 值）：底色与色块都随之补间 */
+  .code-body :global(.ln-val) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: rgba(var(--accent-rgb), 0.16);
+  }
+  .code-body :global(.ln-swatch) {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex: none;
+    background: var(--accent);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .code-body :global(.ln-var) { color: var(--accent-deep); }
 
   /* ── 色卡（照参考站卡片底部的 Presets）── */
   .code-footer {
@@ -652,7 +688,9 @@ const codeSample = [
      （踩过：390px 下需要 634px、容器只有 350px）。只有 <660px 那档例外（见下）。 */
   @media (max-width: 1024px) {
     /* 参考：≤1024 左右栏 gap 收到 72，卡片也变成整宽 */
-    .hero { gap: 72px; padding: 0 24px; }
+    /* ⚠️ 只改左右内边距：写成 padding: 0 24px 会把基础的 96px 顶部呼吸位清掉，
+       徽标立刻被固定导航栏压住（实测 1024 档 badge.top 掉到 0）。 */
+    .hero { gap: 72px; padding-left: 24px; padding-right: 24px; }
     .code-card { max-width: 100%; }
   }
   /* ── 手机端（≤768px）：照参考站手机端的表现优化 ──

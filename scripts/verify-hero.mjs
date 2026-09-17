@@ -139,10 +139,30 @@ check('标签圆角 9999px / 内距 6×14', parseFloat(d.tag.radius) >= 900 && d
 check('标签组 gap 8px', d.tags.gap === '8px', d.tags.gap);
 check('标签数量 ≥ 4（来自作品 tools）', d.tagCount >= 4, String(d.tagCount));
 
-check('卡片最大宽 520（参考值）', d.card.w <= 520 && d.card.w >= 380, String(d.card.w));
-check('卡片圆角 12px', d.card.radius === '12px', d.card.radius);
+check('卡片已缩小（≤440，比参考的 520 小）', d.card.w <= 442 && d.card.w >= 380, String(d.card.w));
+/* 用户要求"大标题与卡片顶部齐平"（左栏第一块是徽标胶囊，标题在其下方，
+   所以卡片要下移一个 badge 高度 + 其下边距）。 */
+const alignState = JSON.parse(await ev(`(function(){
+  var q=function(s){return document.querySelector(s);};
+  return JSON.stringify({titleTop:Math.round(q('.hero-title').getBoundingClientRect().top),
+    cardTop:Math.round(q('.code-card').getBoundingClientRect().top),
+    cardAlign:getComputedStyle(document.documentElement).getPropertyValue('--card-align').trim()});})()`));
+check('大标题与卡片顶部齐平', Math.abs(alignState.titleTop - alignState.cardTop) <= 1,
+  `标题顶=${alignState.titleTop} 卡片顶=${alignState.cardTop}（--card-align=${alignState.cardAlign}）`);check('卡片圆角 12px', d.card.radius === '12px', d.card.radius);
 check('卡片头有文件名', (await ev(`!!document.querySelector('.code-filename')`)) === true);
 check('卡片三色圆点', (await ev(`document.querySelectorAll('.code-dot').length`)) === 3);
+/* 代码段照参考的写法：带一个"会随色卡变色的色值胶囊"（swatch + hex），
+   并且代码里有随预设变化的数值。 */
+const codeState = JSON.parse(await ev(`(function(){var q=function(s){return document.querySelector(s);};
+  var sw=q('.code-body .ln-swatch');
+  return JSON.stringify({有色块:!!sw, 色块色:sw?getComputedStyle(sw).backgroundColor:null,
+    色值:q('.code-body .ln-var')?q('.code-body .ln-var').textContent.trim():null,
+    数值数:document.querySelectorAll('.code-body .ln-num').length,
+    词法类:['code-keyword','code-string','code-function','code-attr','code-number','code-punc','code-comment']
+      .filter(function(c){return document.querySelector('.code-body .'+c);}).length});})()`));
+check('代码里有色值胶囊（swatch + hex，照参考）', codeState.有色块 === true && /^#[0-9A-F]{6}$/i.test(String(codeState.色值)), String(codeState.色值));
+check('代码里有随预设变化的数值', codeState.数值数 >= 2, String(codeState.数值数));
+check('词法着色覆盖 ≥6 类（keyword/string/function/attr/number/punc/comment）', codeState.词法类 >= 6, String(codeState.词法类));
 
 /* ── 强调色预设（照参考站卡片底部的 Presets，见 index.astro / scripts/hero-theme.js）── */
 const accentState = async () => JSON.parse(await ev(`(function(){
@@ -184,6 +204,13 @@ check('背景视频被旋转色相（换色但不是换背景）', parseFloat(a1
 check('色膜浓度在过渡后落到该预设值', parseFloat(a1.tintA) > 0, a1.tintA);
 check('切换后选中态跟随', (a1.激活 || '').trim() === '余烬', (a1.激活 || '').trim());
 check('切换后无横向溢出', a1.溢出 === 0, String(a1.溢出));
+/* 代码里那个"色值胶囊"也要跟着换（照参考：色块与 #hex 都随预设变） */
+const pillAfter = JSON.parse(await ev(`(function(){var q=function(s){return document.querySelector(s);};
+  var sw=q('.code-body .ln-swatch');
+  return JSON.stringify({色:sw?getComputedStyle(sw).backgroundColor:null,
+    值:q('.code-body .ln-var')?q('.code-body .ln-var').textContent.trim():null});})()`));
+check('代码里的色块与色值随预设一起变', pillAfter.色 !== codeState.色块色 && pillAfter.值 !== codeState.色值,
+  `色块 ${codeState.色块色} → ${pillAfter.色}；值 ${codeState.色值} → ${pillAfter.值}`);
 
 // 复位，避免影响后面的断点断言
 await ev(`document.querySelector('[data-accent-preset="mist"]').click()`);

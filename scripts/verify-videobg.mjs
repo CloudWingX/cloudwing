@@ -139,6 +139,9 @@ const injectStyle = (css) =>
   ev(`(()=>{const st=document.createElement('style'); st.textContent=${JSON.stringify(css)};
     document.head.appendChild(st); return true;})()`);
 await injectStyle('*,*::before,*::after{animation:none !important;transition:none !important}');
+/* 开局清掉"强调色预设"的存档：共用调试浏览器时，上一次留下的色卡选择会带来色膜，
+   让"文字背后的底色"整体偏色（实测残留时标题区被判成 rgb(159,211,232)）。 */
+await ev(`(()=>{try{localStorage.removeItem('cw-accent');}catch(e){} return true;})()`);
 await ev(`document.querySelector('.video-bg__el')?.pause()`);
 await sleep(1200);
 const shot2 = await s('Page.captureScreenshot', { format: 'png' });
@@ -172,49 +175,56 @@ const boxes = await ev(`(()=>{const out=[];
   }
   return out;})()`);
 
-// 隐藏 hero 文字（保留布局与所有背景层），再截一张纯背景图。
-// 用 opacity:0 而不是 visibility:hidden —— 渐变标题的字形是**背景**画的
-// （background-clip:text），visibility 改了颜色却留下字形层，实测仍会采到白色笔画。
-// ★而且要把节点真的从文档里摘掉★：只靠注入 CSS 有被作用域样式/时序翻掉的风险
-// （实测 opacity 已经是 0，背景图里却仍有一根 2~3px 宽的字形亮条）。
-const savedText = await ev(`(()=>{const out=[];
-  for (const sel of ['.hero-title','.hero-subtitle']) {
-    const e=document.querySelector(sel); if(!e) continue;
-    out.push({parent:e.parentElement, next:e.nextSibling, el:e});
-    e.remove();
-  }
-  // 存到 window 上，取样结束后再放回（见脚本末尾）
-  window.__cwSavedHero = out;
-  return out.length;})()`);
-await waitFor(`!document.querySelector('.hero-title') && !document.querySelector('.hero-subtitle')`, 5000);
-await sleep(900);
-const bgShot = await s('Page.captureScreenshot', { format: 'png' });
-const bg = decodePNG(Buffer.from(bgShot.result.data, 'base64'));
-// ★解码器交叉核对★：同一张 PNG 分别用自写解码器与项目依赖 sharp 解，取样必须一致。
-// （自写解码器一旦解错，会把"文字自己的白字"当成底色，得出 1.00 这类假失败。）
-{
-  const sharpMod = await import('sharp');
-  const { data: rawData, info: rawInfo } = await sharpMod.default(Buffer.from(bgShot.result.data, 'base64')).raw().toBuffer({ resolveWithObject: true });
-  const sAt = (x, y) => { const o = (y * rawInfo.width + x) * rawInfo.channels; return [rawData[o], rawData[o + 1], rawData[o + 2]]; };
-  const mism = [];
-  for (const [x, y] of [[207, 238], [255, 368], [140, 300], [600, 480], [300, 560]]) {
-    const a = bg.at(x, y), b = sAt(x, y);
-    if (a[0] !== b[0] || a[1] !== b[1] || a[2] !== b[2]) mism.push(`(${x},${y}) mine=${a} sharp=${b}`);
-  }
-  check('背景图解码器自检（自写解码 vs sharp）', mism.length === 0, mism.slice(0, 3).join(' | ') || '一致');
-}
+// ⚠️ 这里**不**在当前页隐藏文字（试过四种都失败，见下面的注释）：
+// 当前页保持原样，只用来量"文字框在哪、文字是什么颜色"。
 
-check('首页 hero 元素可定位（用于对比度取样）', Array.isArray(boxes) && boxes.length >= 1,
-  Array.isArray(boxes) ? `${boxes.length} 个` : '取值失败');
-// 自检：确认"隐藏文字"确实生效（否则会采到自己的字形，得到假失败）
-console.log('  [自检] 隐藏后 .hero-title opacity =', await ev(`getComputedStyle(document.querySelector('.hero-title')).opacity`),
-  '| bg图 (207,238)=rgb(' + bg.at(207, 238) + ')');
+/* ★背景图怎么取：另开一个"从头就隐藏文字"的对照页，而不是在当前页上动手脚★
+   在当前页上试过四种都失败（都实测过）：
+     · visibility:hidden / opacity:0 —— 渐变标题的字形是 background-clip:text 画的，
+       color 改了字形层还在，仍采到白字（假 1.00）；
+     · color:transparent + background:none —— 去不掉渐变那层；
+     · text-indent:-9999px —— 同样不行（背景层按元素自身盒定位）；
+     · **remove() 节点** —— 布局回流，徽标/统计往上顶进标题原来的框里，
+       采样框里变成它们的白字，还是假 1.00（踩过第二次）。
+   所以改成正路：新开一个 tab，在**首次导航之前**就注入"文字不可见"的样式，
+   这样页面从一开始就不含字形，布局按正常内容尺寸走，取样干净。
+   为了确保"框对得上"，对照页还会量一次同样的选择器做尺寸自检。 */
+const HIDE_CSS = '.hero-title,.hero-subtitle{visibility:hidden !important}';
+const bgTab = await (await fetch(`${CDP}/json/new?about:blank`, { method: 'PUT' })).json();
+const bgWs = new WebSocket(bgTab.webSocketDebuggerUrl);
+await new Promise((res, rej) => { bgWs.onopen = res; bgWs.onerror = rej; });
+let bgId = 0; const bgPending = new Map();
+const bgSend = (m, p2 = {}) => new Promise((res) => { const i = ++bgId; bgPending.set(i, res); bgWs.send(JSON.stringify({ id: i, method: m, params: p2 })); });
+bgWs.onmessage = (e) => { const m = JSON.parse(e.data); if (m.id && bgPending.has(m.id)) { bgPending.get(m.id)(m); bgPending.delete(m.id); } };
+const bgEv = async (x) => (await bgSend('Runtime.evaluate', { expression: x, returnByValue: true })).result?.result?.value;
+await bgSend('Page.enable'); await bgSend('Runtime.enable');
+// ⚠️ 新 tab 不会继承另一个 tab 的 Emulation 覆盖，不显式设置就会按默认（移动端）渲染，
+// 量出来的框与真实页对不上（踩过：对照页 left=20 vs 真实页 133）。
+await bgSend('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+await bgSend('Page.addScriptToEvaluateOnNewDocument', {
+  source: `document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent=${JSON.stringify(HIDE_CSS)};document.head.appendChild(s);});`,
+});
+await bgSend('Page.navigate', { url: BASE + '/' });
+await sleep(3000);
+const bgBoxes = JSON.parse(await bgEv(`(()=>{const o=[];
+  for(const sel of ['.hero-title','.hero-subtitle']){const e=document.querySelector(sel);if(!e)continue;
+  const r=e.getBoundingClientRect();o.push({sel,x0:Math.round(r.left),x1:Math.round(r.right),y0:Math.round(r.top),y1:Math.round(r.bottom)});}
+  return JSON.stringify(o);})()`) || '[]');
+check('对照页可用（隐藏文字的同一版式）', bgBoxes.length === boxes.length,
+  `${bgBoxes.length} vs ${boxes.length} 个文字框`);
+check('对照页版式与真实页一致（框坐标相同，说明没有回流）',
+  bgBoxes.every((b, i) => Math.abs(b.x0 - boxes[i].x0) <= 1 && Math.abs(b.y0 - boxes[i].y0) <= 1
+    && Math.abs(b.x1 - boxes[i].x1) <= 1 && Math.abs(b.y1 - boxes[i].y1) <= 1),
+  JSON.stringify(bgBoxes.map((b) => [b.x0, b.y0])) + ' vs ' + JSON.stringify(boxes.map((b) => [b.x0, b.y0])));
+await bgEv(`document.querySelector('.video-bg__el') && document.querySelector('.video-bg__el').pause()`);
+await sleep(700);
+const bgShot = await bgSend('Page.captureScreenshot', { format: 'png' });
+const bg = decodePNG(Buffer.from(bgShot.result.data, 'base64'));
 
 for (const b of boxes || []) {
   const tl = lum(b.rgb);
   const need = (b.size >= 24 || (b.size >= 18.66 && +b.weight >= 700)) ? 3.0 : 4.5;
   let worst = Infinity, wb = null, samples = 0, wxy = null;
-  // 在文字框内按网格取样 —— 此刻字形已隐藏，取到的必然是背景
   for (let y = b.y0; y <= b.y1; y += 4) {
     for (let x = b.x0 + 4; x <= b.x1 - 4; x += 16) {
       if (x < 1 || y < 1 || x >= bg.width || y >= bg.height) continue;
@@ -226,29 +236,11 @@ for (const b of boxes || []) {
   }
   check(`hero ${b.sel} 在视频背景上可读`, worst >= need && samples > 0,
     `对比 ${worst === Infinity ? 'n/a' : worst.toFixed(2)}（需 ${need}，采样 ${samples} 点）最差底色 rgb(${wb}) 于 (${wxy})`);
-  if (worst < need && wxy) {
-    const [wx, wy] = wxy;
-    let map = '';
-    for (let dy = -6; dy <= 6; dy += 3) {
-      let row = '';
-      for (let dx = -6; dx <= 6; dx += 3) {
-        const px = bg.at(wx + dx, wy + dy);
-        const l = Math.round((px[0] + px[1] + px[2]) / 3);
-        row += (l > 200 ? '#' : l > 120 ? '+' : l > 60 ? '.' : ' ') + ' ';
-      }
-      map += '\n        ' + row;
-    }
-    console.log(`  [诊断] 最差点邻域（#=亮 +/./空=暗）:${map}`);
-  }
 }
+try { await fetch(`${CDP}/json/close/${bgTab.id}`); } catch { /* 忽略 */ }
+try { bgWs.close(); } catch { /* 忽略 */ }
 
 check('无 JS 异常', errs.length === 0, errs[0] || '');
-
-// 把取样时摘掉的 hero 文字放回去，保证截图是完整页面（不是缺了标题的版本）
-await ev(`(()=>{const saved=window.__cwSavedHero; if(!saved) return false;
-  for (const it of saved) { it.parent.insertBefore(it.el, it.next); }
-  window.__cwSavedHero=null; return true;})()`);
-await sleep(800);
 
 // 截图取首页（hero + 背景视频一起入镜，最能反映观感）
 const shot = await s('Page.captureScreenshot', { format: 'png' });

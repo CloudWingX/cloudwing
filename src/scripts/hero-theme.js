@@ -65,6 +65,7 @@ function endpoints(p) {
     soft: parseColor(p.soft) || parseColor(p.base), // soft 是 rgba 串；解析不到就退回 base 的通道
     softA: SOFT_A,
     key: mix(p.base, '#ffffff', 0.18),
+    attr: mix(p.base, '#ffffff', 0.12),
     str: mix(p.base, '#7fd6a8', 0.42),
     fn: mix(p.base, '#8fb4f0', 0.28),
     comp: mix(p.base, '#ffffff', 0.58),
@@ -73,7 +74,21 @@ function endpoints(p) {
     tintA: p.tintA,
     hue: p.hue ?? 0,
     sat: p.sat ?? 1,
+    /* 代码段里"会跟着换"的那两处（照参考：色值胶囊 + 每个数值都随预设变） */
+    varHex: String(p.base).toUpperCase(),
+    nums: p.nums || ['0.50', '0'],
   };
+}
+
+/* 把代码段里随预设变化的那两处写进 DOM */
+function applyCodeVars(p) {
+  document.querySelectorAll('.code-body .ln-var').forEach((el) => {
+    el.textContent = String(p.base).toUpperCase();
+  });
+  const nums = p.nums || ['0.50', '0'];
+  document.querySelectorAll('.code-body .ln-num').forEach((el, i) => {
+    if (nums[i] != null) el.textContent = nums[i];
+  });
 }
 
 function reduced() {
@@ -96,6 +111,7 @@ export function initHeroTheme() {
     root.style.setProperty('--accent-rgb', parseColor(e.accent).map(Math.round).join(', '));
     root.style.setProperty('--accent-soft', `rgba(${e.soft.map(Math.round).join(', ')}, ${e.softA})`);
     root.style.setProperty('--code-key', toHex(e.key));
+    root.style.setProperty('--code-attr', toHex(e.attr));
     root.style.setProperty('--code-str', toHex(e.str));
     root.style.setProperty('--code-fn', toHex(e.fn));
     root.style.setProperty('--code-comp', toHex(e.comp));
@@ -104,6 +120,7 @@ export function initHeroTheme() {
     root.style.setProperty('--tint-a', String(e.tintA));
     root.style.setProperty('--vid-hue', `${e.hue}deg`);
     root.style.setProperty('--vid-sat', String(e.sat));
+    applyCodeVars(p);
   };
 
   /* 从 from 预设缓动到 to 预设（经过中间色） */
@@ -128,6 +145,7 @@ export function initHeroTheme() {
         `rgba(${lerp(a.soft, b.soft, k).map(Math.round).join(', ')}, ${(a.softA + (b.softA - a.softA) * k).toFixed(3)})`,
       );
       root.style.setProperty('--code-key', c(a.key, b.key));
+      root.style.setProperty('--code-attr', c(a.attr, b.attr));
       root.style.setProperty('--code-str', c(a.str, b.str));
       root.style.setProperty('--code-fn', c(a.fn, b.fn));
       root.style.setProperty('--code-comp', c(a.comp, b.comp));
@@ -139,7 +157,10 @@ export function initHeroTheme() {
       root.style.setProperty('--vid-hue', `${(a.hue + (b.hue - a.hue) * k).toFixed(2)}deg`);
       root.style.setProperty('--vid-sat', String(a.sat + (b.sat - a.sat) * k));
       if (t < 1) st.raf = requestAnimationFrame(step);
-      else st.raf = 0;
+      else {
+        st.raf = 0;
+        applyCodeVars(to); // 色块与代码里那两处"文字值"在终点对齐（色块本身是平滑变的）
+      }
     };
     st.raf = requestAnimationFrame(step);
   };
@@ -173,6 +194,36 @@ export function initHeroTheme() {
 
   if (!st.wired) {
     st.wired = true;
+    /* "大标题与卡片顶部齐平"：左栏第一块是徽标胶囊、标题在它下面
+       （中间还有 badge 的 margin-bottom，实测 28px）。
+       做法：目标 = 标题自身的顶（绝对坐标）；卡片在顶对齐下的自然顶
+       = hero 内容区顶（卡片不带上外边距时就在那里，与当前 margin 无关）。
+       两者相减就是需要补的上外边距 —— 用绝对坐标算，避免"上一轮 margin"反复叠加。
+       ⚠️ 不要用 badge.bottom 当目标：那是 32，而标题顶是 60（差在 badge 的下边距）。 */
+    const alignCard = () => {
+      const root2 = document.documentElement;
+      const hero = document.querySelector('.hero');
+      const title = document.querySelector('.hero-title');
+      const card = document.querySelector('.code-card');
+      if (!hero || !title || !card) return;
+      if (getComputedStyle(hero).flexDirection === 'column') {
+        root2.style.setProperty('--card-align', '0px');
+        return;
+      }
+      const hr = hero.getBoundingClientRect();
+      const padT = parseFloat(getComputedStyle(hero).paddingTop) || 0;
+      const baseTop = hr.top + padT; // 卡片不带 margin 时所在的顶
+      const target = title.getBoundingClientRect().top;
+      const delta = Math.round(target - baseTop);
+      if (delta >= 0) root2.style.setProperty('--card-align', delta + 'px');
+    };
+    st.align = alignCard;
+    window.addEventListener('resize', alignCard, { passive: true });
+  }
+  if (st.align) st.align();
+
+  if (!st.wired2) {
+    st.wired2 = true;
     document.addEventListener('click', (ev) => {
       const t = ev.target instanceof Element ? ev.target : null;
       const btn = t && t.closest('[data-accent-preset]');
@@ -191,4 +242,7 @@ export function initHeroTheme() {
       tween(from, to);
     });
   }
+  // 字体/图片加载完高度会变，再对齐一次
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => st.align && st.align());
+  window.setTimeout(() => st.align && st.align(), 400);
 }
