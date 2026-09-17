@@ -562,6 +562,8 @@ html[data-theme='dark'] {
   --glass-card: linear-gradient(160deg, rgba(58, 58, 62, 0.82), rgba(30, 30, 34, 0.62));
   /* 浮层（搜索悬浮窗）：深色下也要够实，避免背后正文透进来 */
   --glass-panel: linear-gradient(160deg, rgba(34, 34, 38, 0.97), rgba(20, 20, 23, 0.95));
+  /* 导航栏专用：半透明，让背景视频透上来（见 global.css 同名令牌的注释） */
+  --glass-nav: linear-gradient(160deg, rgba(30, 30, 34, 0.62), rgba(14, 14, 16, 0.46));
   /* 深色主题的玻璃/卡片用白描边（浅色主题走 --line-2 深灰线，见 global.css 注释） */
   --line-glass: rgba(255, 255, 255, 0.4);
 }

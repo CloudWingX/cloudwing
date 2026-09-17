@@ -26,13 +26,19 @@
    - `-an` 去掉音轨（背景视频不需要声音，也不会有自动播放限制问题）
    - `movflags +faststart` 把索引放到文件头，边下边播更快出画面
    - 建议控制在 **8 MB 以内**；超过 25 MB 会碰到 Cloudflare Pages 的单文件上限
-3. 换素材后**务必重跑对比度自检**（不同素材亮度差别很大，浅色主题尤其敏感）：
+3. 换素材后**务必重跑对比度与全站一致性自检**（不同素材亮度差别很大，浅色主题尤其敏感）：
    ```
    node scripts/verify-videobg.mjs http://127.0.0.1:4321 light
    node scripts/verify-videobg.mjs http://127.0.0.1:4321 dark
+   node scripts/verify-videobg-global.mjs http://127.0.0.1:4321 light
    ```
    如果 hero 文字不达标，调 `src/site.ts` 里 `VIDEO_BG` 的
    `opacityLight/opacityDark`（调小 → 视频更淡）或 `scrimLight/scrimDark`（调大 → 遮罩更浓）。
+
+> 注意：背景视频所在的容器带 `transition:persist="video-bg"`（见
+> `components/VideoBackground.astro`）。**不要删掉这个属性** —— 删了之后每次软导航
+> （站内点链接切换）都会重建 `<video>`、重新加载并重新起播，表现为"切换页面视频就失效"。
+> 视频层固定在 `z-index:-4`：压在页面底色之上、旧的光晕(`-2`)/粒子(`-1`)之下。
 
 ## 关掉视频背景
 

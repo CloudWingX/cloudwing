@@ -1,17 +1,22 @@
 ---
 // 全站背景视频（fixed 铺满视口，位于所有内容之下）。
 //
-// 层次（z-index，见 global.css 的「背景层次」注释）：
-//   .video-bg          -5   视频本体
-//   .video-bg::after   -4   遮罩（把视频压暗，保证正文对比度）
-//   body::before       -3   原有光斑
-//   .grid-bg           -2   原有漂移光晕
-//   .pparticles-layer  -1   粒子
-//   内容                0+
+// ★跨页不重建★：外层带 `transition:persist="video-bg"`。
+//   Astro 的 ClientRouter 在软导航时是用 `data-astro-transition-persist` 匹配元素的
+//   （见 astro/dist/transitions/swap-functions.js），没有这属性的元素会被整棵换掉 ——
+//   视频就会**重新建一个 <video>、readyState 归零、重新起播**，
+//   表现就是"一切换页面视频就闪一下/像失效了"（实测：seq 1→2、readyState 4→0）。
+//   加上 persist 后是同一个节点被搬过去，播放位置连续、不重新加载。
 //
-// 两个健壮性处理：
-//   1) prefers-reduced-motion：暂停播放（只显示首帧），尊重系统设置。
-//   2) 自动播放被拦（省电模式等）：回落到 poster/首帧，页面照常可用，不报错。
+// 层次（z-index，见 global.css 的「背景层次」注释）：
+//   body 底色渐变        最底
+//   .video-bg          -4   视频本体 + 遮罩（半透明，让底色透上来）
+//   .grid-bg           -2   原有漂移光晕（保留，叠在视频之上）
+//   .pparticles-layer  -1   原有粒子（保留，叠在视频之上）
+//   内容 / 导航栏        0+
+//
+// 健壮性：prefers-reduced-motion 只显示首帧；自动播放被拦时保持首帧；
+// 标签页切后台暂停。
 import { VIDEO_BG } from '../site';
 const on = Boolean(VIDEO_BG.src);
 ---
@@ -19,6 +24,7 @@ const on = Boolean(VIDEO_BG.src);
   on && (
     <div
       class="video-bg"
+      transition:persist="video-bg"
       aria-hidden="true"
       style={`--vid-opacity-dark:${VIDEO_BG.opacityDark};--vid-opacity-light:${VIDEO_BG.opacityLight};--vid-scrim-dark:${VIDEO_BG.scrimDark};--vid-scrim-light:${VIDEO_BG.scrimLight};`}
     >
@@ -42,7 +48,9 @@ const on = Boolean(VIDEO_BG.src);
   .video-bg {
     position: fixed;
     inset: 0;
-    z-index: -5; /* 在所有背景层之后（见文件头注释） */
+    /* -4：压在页面底色之上、原有光晕(-2)/粒子(-1) 之下。
+       之前放在 -5（最底）时会被 body 的渐变糊住、几乎看不出是视频。 */
+    z-index: -4;
     pointer-events: none;
     overflow: hidden;
   }
@@ -63,6 +71,8 @@ const on = Boolean(VIDEO_BG.src);
      浅色主题用**白色**薄膜（把整体抬亮，深色文字才压得住）；
      深色主题用**黑色**薄膜（压住素材高光，避免出现刺眼的白块）。
      两层都只是"薄膜"，视频依然可见、依然在动。 */
+  /* 遮罩：同一个层里的伪元素，直接盖在视频之上（不给它单独 z-index，
+     否则会和 body::before(-3) 抢同一层，顺序变得不可预期）。 */
   .video-bg::after {
     content: '';
     position: absolute;

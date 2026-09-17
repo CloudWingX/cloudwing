@@ -190,7 +190,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
     z-index: -1;
     border: 0;
     border-bottom: var(--line-w) solid var(--line-2);
-    background: var(--glass-panel);
+    /* 半透明（--glass-nav）：给背景视频留出可见度。
+       模糊留着 —— 视频透上来时是"磨砂"而不是清晰的画面。 */
+    background: var(--glass-nav);
     /* 顺序与 .nav-sub 一致（-webkit- 在前）：构建时的 CSS 压缩会合并这两个前缀，
        顺序不同可能导致合并后把标准属性丢掉（实测过一次，结果计算值是 none）。 */
     -webkit-backdrop-filter: blur(22px) saturate(1.5);

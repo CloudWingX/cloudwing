@@ -352,6 +352,21 @@ items:
          看起来也像文字丢失。**先等 dashoffset 归零，再注入 `animation:none` 截图**。
     - 自检：`node scripts/verify-videobg.mjs [url] [light|dark]`（16 项：播放/层级/透明度/
       遮罩/无溢出/hero 两组文字在视频上的实际对比度）。关掉视频只需把 `VIDEO_BG.src` 置为 `''`。
+    - **★必须带 `transition:persist`★**（2026-09-15 修用户报的"切页就失效"）：
+      Astro 的 ClientRouter 是按 `data-astro-transition-persist` 匹配元素的
+      （见 `astro/dist/transitions/swap-functions.js`）。没这个属性的元素在软导航时会被
+      **整棵换掉** → 视频被重新 new 一个 `<video>`、`readyState` 归零、重新起播，
+      表现就是"一切换页面视频就闪一下、像没生效"。
+      实测：加之前 `seq 1→2、readyState 4→0`；加了之后 `seq` 不变、`readyState` 一直是 4。
+      **凡是 `Base.astro` 里要跨页常驻的重型节点（视频/音频/canvas），都要考虑加这条。**
+    - **层次**（用户要求"保留旧背景但同步加载"，故视频不放在最底）：
+      视频放 `-4`（压在页面底色之上），旧的光晕 `-2`、粒子 `-1` 仍在视频之上保留；
+      导航栏的玻璃层改用 `--glass-nav`（半透明，约 0.66/0.5），否则接近不透明的
+      `--glass-panel` 会让"导航栏区域的视频等于没有"（实测像素贡献只有 1.44，换掉后 8.14，
+      与内容区的 9.8 同量级）。
+    - 自检（全站一致性）：`node scripts/verify-videobg-global.mjs [url] [light|dark]`
+      （25 项：逐页硬刷新 + 软导航一圈，校验视频存在/在播/层级/透明度、旧背景仍在、
+      以及软导航时视频节点**未被重建**）。
 
 ---
 
