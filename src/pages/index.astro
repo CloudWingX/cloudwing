@@ -72,13 +72,15 @@ const stackTop = topTools.length ? topTools : ['Java', 'Spring Boot', 'MySQL', '
 /* 展示卡片里的代码段（照参考的 code-card 形态）。
    取的是一段**真实关键代码**：本站背景视频层是怎么用"雾蓝强调色 + 玻璃材质"这套
    设计令牌落地的 —— 与左侧文案同一主题，纯展示用、不参与运行。
-   高亮类名沿用参考（code-keyword / code-string / …），颜色换成站点令牌。 */
+   高亮类名沿用参考（code-keyword / code-string / …），颜色换成站点令牌。
+   ★代码段内一律用英文★（注释也不例外）：代码卡片里混中文会显得像文案而不是代码，
+   也与参考卡片的观感不一致 —— 想改成中文请先确认。 */
 const codeSample = [
-  '<span class="code-comment">{/* 背景视频层 · 设计令牌 → 画面 */}</span>',
+  '<span class="code-comment">{/* backdrop video layer · tokens → frame */}</span>',
   '<span class="code-keyword">const</span> <span class="code-function">VIDEO_BG</span> = {',
   '  <span class="code-prop">src</span>: <span class="code-string">\'/media/bg-loop.mp4\'</span>,',
-  '  <span class="code-prop">opacity</span>: <span class="code-number">0.50</span>, <span class="code-comment">// 视频只当纹理</span>',
-  '  <span class="code-prop">scrim</span>: <span class="code-string">\'0.35 → 0.58 → 0.82\'</span>, <span class="code-comment">// 渐变遮罩</span>',
+  '  <span class="code-prop">opacity</span>: <span class="code-number">0.50</span>, <span class="code-comment">// video as texture</span>',
+  '  <span class="code-prop">scrim</span>: <span class="code-string">\'0.35 → 0.58 → 0.82\'</span>, <span class="code-comment">// gradient mask</span>',
   '};',
   '',
   '<span class="code-keyword">export default function</span> <span class="code-function">VideoBackground</span>() {',
@@ -89,7 +91,7 @@ const codeSample = [
   '  );',
   '}',
   '',
-  '<span class="code-comment">/* 玻璃材质：强调色只做点缀，底子是深色玻璃 */</span>',
+  '<span class="code-comment">/* glass: accent only as a highlight, dark glass underneath */</span>',
   '<span class="code-component">.video-bg</span> {',
   '  <span class="code-prop">position</span>: <span class="code-keyword">fixed</span>; <span class="code-prop">inset</span>: <span class="code-number">0</span>;',
   '  <span class="code-prop">z-index</span>: <span class="code-number">-4</span>;',
