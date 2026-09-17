@@ -774,19 +774,41 @@ CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真�
 | 个人信息卡横幅图 | `SidebarNav.astro` 顶部常量 `PROFILE_BANNER = ''`，留空＝主题渐变；填站内图片路径即换成图片 |
 | 天气城市 | `src/site.ts` 的 `WEATHER_CITY = ''`＝按访客 IP 自动定位（推荐，不暴露你的位置）；填城市名则固定（等于公开城市） |
 | 画廊原图 | 40 张原始 PNG 备份已随工作区清理删除，仓库里的 webp 是唯一副本（详见 §11） |
-| `SESSION_HANDOFF.md` | 仓库内 gitignore 的旧交接笔记，内容已过时（引用 `_shots/` 等已删路径），要删/要更新都可以 |
+| `SESSION_HANDOFF.md` | **已删除**（交接时清理，见 §11.2） |
 
 ---
 
-## 11. 本次工作区清理（2026-09-15）
+## 11. 工作区清理记录
 
-工作区从 **6,581MB → 437MB**，现在只剩三项：`endfield-blog/`（437MB，其中 node_modules 412MB）、
-`.recode/`（DSH 会话状态）与本文件 `HANDOFF.md`。
+### 11.1 首轮大清理（2026-09-15，6,581MB → 437MB）
 
 - 删除的会话产物/缓存：诊断截图 2.2GB、无头浏览器配置、npm 缓存 859MB、vision 产物缓存、写入测试残留、根目录误建的 `public/`。
 - 删除的其他任务文件（用户确认）：`dev-setup` 1.8GB、`.venv` 470MB、`mc-originals-backup` 180MB、`pylibs` 135MB、
   pip 缓存 203MB、`data`(MNIST) 64MB、`dsh-tools` 35MB、参考目录与实验脚本、简历/课业文件、Jupyter 状态等。
 - 已同步修正 `CODEX.md` / `README.md` 里指向 `mc-originals-backup/` 的失效路径（提交 `fbba3b6`）。
+
+### 11.2 交接前例行清理（2026-09-15 晚，释放 112MB）
+
+清理后工作区 **486MB**，只有 4 项：`endfield-blog/`、`.recode/`、`_shots/`（空）、`HANDOFF.md`。
+
+| 删除 | 原因 |
+|---|---|
+| `_shots/`（84 张，108.6MB） | 调试截图。**全部由验证脚本现场生成，可直接删** |
+| `_shots-before/`（6 张，3.3MB） | 亮色主题对比基线，主题已删（§27）→ 无意义 |
+| `endfield-blog/SESSION_HANDOFF.md` | gitignore 的旧交接笔记，内容已过时（引用 `_shots-before` 等失效路径） |
+| `_shots/_vid-off.png`、`_vid-on.png` | 0 字节空文件（当时截图失败留下的） |
+
+> **关于 `_shots/`**：这是**验证脚本的输出目录**（13 个脚本按绝对路径写入
+> `D:\deep seek workplace\_shots\`），已保留为空目录。
+> ⚠️ 其中**多数脚本不会自建目录**（只有 `mobile-shots.mjs` / `shot-countup.mjs` /
+> `shots-theme.mjs` / `sweep-light.mjs` 有 `mkdirSync`）—— **别把这个目录整个删掉**，
+> 否则那 9 个脚本会因写盘失败而中断。删图可以，删目录不行。
+> 里面的图随时可重新生成，不需要备份。
+
+**没有动的东西**（评估后保留）：`node_modules/`（412MB，本机依赖，删了要重装）、
+`dist/`（26MB，预览服务器正在用，且 `start-cloudwing.cmd -n` 依赖它）、
+`.git/`（25MB）、`.astro/`（构建缓存，0MB）。
+另外 `package-lock.json` 虽然被 gitignore（§2 说明为何不能提交），**但本机装依赖需要它，别删**。
 
 ---
 
