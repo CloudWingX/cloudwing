@@ -74,24 +74,26 @@ const stackTop = topTools.length ? topTools : ['Java', 'Spring Boot', 'MySQL', '
    设计令牌落地的 —— 与左侧文案同一主题，纯展示用、不参与运行。
    高亮类名沿用参考（code-keyword / code-string / …），颜色换成站点令牌。
    ★代码段内一律用英文★（注释也不例外）：代码卡片里混中文会显得像文案而不是代码，
-   也与参考卡片的观感不一致 —— 想改成中文请先确认。 */
+   也与参考卡片的观感不一致 —— 想改成中文请先确认。
+   ★最长行请控制在 47 字符以内★：手机端字号是按最长行反解出来的
+   （见样式的 .code-body 注释），行太长就只能把字缩小，反而更难读。 */
 const codeSample = [
   '<span class="code-comment">{/* backdrop video layer · tokens → frame */}</span>',
   '<span class="code-keyword">const</span> <span class="code-function">VIDEO_BG</span> = {',
   '  <span class="code-prop">src</span>: <span class="code-string">\'/media/bg-loop.mp4\'</span>,',
   '  <span class="code-prop">opacity</span>: <span class="code-number">0.50</span>, <span class="code-comment">// video as texture</span>',
-  '  <span class="code-prop">scrim</span>: <span class="code-string">\'0.35 → 0.58 → 0.82\'</span>, <span class="code-comment">// gradient mask</span>',
+  '  <span class="code-prop">scrim</span>: <span class="code-string">\'0.35 → 0.58 → 0.82\'</span>, <span class="code-comment">// mask</span>',
   '};',
   '',
   '<span class="code-keyword">export default function</span> <span class="code-function">VideoBackground</span>() {',
   '  <span class="code-keyword">return</span> (',
-  '    &lt;<span class="code-component">div</span> <span class="code-prop">class</span>=<span class="code-string">"video-bg"</span> <span class="code-prop">aria-hidden</span>=<span class="code-string">"true"</span>&gt;',
-  '      &lt;<span class="code-component">video</span> <span class="code-prop">src</span>={<span class="code-function">VIDEO_BG</span>.<span class="code-prop">src</span>} <span class="code-prop">muted loop playsinline</span> /&gt;',
+  '    &lt;<span class="code-component">div</span> <span class="code-prop">class</span>=<span class="code-string">"video-bg"</span>&gt;',
+  '      &lt;<span class="code-component">video</span> <span class="code-prop">src</span>={<span class="code-function">VIDEO_BG</span>.<span class="code-prop">src</span>} <span class="code-prop">muted</span> /&gt;',
   '    &lt;/<span class="code-component">div</span>&gt;',
   '  );',
   '}',
   '',
-  '<span class="code-comment">/* glass: accent only as a highlight, dark glass underneath */</span>',
+  '<span class="code-comment">/* glass: accent as highlight */</span>',
   '<span class="code-component">.video-bg</span> {',
   '  <span class="code-prop">position</span>: <span class="code-keyword">fixed</span>; <span class="code-prop">inset</span>: <span class="code-number">0</span>;',
   '  <span class="code-prop">z-index</span>: <span class="code-number">-4</span>;',
@@ -524,22 +526,39 @@ const codeSample = [
     .hero-title { font-size: 48px; }
     .code-card { max-width: 440px; }
   }
+  /* ── 手机端（≤768px）：照参考站手机端的表现优化 ──
+     参考（reactbits.dev）在 390/360 下的实测结论：
+       · 标题与正文**保持左对齐**（text-align: start），不是居中；
+       · 顶部到内容留白 ≈ 96px（不是 120px）；内容与卡片之间 32px（不是 48px）；
+       · 代码卡片给出**足够宽的行宽**，靠字号收进去，不出现"读到一半截断"。
+     ⚠️ 整套只写在 (max-width:768px) 里，桌面（≥769px）一行都不受影响。 */
   @media (max-width: 768px) {
     .hero {
       flex-direction: column;
       justify-content: center;
-      gap: 48px;
-      padding: 120px 20px 80px;
-      text-align: center;
+      align-items: stretch; /* 左栏不再被居中拉伸，内容真正从左边起排 */
+      gap: 32px;
+      padding: 96px 20px 64px;
+      text-align: left;
     }
-    .hero-content { text-align: center; max-width: 100%; }
+    .hero-content { text-align: left; max-width: 100%; }
     .hero-title { font-size: 36px; }
     .hero-subtitle { font-size: 16px; }
-    .hero-features { justify-content: center; gap: 20px; }
-    .component-tags { justify-content: center; }
+    .hero-features { justify-content: flex-start; gap: 20px; }
+    .component-tags { justify-content: flex-start; }
     .feature-number { font-size: 22px; }
     .code-card { max-width: 100%; width: 100%; }
-    .code-body { font-size: 12px; padding: 16px; }
+    /* 代码行宽：手机端字号按**容器实测宽度 ÷ 最长行字数**反解，保证最长那行也放得下，
+       不再需要横向滚动（原来 390px 下要滚 93px、360px 下要滚 123px）。
+       系数 0.55 是这套等宽字体每字符推进宽度与字号的比（实测 13px → 7.1475px）。
+       分子里的 40px = 页面左右各 20px 内边距，32px = 卡片内左右内边距之和。
+       47 = codeSample 的最长行字数（改代码时若超过 47，这里要同步改，否则会横向滚动）。 */
+    .code-body {
+      font-size: min(11.5px, calc((100vw - 40px - 32px) / (47 * 0.55)));
+      padding: 14px 14px 16px 16px;
+      line-height: 1.65;
+      overflow-x: auto; /* 兜底：万一以后加了更长的行，内部滚动而不是撑破页面 */
+    }
   }
 
   /* ── ② 最新作品 ── */

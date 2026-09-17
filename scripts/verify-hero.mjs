@@ -123,16 +123,20 @@ check('标题收到 48px', t.title.fs === '48px', t.title.fs);
 check('卡片最大宽收到 440', t.card.w <= 440, String(t.card.w));
 check('无横向溢出', t.overflow === 0, String(t.overflow));
 
-console.log('\n=== 768：堆叠 + 居中 + 标题 36px（参考值）===');
+console.log('\n=== 768：堆叠（参考手机端行为）===');
 await goto(768, 900, true);
 const m = await snap();
 check('改为列向堆叠', m.hero.dir === 'column', m.hero.dir);
-check('gap 48px', m.hero.gap === '48px', m.hero.gap);
-check('上内边距 120px', m.hero.padT === '120px', m.hero.padT);
+// 2026-09-18 手机端优化：照参考站的手机端实测值 —— 左对齐 / gap 32 / 上内边距 96
+check('gap 32px（参考手机端值）', m.hero.gap === '32px', m.hero.gap);
+check('上内边距 96px（参考手机端值）', m.hero.padT === '96px', m.hero.padT);
 check('标题 36px', m.title.fs === '36px', m.title.fs);
-check('内容居中', (await ev(`getComputedStyle(document.querySelector('.hero-content')).textAlign`)) === 'center');
-check('统计组居中', (await ev(`getComputedStyle(document.querySelector('.hero-features')).justifyContent`)) === 'center');
+check('内容**左对齐**（参考手机端不居中）', (await ev(`getComputedStyle(document.querySelector('.hero-content')).textAlign`)) === 'left');
+check('统计组左对齐', (await ev(`getComputedStyle(document.querySelector('.hero-features')).justifyContent`)) === 'flex-start');
+check('标签组左对齐', (await ev(`getComputedStyle(document.querySelector('.component-tags')).justifyContent`)) === 'flex-start');
 check('卡片占满内容宽', m.card.w > 600, String(m.card.w));
+check('代码卡片不横向滚动（字号已按最长行反解）',
+  (await ev(`(()=>{const b=document.querySelector('.code-body'); return b.scrollWidth-b.clientWidth;})()`)) === 0);
 check('无横向溢出', m.overflow === 0, String(m.overflow));
 
 console.log('\n=== 减少动态：不应有残留动画导致的空白 ──');
