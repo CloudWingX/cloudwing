@@ -35,13 +35,13 @@ const hero = await ev(`(()=>{const t=s=>document.querySelector(s);
     统计:document.querySelectorAll('.feature-item').length,
     标签:document.querySelectorAll('.component-tags .tag').length,
     卡片:!!t('.code-card'),
-    渐变行:!!t('.title-gradient'),
+    渐变行:!!t('.ht-l2'),
     旧结构:document.querySelectorAll('.hero-eyebrow,.hero-inner,.hero-cta,.ht-line,.stroke-text__svg,.typed-hero').length};})()`);
 console.log('  ' + JSON.stringify(hero));
 check('Hero 版式四块齐全（徽标/标题/统计/标签）',
   hero.徽标.length > 0 && hero.标题.length > 4 && hero.统计 === 2 && hero.标签 >= 4,
   `${hero.统计} 统计 / ${hero.标签} 标签`);
-check('副标题文案正确', hero.副标题.startsWith('云上写代码，翼下记生活。'), hero.副标题.slice(0, 24) + '…');
+check('副标题文案正确', hero.副标题 === '记录我的学习，折腾和胡思乱想', hero.副标题);
 check('标题第二行走渐变', hero.渐变行 === true);
 check('右侧展示卡片存在（参考的 code-card 位）', hero.卡片 === true);
 check('旧 Hero 结构已清干净', hero.旧结构 === 0, String(hero.旧结构));

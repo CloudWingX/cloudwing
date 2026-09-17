@@ -81,13 +81,36 @@ check('徽标：圆角 9999px / 内距 6×14（参考值）',
   `${d.badge.radius} ${d.badge.padT} ${d.badge.padL}`);
 check('徽标圆点 6×6', d.dot.w === 6 && d.dot.h === 6, `${d.dot.w}×${d.dot.h}`);
 
-check('主标题字号 64px', d.title.fs === '64px', d.title.fs);
-check('主标题字重 700', d.title.fw === '700', d.title.fw);
-check('主标题行高 1.05', Math.abs(parseFloat(d.title.lh) - 64 * 1.05) < 2, d.title.lh);
-check('主标题字距 -0.03em', Math.abs(parseFloat(d.title.ls) + 64 * 0.03) < 0.8, d.title.ls);
-check('标题含渐变行（.title-gradient 存在且有尺寸）',
-  !!d.gradient && d.gradient.w > 0 && d.gradient.h > 0, d.gradient ? `${d.gradient.w}×${d.gradient.h}` : 'missing');
+/* 主标题：2026-09-18 用户改文案为两行
+   L1「Code on clouds, life on wings」/ L2「Hello this is CloudWing」。
+   L1 有 28 字符，64px 下要 844px 而左栏只有 560px —— 所以字号是**按最长行反解**的
+   clamp(27px, 1.9vw, 42px)，并且两行 nowrap 保证 PC 上严格两行。
+   这里断言的是"两行 + 放得下 + 颜色分工"，不再锁定 64px。 */
+const titleInfo = await ev(`(function(){var q=function(s){return document.querySelector(s);};
+  var t=q('.hero-title'), l1=q('.ht-l1'), l2=q('.ht-l2');
+  var cw=q('.hero-content').getBoundingClientRect().width;
+  var mw=function(e){var d=e.style.display;e.style.display='inline-block';var w=e.getBoundingClientRect().width;e.style.display=d;return w;};
+  return JSON.stringify({fs:getComputedStyle(t).fontSize, fw:getComputedStyle(t).fontWeight,
+    lh:getComputedStyle(t).lineHeight, ls:getComputedStyle(t).letterSpacing, cw:Math.round(cw),
+    l1w:Math.round(mw(l1)), l2w:Math.round(mw(l2)),
+    l1:l1.textContent.trim(), l2:l2.textContent.trim(),
+    l1color:getComputedStyle(l1).color, l2clip:getComputedStyle(l2).webkitBackgroundClip||getComputedStyle(l2).backgroundClip,
+    l2img:getComputedStyle(l2).backgroundImage.slice(0,24),
+    l1rects:l1.getClientRects().length, l2rects:l2.getClientRects().length});})()`);
+const ti = JSON.parse(titleInfo);
+check('标题第一行文案正确', ti.l1 === 'Code on clouds, life on wings', ti.l1);
+check('标题第二行文案正确', ti.l2 === 'Hello this is CloudWing', ti.l2);
+check('PC 上严格两行（两行都不折行）', ti.l1rects === 1 && ti.l2rects === 1, `L1=${ti.l1rects} L2=${ti.l2rects}`);
+check('两行都放得进左栏（按最长行反解字号）', ti.l1w <= ti.cw + 1 && ti.l2w <= ti.cw + 1,
+  `L1=${ti.l1w} L2=${ti.l2w} 容器=${ti.cw}`);
+check('第一行为纯白', /rgb\(255,\s*255,\s*255\)/.test(ti.l1color), ti.l1color);
+check('第二行走渐变强调色（background-clip:text + 渐变）',
+  /text/.test(ti.l2clip) && /gradient/.test(ti.l2img), `${ti.l2clip} | ${ti.l2img}`);
+check('主标题字重 700', ti.fw === '700', ti.fw);
+check('主标题行高 1.05', Math.abs(parseFloat(ti.lh) - parseFloat(ti.fs) * 1.05) < 2, `${ti.lh} @ ${ti.fs}`);
+check('主标题字距 -0.03em', Math.abs(parseFloat(ti.ls) + parseFloat(ti.fs) * 0.03) < 0.8, ti.ls);
 
+check('副标题文案正确', d.subtitleText === '记录我的学习，折腾和胡思乱想', d.subtitleText);
 check('副标题字号 18px', d.subtitle.fs === '18px', d.subtitle.fs);
 check('副标题颜色 rgba(255,255,255,0.7)', /rgba\(255,\s*255,\s*255,\s*0?\.7\)/.test(d.subtitle.color), d.subtitle.color);
 check('副标题行高 1.6', Math.abs(parseFloat(d.subtitle.lh) - 18 * 1.6) < 1.5, d.subtitle.lh);
@@ -119,7 +142,7 @@ await goto(1024, 900, false);
 const t = await snap();
 check('gap 收到 40px', t.hero.gap === '40px', t.hero.gap);
 check('左右内边距 24px', t.hero.padL === '24px' && t.hero.padR === '24px', `${t.hero.padL}/${t.hero.padR}`);
-check('标题收到 48px', t.title.fs === '48px', t.title.fs);
+check('标题字号 ≤ PC 上限（按最长行反解，不再写死 48px）', parseFloat(t.title.fs) <= 42, t.title.fs);
 check('卡片最大宽收到 440', t.card.w <= 440, String(t.card.w));
 check('无横向溢出', t.overflow === 0, String(t.overflow));
 
@@ -130,7 +153,7 @@ check('改为列向堆叠', m.hero.dir === 'column', m.hero.dir);
 // 2026-09-18 手机端优化：照参考站的手机端实测值 —— 左对齐 / gap 32 / 上内边距 96
 check('gap 32px（参考手机端值）', m.hero.gap === '32px', m.hero.gap);
 check('上内边距 96px（参考手机端值）', m.hero.padT === '96px', m.hero.padT);
-check('标题 36px', m.title.fs === '36px', m.title.fs);
+check('标题 36px（手机端比 PC 大：第一行允许折行，不必为一行牺牲字号）', m.title.fs === '36px', m.title.fs);
 check('内容**左对齐**（参考手机端不居中）', (await ev(`getComputedStyle(document.querySelector('.hero-content')).textAlign`)) === 'left');
 check('统计组左对齐', (await ev(`getComputedStyle(document.querySelector('.hero-features')).justifyContent`)) === 'flex-start');
 check('标签组左对齐', (await ev(`getComputedStyle(document.querySelector('.component-tags')).justifyContent`)) === 'flex-start');
