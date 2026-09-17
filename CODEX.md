@@ -1,100 +1,166 @@
 # CODEX 交接指南 — CloudWing / 云翼
 
-> 给 Codex（或任何接手开发者）的第一份文档。请先读本文件再动代码。
+> 仓库内**简版硬规则**。给 Codex（或任何接手开发者）先读这一份，够你安全动代码。
+> 需要完整背景（症状→根因→修法、验证手法、遗留待决项）时读 [`docs/HANDOFF.md`](./docs/HANDOFF.md)。
+> 两份冲突时**以 `docs/HANDOFF.md` 为准**。
 
 ## 项目一句话
-Astro 7 静态个人档案站（磨砂玻璃扁平化 UI，黑白灰体系，浅/深双主题）。当前已上线：源码在 GitHub `CloudWingX/cloudwing`，站点由 Cloudflare Pages 自动构建部署到 `https://cloudwing.pages.dev`。
+
+Astro 7 静态个人档案站，**暗色电影感 + 玻璃拟态 UI，只有一套暗色主题**
+（没有浅色主题、没有主题开关 —— 见「主题机制」）。源码在 GitHub `CloudWingX/cloudwing`，
+Cloudflare Pages 自动构建部署到 `https://cloudwing.pages.dev`。
 
 ## 立即能跑
+
 ```bash
-cd D:\deep seek workplace\endfield-blog   # Windows 本机路径
-$env:npm_config_cache = 'D:\deep seek workplace\.npm-cache'
-npm install
-npm run dev          # http://localhost:4321
-npm run build        # 产物 → dist/
-npm run preview      # 预览 dist（--port 4321 --host 127.0.0.1）
+cd D:\deep seek workplace\endfield-blog       # Windows 本机路径
+npm install                                   # 依赖已装好（node_modules 在仓库里）
+npm run build                                 # astro build && pagefind --site dist
+npm run build:fast                            # 只 astro build（改样式时更快）
+npm run preview -- --port 4321 --host 127.0.0.1
+node scripts/smoke.mjs                        # 自检入口（当前基线 45/45）
 ```
 
-## 目录速览
-```
-src/
-  site.ts               ← 站点信息 / NAV / IMG_CDN 图床开关 / GISCUS 配置 / imgUrl()
-  content.config.ts     ← works / shots 集合 schema
-  content/works/*.md    ← 作品（每件 1 个 md，自动生成卡片+详情页）
-  content/shots/*.md    ← 影集条目（40 个，对应 public/shots/mc/*.webp）
-  layouts/Base.astro    ← 全站壳：主题引导 / Header / Footer / Particles / fonts
-  layouts/WorkLayout.astro ← 作品详情页布局（含 ext-link 仓库按钮）
-  pages/                ← index / works / gallery / about / account / 404
-  components/ReactBits/ ← React Bits 官方原码（gsap/three/ogl），勿改核心
-  scripts/ui.js         ← 全局动效 / 主题切换事件
-  styles/global.css     ← 设计 token + 玻璃基础
-  styles/motion.css     ← 动效 + html[data-theme='dark'] 深色 token 覆盖
-public/                 ← shots/mc/*.webp(40) + covers/*.svg + favicon + lanyard
-plugins/vite-cjs-inline-shim.mjs ← 构建 shim（勿删，见“构建坑”）
-```
+## 七条硬规则
 
-## 页面与 bodyClass
-| 路由 | 文件 | bodyClass | 说明 |
-|---|---|---|---|
-| `/` | pages/index.astro | `home-route` | hero + 01作品库/02画廊/03关于 三板块（左右交错文字）|
-| `/works/` | pages/works/index.astro | — | 卡片网格 + 玻璃分段单选分类（01/02 板块数据源）|
-| `/works/[slug]/` | pages/works/[slug].astro | — | 详情（WorkLayout + Markdown）|
-| `/gallery/` | pages/gallery/index.astro | — | 40 图玻璃卡网格 + `<dialog>` 大图 |
-| `/about/` | pages/about.astro | `about-route` | 履历时间线 + MagicBento + Lanyard 工牌 + **VariableProximity 文字**（h1 与两个小节标题：光标邻近可变字重） |
-| `/account/` | pages/account.astro | — | 互动：giscus 留言板（配置为空时占位）+ **全站粒子背景**（V53 起与其它页统一，GridScan/深色令牌已移除） |
-| `/404` | pages/404.astro | — | — |
+1. **ReactBits 原码不动**：`src/components/ReactBits/*` 是官方原码。要改视觉 → 新建宿主组件
+   （`src/components/*.jsx`）传 props / 覆盖 CSS。唯一例外已在文件内注明
+   （`VariableProximity.css` 删掉了失效的 Google Fonts `@import`）。
+2. **软导航会重建 DOM，但页面脚本不会重跑**：站内用 `<ClientRouter />`。任何交互必须写成
+   **document 级事件委托 + `window` 上的单例状态**，并在 `astro:page-load` 里重新绑定。
+3. **事件挂在 `document` 上，不是 `window`**：`astro:page-load` / `astro:after-swap`
+   在 document 上派发**且不冒泡**，挂 window 永远收不到（已踩坑两次）。
+4. **常驻小岛一律 `client:idle`**：`client:visible` 与软导航的水合时机冲突，会抛
+   `React error #424`（水合不匹配，控制台无诊断信息）。不要用 `client:visible`。
+   ⚠️ **本站在"线上"仍会间歇性（约 1/3 轮次）抛 #424，本地永远复现不了**；
+   已排除缓存与代码改动，详见 `docs/HANDOFF.md` §32，别误判成自己改坏了。
+5. **玻璃材质走令牌，不在组件里写死数值**：`--glass-blur` / `--line-2` / `--r-s|m|l` /
+   `--glass*` / `--glass-panel`。页面与组件的 `<style>` 是作用域样式，**优先级高于 global.css**，
+   写死 `1px solid …` 会局部盖掉全局令牌。边框只写 `1px` 或 `2px`（Blink 把 1.5px 取整成 1px）。
+6. **改底色要改两处**：`global.css` 的 `:root` 与 `motion.css` 里 `html[data-theme='dark'] body`
+   （后者会整条覆盖前者）。只改一处不生效。
+7. **隐私红线**：不得出现真实姓名、学校、企业名（作者身份统一为 `CloudWing_X`）；
+   不要把简历 / 课业 / 个人文档放进仓库或 `public/`。
 
-## 三条硬规则
-1. **ReactBits 原码不动**：`src/components/ReactBits/*` 是官方 JS/CSS 原版。只允许：宿主组件（`src/components/*.jsx`）改 props / 包尺寸 / 定位 / 主题适配。改核心前先确认。
-2. **隐私红线**：About / README / 作品正文不得出现真实姓名、学校、企业名（用户明确要求）。
-3. **软导航陷阱**：站内用 Astro `<ClientRouter/>`。任何「点按钮/标签要生效」的交互**不要**把监听绑到首屏 DOM 元素上，要绑 `document` + 幂等标记（参考 `Header.astro` 汉堡菜单、`works/index.astro` 分类，均用 `window.__cw…Wired` + document 委托，并在 `astro:page-load` 兜底）。
-4. **ReactBits 组件用法限制（VariableProximity）**：`/about/` 的标题文字用了 `VariableProximity`（宿主 `src/components/ProximityText.jsx`，依赖 `motion`）。它把文本按**空格**分词、每个词 `nowrap` → **中文长句会被当成一个不可换行的词导致溢出，切勿用于中文长段落**，只适合短文本 / 拉丁标题。宿主已用内联 `fontFamily: var(--font-display)` 覆盖组件默认的 Roboto Flex，保持全站字体一致（Outfit 支持 wght 可变轴，效果照常）。
+## 主题机制（只有暗色）
 
-## 主题机制（浅/深）
-- Base 内联脚本首屏读 `cw-theme-pref`（localStorage→session→cookie）设 `html[data-theme]`。
-- `ui.js` `.theme-toggle` 事件委托：白日/夜间两态，落盘三通道。
-- 组件适配看 `html[data-theme]`（全局 CSS 或宿主 JS 里 MutationObserver）。
-- **背景已全站统一**（V53）：所有页面（含 `/account/`、`/search/`）都用 `PageParticlesBackground` 粒子层，`Base.astro` 的 `withParticles` 恒为 `true`；页面级 `auth-route` 深色令牌与其判断逻辑已删除。新增页面无需再处理背景。
-
-## 图片与图床
-- 图片统一经 `src/site.ts` 的 `imgUrl()`：`IMG_CDN=''`（当前）走本地相对路径，图片随 `dist` 由 Cloudflare Pages CDN 服务——**稳定，勿改回 jsDelivr**（国内不稳踩过坑）。
-- 影集 40 张原 PNG 已转 webp（约 3MB）。原 PNG 备份（`mc-originals-backup/`）已于 2026-09 随工作区清理删除，**仓库里的 webp 现在是唯一副本**；要更高分辨率原图需重新提供。
-- 加新影集：webp 放 `public/shots/mc/` + `src/content/shots/` 加一条 md（`image: /shots/mc/mc-xxx.webp`）。
-
-## 作品（works）怎么加
-复制 `src/content/works/w001-lib.md` 或 `w002-site.md`：
-```yaml
-title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cover / link?
-```
-- `link`（可选）会在详情页元信息显示「仓库/地址 ↗」胶囊按钮。
-- 列表自动出现 + 分类分段自动统计，无需改代码。
+- 站点**恒为暗色**。`Base.astro` 首屏内联脚本先于渲染写死 `<html data-theme="dark">`（防闪烁）；
+  `ui.js` 的 `lockDarkTheme()` 在每次 `astro:page-load` 后写回（ClientRouter 会用新文档的
+  `<html>` 覆写属性）。
+- **不存在** `cw-theme-pref`、`.theme-toggle`、`applyPref()`、`html[data-theme='light']` 规则 ——
+  这些已全部删除（2026-09-15）。别再"修"它们。
+- 强调色是雾蓝 `--accent: #9FD3E8`（取自背景视频的 192° 青蓝）。
+- 自检：`node scripts/verify-theme.mjs`（单主题不变量，11 项）。
 
 ## 构建 / 部署坑（重要）
-1. **不要在仓库提交 `package-lock.json`**：Windows 生成的 lock 会让云端 Linux `npm ci` 报 `Missing @emnapi/*`；仓库无 lock 时云端自动 `npm install`（已在 .gitignore 排除）。
-2. **依赖版本要 pin 关键 peer**：`react` / `react-dom` 已固定为精确 `19.2.8`（`@react-three/fiber@9.7` 的 peer 是 `>=19 <19.3`，用 `^` 会解析到 19.3 导致云端 ERESOLVE 构建失败）。另有 `.npmrc` `legacy-peer-deps=true` 兜底。
-3. **构建 shim**：`plugins/vite-cjs-inline-shim.mjs` 修复 Node24+Astro7.3 的 `require is not defined`（picomatch CJS）。不要删，也不要改 node_modules。
-4. 改动后必须 `npm run build`；Cloudflare 检测到 push 到 `main` 自动重建部署（约 1–2 分钟）。
-5. 预览旧进程可能残留：port 4321 被占时 `astro preview stop` 或复用现有实例；本地截图用 CDP（headless Edge :9222）。
 
-## 下一步建议（按需）
-- ✅ giscus 留言板已启用（`src/components/GiscusComments.astro` 公共组件，互动页 + **作品详情页**共用；主题随站点浅/深）；首条评论由登录用户发出时自动创建 discussion。
-- ✅ RSS 已加：`/rss.xml`（`src/pages/rss.xml.ts`，依赖 `@astrojs/rss`），Base head 有 auto-discovery、Footer 有入口。
-- ✅ 作品详情页有**上/下篇导航**（`[slug].astro` 计算相邻条目 → WorkLayout `newer`/`older` props）。
-- ✅ **全站搜索**：Pagefind（`npm run build` = `astro build && pagefind --site dist`）；**搜索是悬浮窗、不是页面**（`components/SearchModal.astro` + `ui.js` 的 `searchModal()`），Pagefind 的 JS/CSS 首次打开时才加载；触发点：顶栏搜索按钮 / 移动端抽屉 / 侧栏导航树 / `⌘Ctrl+K`；`build:fast` 可跳过索引。
-- ✅ 首页 01 板块已接**真实最新 3 篇作品**（读 works 集合，卡片可点进详情）。
-- ✅ 联系方式已填（邮箱 / GitHub / Bilibili）。
-- ✅ **sitemap**：`@astrojs/sitemap` 生成 `sitemap-index.xml` / `sitemap-0.xml`，`public/robots.txt` 已声明 Sitemap 地址。
-- ✅ **og:image**：Base 输出 og:image / twitter:summary_large_image / canonical；默认图 `public/og/default.png`，作品页自动用 `/og/<id>.png`（不存在则回退默认）。新增作品后跑 `npm run og` 重新生成分享图（脚本 `scripts/gen-og.mjs`，基于 sharp）。
-- ✅ **关于页工牌 = 拉绳开关**：桌面端工牌贴在页面右上边缘（`.ly-floater` 绝对定位 `top:0; right:0`，430×720），**向下拖拽 96px 切换白日/夜间主题**，带“灯闪”反馈；手势 pointerdown 限定在工牌内、move/up 挂 window（拖拽可超出容器，不受范围限制）；仅 ≥1025px 启用（避免移动端滚动误触）。
-- ✅ **动效系统（V51）**：
-  - 首页：hero 用 `[data-ent]`（加载入场）；**下方三个板块改为滚动显现**（`.sli`，进入视口时上滑 56px 淡入，逐项错峰 70ms）——由 `ui.js` 的 `scrollFade()` 驱动，选择器含 `.home-block .wrap > * / .acc-holder / .ph-card`。
-  - 其他页面：进入时 `main` 整体淡入上浮（`main.page-enter`），`[data-ent]` 元素**自动按 DOM 顺序排入场延迟**（未手写 `--ad` 时，最多 8 档 × 70ms），作品详情页也已补齐入场。
-- ⚠️ **互动页 GridScan 背景铺满（V52 已修）**：GridScan 只在挂载时按 `container.clientHeight` 测量一次、之后仅 `window.resize` 重测；Astro 岛水合早于布局稳定时会测得偏小（实测 670px vs 视口 900px）→ 网格只覆盖上半屏。`account.astro` 已加：水合后分档延时触发 `resize` 重测 + `ResizeObserver` 监听容器 + CSS 兜底（`.gs-fixed .gridscan/canvas { width/height:100% !important }`）。同类 fixed 全屏 canvas 组件如有此问题可复用该模式。
-  - ⚠️ 两个已修坑：① Astro 软导航会按新文档 `<html>` 覆写属性，**客户端加的 `js` 类会丢**（所有 `html.js .sli/[data-ent]` 规则随之失效）→ 在 `astro:after-swap` 与 `pageEnter()` 里补回；② `IntersectionObserver` 只在跨阈值时回调，**一次性跳转滚动**（End/PageDown/锚点）会让元素从下方直接到上方而不回调 → 加滚动节流兜底扫描（`r` top < 94%vh 或 bottom < 0 即显现）。
-- 可选后续：画廊二次分类、作品正文图片灯箱、暗色下 giscus 主题微调、评论数展示。
-- works 目前 2 篇（图书管理系统、本站诞生部署记），继续补作品即可；03「关于本站」首页块仍是静态简介卡。
+1. **不要提交 `package-lock.json`**（已在 `.gitignore`）：Windows 生成的 lock 缺平台相关可选依赖
+   （`@emnapi/*`），云端 Linux `npm ci` 会失败；无 lock 时 Cloudflare 自动 `npm install`。
+   本机需要它，所以别删本地那个文件。
+2. **`react` / `react-dom` 精确锁 `19.2.8`**，不要改成 `^`：浮动会解析到 19.3，与
+   `@react-three/fiber@9.7` 的 peer `>=19 <19.3` 冲突 → 云端 ERESOLVE 构建失败。
+   `.npmrc` 的 `legacy-peer-deps=true` 是兜底，保留。
+3. **构建 shim 勿删**：`plugins/vite-cjs-inline-shim.mjs` 修 Node 24 + Astro 7.3 的
+   `require is not defined`（picomatch CJS）。不要改 `node_modules`。
+4. **`IMG_CDN = ''`（`src/site.ts`）**：图片走本地相对路径随 dist 分发。
+   **不要改回 jsDelivr** —— 国内不稳，曾导致整站图片打不开。
+5. **`backdrop-filter` 书写顺序**：必须 `-webkit-` 在前。标准属性在前时构建压缩会把整条丢掉
+   （计算值直接变 `none`，模糊消失）。改完模糊没效果先去构建产物里搜这条规则还在不在。
+6. **推送后要轮询线上确认**：CF 构建约 30~90 秒。**不要用 chunk 哈希判断部署**
+   （本地与线上哈希可能不同），用**内容特征**去线上 HTML/CSS 里找。
+7. **git 走代理**（仓库级配置）：`http.proxy = http://127.0.0.1:33210`。git 不读 Windows 系统代理；
+   代理没开时会超时，改成直连：`git config --local --unset http.proxy`。
 
-## 验证方式备忘
-- 上线地址：`https://cloudwing.pages.dev`（Cloudflare Pages 项目名 cloudwing，Git 自动部署）
-- 仓库：`https://github.com/CloudWingX/cloudwing`（公开）
-- 本机预览：`http://localhost:4321`；移动端菜单/软导航测试在无痕窗口最准
+## 目录速览
+
+```text
+src/
+  site.ts                  ← 站点信息 / NAV / IMG_CDN / GISCUS / MUSIC / VIDEO_BG / WEATHER_CITY
+  content.config.ts        ← 三个集合 schema：works / shots / changelog
+  content/works/*.md       ← 作品（每件 1 个 md → 卡片 + 详情页）
+  content/shots/*.md       ← 影集条目（40 个，对应 public/shots/mc/*.webp）
+  content/changelog/*.md   ← 一天一个文件，驱动侧栏「更新日历」
+  layouts/Base.astro       ← 全站壳：暗色引导 / Header / Footer / 背景视频 / Particles
+  layouts/WorkLayout.astro ← 作品详情页布局（含上下篇导航）
+  pages/                   ← index / works / gallery / about / account / 404 / rss.xml
+                             （★搜索不是页面★，是 components/SearchModal.astro 悬浮窗）
+  components/ReactBits/    ← React Bits 官方原码，勿改核心
+  components/*.jsx         ← 宿主层（Particles / Lanyard / ProximityText 的适配）
+  scripts/ui.js            ← ★全站交互中枢（软导航后一切功能都靠它重新接管）
+  scripts/hero-anim.js     ← 首页 Hero 四个动画
+  scripts/nav-mobile.js    ← 汉堡菜单 + 顶部指示线
+  styles/global.css        ← 设计 token + 玻璃基础（★:root 即暗色）
+  styles/motion.css        ← 动效 token + html[data-theme='dark'] 镜像块
+  styles/shell.css         ← 三栏壳层 + 侧栏卡片
+public/                    ← covers / lanyard / og / shots / media(bg-loop.mp4) / favicon
+```
+
+**死代码 / 易误记**：`DriftWallBackground.astro`、`HomeShapeGrid.jsx` 已无引用；
+`motion.css` 里的 `.topbar{…}` 是死代码（顶栏真实类名是 `.hd` / `.hd-glass`）。
+
+## 页面
+
+| 路由 | 文件 | 说明 |
+|---|---|---|
+| `/` | `pages/index.astro` | Hero（eyebrow + 两行标题 + 逐字副标题）+ 最新作品 / 精选影像 / 关于预览 |
+| `/works/` | `pages/works/index.astro` | 卡片网格 + 分类筛选（浏览器端读 `location.search`） |
+| `/works/[slug]/` | `pages/works/[slug].astro` | 详情（WorkLayout + Markdown 目录 + giscus + 上下篇） |
+| `/gallery/` | `pages/gallery/index.astro` | 40 图玻璃网格 + `<dialog>` 大图；`?game=` 浏览器端过滤 |
+| `/about/` | `pages/about.astro` | 履历时间线 + MagicBento + Lanyard 工牌 + ProximityText 标题 |
+| `/account/` | `pages/account.astro` | 互动：giscus 留言板 |
+| `/404` | `pages/404.astro` | — |
+| `/rss.xml` | `pages/rss.xml.ts` | 作品档案 RSS |
+
+> ⚠️ `ProximityText`（ReactBits `VariableProximity` 宿主）按**空格**分词且每词 `nowrap`：
+> **中文长句会被当成一个不可换行的词导致溢出，切勿用于中文段落**，只适合短文本 / 拉丁标题。
+
+## 内容怎么加
+
+- **作品**：复制 `src/content/works/w00X-*.md` → 改 frontmatter
+  （`title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cover / link?`）。
+  `tags` 会出现在顶部导航「作品库」二级菜单。
+- **影集**：webp 放 `public/shots/mc/`（1600w q78，约 80KB 内）+ `src/content/shots/` 加一条 md
+  （`title / date / game / image / note / aspect`）。`game` 会出现在导航「画廊」二级菜单。
+- **更新记录**：`src/content/changelog/YYYY-MM-DD.md`，一天一个文件，`items[]` 里写
+  `kind / title / note?`。
+- 新增作品后跑 `npm run og` 重新生成分享图（`scripts/gen-og.mjs`，基于 sharp）。
+
+## 验证 — 三条铁律
+
+全部脚本在 `scripts/`，用法 `node scripts/<名>.mjs [url] [light|dark]`。
+前置：**预览 4321 已起 + 无头浏览器 9222 已起**。退出码 0=全过 / 1=有失败 / 2=环境没起。
+
+1. **用轮询等待，不要固定 `sleep`**：无头浏览器渲染快慢不定，固定等待会读到还没渲染的文档 →
+   `undefined` 的**假失败**（同一份脚本实测能出现 5/14 与 14/14 两种结果）。
+2. **别让标签页开两次**：用 `json/new?about:blank` 开空白页再 `Page.navigate` 一次。
+3. **★串行跑，不要并发★**：多个脚本同时占用同一个调试浏览器会互相干扰，产生大面积假失败
+   （实测并发时 `verify-theme` 8/11、`verify-hero` 48/49、`verify-videobg-global` 多项失败，
+   重启浏览器串行重跑全部通过）。另外每跑几十次要重启浏览器（标签页会累积到拖垮布局等待）。
+
+### 基线（改动后应当仍是这些数字）
+
+| 脚本 | 覆盖 | 基线 |
+|---|---|---|
+| `smoke.mjs` | 总入口：溢出 / 异常 / 侧栏同步 / 软导航 / 手机端 | **45/45** |
+| `verify-hero.mjs` | 首页 Hero 逐条规格 | **49/49** |
+| `verify-home.mjs` | 首页四层结构 / 图片策略 / SEO | **25/25** |
+| `verify-nav-shrink.mjs` | 导航三态 + 移动端汉堡 | **37/37** |
+| `verify-nav.mjs` | 导航几何 / 链接 / 指示线 | **15/15** |
+| `verify-brand.mjs` | 品牌标志 | **10/10** |
+| `verify-theme.mjs` | 单主题不变量 | **11/11** |
+| `verify-redesign.mjs` | 玻璃令牌 / 暂停按钮 / 导航过渡 | **14/14** |
+| `verify-search.mjs` | 搜索悬浮窗 | **17/17** |
+| `verify-videobg.mjs` | 背景视频 + hero 实际像素对比度 | **15/15** |
+| `verify-videobg-global.mjs` | 全站视频一致性 + 软导航不重建 | **25/25** |
+| `contrast-audit.mjs` | WCAG 对比度审计 | 暗色 **0 处不达标** |
+| `mobile-shots.mjs` | 三机型 × 5 页截图 + 溢出 | **15/15 无溢出** |
+| `diag-errors.mjs` | 逐页 JS 异常计数 | 7 页全 **0** |
+
+改完对应模块就跑它；`smoke.mjs` 是每次都要跑的总入口。
+
+## 改完必须做的三件事
+
+1. `npm run build` 无报错；
+2. 本地预览**实测**（别只看 HTML），跑 `node scripts/smoke.mjs`；
+3. `git add -A && git commit && git push origin main`，然后**轮询线上确认真上线**
+   （用内容特征，别用哈希）。
