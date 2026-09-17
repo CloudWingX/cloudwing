@@ -86,7 +86,13 @@ check('导航链接收进菜单按钮（桌面链接组隐藏）', (await ev(`ge
 // 侧边菜单已换成 ReactBits 风格 StaggeredMenu（细测见 verify-nav-rb.mjs），
 // 这里只校验它作为"移动端菜单"的基本可用性：能滑入、铺满视口、压得住内容。
 await ev(`document.querySelector('[data-sm-toggle]')?.click()`);
-await sleep(3000);
+// 等到"真的滑到位"再断言，而不是猜一个固定时长 —— 线上要加载视频与脚本，
+// 3s 有时不够（表现为面板 x 仍是 390 的假失败）。
+await waitFor(`(()=>{const d=document.querySelector('[data-sm-panel]');
+  if(!d) return false;
+  const m=new DOMMatrixReadOnly(getComputedStyle(d).transform);
+  return Math.abs(m.m41) <= 1;})()`, 12000);
+await sleep(400);
 const panel = await ev(`(()=>{const d=document.querySelector('[data-sm-panel]'); if(!d) return null;
   const c=getComputedStyle(d); const b=d.getBoundingClientRect();
   const m=new DOMMatrixReadOnly(c.transform);
