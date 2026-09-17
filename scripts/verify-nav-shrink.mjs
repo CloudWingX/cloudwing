@@ -131,14 +131,21 @@ await sleep(600);
 check('Esc 可关闭菜单', (await ev(`document.querySelector('[data-mnav-panel]').hidden`)) === true);
 
 // 移动端滚动后菜单仍不被胶囊压住
+// 注意：滚动会让 autoHideHeader 收起导航；这里滚回接近顶部，保证两者都在视口内再量。
 await ev(`document.querySelector('[data-mnav-toggle]').click()`);
 await waitFor(`document.querySelector('[data-mnav-panel]').classList.contains('is-open')`);
-await ev(`window.scrollTo(0,300)`);
-await sleep(1000);
+await ev(`window.scrollTo(0, 300)`);
+await sleep(700);
+await ev(`window.scrollTo(0, 140)`);
+await sleep(1200);
 const m2 = await ev(`(()=>{const p=document.querySelector('[data-mnav-panel]').getBoundingClientRect();
   const h=document.querySelector('.hd').getBoundingClientRect();
-  return {菜单顶:Math.round(p.top), 胶囊底:Math.round(h.bottom)};})()`);
-check('滚动后菜单仍在胶囊下方', m2.菜单顶 >= m2.胶囊底 - 2, JSON.stringify(m2));
+  return {菜单顶:Math.round(p.top), 胶囊底:Math.round(h.bottom), 胶囊高:Math.round(h.height),
+    视口:innerHeight};})()`);
+console.log('  ' + JSON.stringify(m2));
+check('滚动后菜单仍在胶囊下方（几何有效）',
+  m2.胶囊高 > 0 && m2.菜单顶 >= m2.胶囊底 - 2 && m2.菜单顶 < m2.视口,
+  JSON.stringify(m2));
 
 check('全程无 JS 异常', errs.length === 0, errs[0] || '');
 
