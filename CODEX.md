@@ -21,6 +21,10 @@ npm run preview -- --port 4321 --host 127.0.0.1
 node scripts/smoke.mjs                        # 自检入口（当前基线 45/45）
 ```
 
+> 导航栏与首页 Hero 在 2026-09-18 照用户给的参考文件整体重做过
+> （`position: fixed`、不再下滑收起、二级菜单已移除、Hero 是静态版式）。
+> **改这两块之前先读 `docs/HANDOFF.md` §33**，那里记了形态取值与一批真实踩坑。
+
 ## 七条硬规则
 
 1. **ReactBits 原码不动**：`src/components/ReactBits/*` 是官方原码。要改视觉 → 新建宿主组件
@@ -102,7 +106,7 @@ public/                    ← covers / lanyard / og / shots / media(bg-loop.mp4
 
 | 路由 | 文件 | 说明 |
 |---|---|---|
-| `/` | `pages/index.astro` | Hero（eyebrow + 两行标题 + 逐字副标题）+ 最新作品 / 精选影像 / 关于预览 |
+| `/` | `pages/index.astro` | Hero（徽标 + 两行大字 + 副标题 + 两个统计 + 技术标签 ｜ 右侧展示卡片，照参考复刻）+ 最新作品 / 精选影像 / 关于预览 |
 | `/works/` | `pages/works/index.astro` | 卡片网格 + 分类筛选（浏览器端读 `location.search`） |
 | `/works/[slug]/` | `pages/works/[slug].astro` | 详情（WorkLayout + Markdown 目录 + giscus + 上下篇） |
 | `/gallery/` | `pages/gallery/index.astro` | 40 图玻璃网格 + `<dialog>` 大图；`?game=` 浏览器端过滤 |
@@ -142,17 +146,17 @@ public/                    ← covers / lanyard / og / shots / media(bg-loop.mp4
 | 脚本 | 覆盖 | 基线 |
 |---|---|---|
 | `smoke.mjs` | 总入口：溢出 / 异常 / 侧栏同步 / 软导航 / 手机端 | **45/45** |
-| `verify-hero.mjs` | 首页 Hero 逐条规格 | **49/49** |
-| `verify-home.mjs` | 首页四层结构 / 图片策略 / SEO | **25/25** |
-| `verify-nav-shrink.mjs` | 导航三态 + 移动端汉堡 | **37/37** |
-| `verify-nav.mjs` | 导航几何 / 链接 / 指示线 | **15/15** |
+| `verify-hero.mjs` | 首页 Hero 几何/排版/断点（照参考实测值） | **44/44** |
+| `verify-home.mjs` | 首页四层结构 / 图片策略 / SEO | **23/23** |
+| `verify-nav-shrink.mjs` | 导航三态 + 移动端汉堡 | **36/36** |
+| `verify-nav.mjs` | 导航几何 / 分类入口在左栏 / 无遗留二级菜单 | **14/14** |
 | `verify-brand.mjs` | 品牌标志 | **10/10** |
 | `verify-theme.mjs` | 单主题不变量 | **11/11** |
 | `verify-redesign.mjs` | 玻璃令牌 / 暂停按钮 / 导航过渡 | **14/14** |
 | `verify-search.mjs` | 搜索悬浮窗 | **17/17** |
-| `verify-videobg.mjs` | 背景视频 + hero 实际像素对比度 | **15/15** |
+| `verify-videobg.mjs` | 背景视频 + hero 实际像素对比度 | **17/17** |
 | `verify-videobg-global.mjs` | 全站视频一致性 + 软导航不重建 | **25/25** |
-| `contrast-audit.mjs` | WCAG 对比度审计 | 暗色 **0 处不达标** |
+| `contrast-audit.mjs` | WCAG 对比度审计（渐变文字逐停靠点取最差） | 暗色 **0 处不达标** |
 | `mobile-shots.mjs` | 三机型 × 5 页截图 + 溢出 | **15/15 无溢出** |
 | `diag-errors.mjs` | 逐页 JS 异常计数 | 7 页全 **0** |
 

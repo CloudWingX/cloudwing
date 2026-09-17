@@ -17,9 +17,10 @@
   width: 100%;
   max-width: var(--shell-max);
   margin: 0 auto;
-  /* 顶部留出和 --shell-top 相同的呼吸位：这样滚动 0 时侧栏的自然位置
-     正好等于它的吸顶位置，起滚不跳。 */
-  padding: var(--shell-gap-top, 1.15rem) var(--gutter) 0;
+  /* 2026-09-18：导航改成 position:fixed 后不再占文档流，壳层要自己让出导航高度，
+     否则内容会被压在导航栏下面。取值 = 导航高 + 原呼吸位（与 --shell-top 同源），
+     这样滚动 0 时侧栏自然位置仍正好等于它的吸顶位置，起滚不跳。 */
+  padding: var(--shell-pad-top, calc(var(--header-h) + 1.15rem)) var(--gutter) 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* 移动端：单列 */
   gap: var(--shell-gap);

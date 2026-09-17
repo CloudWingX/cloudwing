@@ -1,4 +1,12 @@
 ---
+/* ============================================================
+   顶部导航 —— 按 reference（code_20260918.html）像素级复刻形态
+   · 几何/间距/断点/过渡全部照参考：1280→1120、64→56、32→24、
+     0→999px 圆角、gap 32→24、按钮 8px→9999px
+   · 强调色保留站点雾蓝（--accent），不用参考里的紫/粉/红
+   · 按用户要求去掉导航里的搜索入口（悬浮窗仍可由 ⌘/Ctrl+K 打开）
+   · 保留站点功能：品牌标志、动效暂停按钮、移动端下拉菜单、二级菜单数据
+   ============================================================ */
 import { SITE, NAV } from '../site';
 import { getCollection } from 'astro:content';
 import BrandMark from './BrandMark.astro';
@@ -7,7 +15,7 @@ const { current = '/' } = Astro.props;
 const isActive = (href: string) =>
   href === '/' ? current === '/' : current.startsWith(href);
 
-/* ---------- 各子页面的分类 → 对应导航项的二级菜单 ----------
+/* ---------- 各子页面的分类 → 对应导航项的二级菜单（移动端菜单里用） ----------
    作品库的分类 = 作品标签（tags），画廊的分类 = 截图所属游戏（game）。
    两者都由内容集合现算，新增作品/截图后菜单自动更新，不用改这里。 */
 const worksAll = await getCollection('works');
@@ -18,106 +26,65 @@ const countBy = (list: string[]) => {
   list.forEach((k) => k && m.set(k, (m.get(k) ?? 0) + 1));
   return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
 };
-
 const workTags = countBy(worksAll.flatMap((e) => e.data.tags ?? []));
 const shotGames = countBy(shotsAll.map((e) => e.data.game ?? ''));
-
-const SUBS: Record<string, { label: string; href: string; count?: number; sub?: boolean }[]> = {
-  '/works/': [
-    { label: '全部作品', href: '/works/', sub: true },
-    ...workTags.map(([t, n]) => ({ label: t, href: `/works/?tag=${encodeURIComponent(t)}`, count: n })),
-  ],
-  '/gallery/': [
-    { label: '全部截图', href: '/gallery/', sub: true },
-    ...shotGames.map(([g, n]) => ({ label: g, href: `/gallery/?game=${encodeURIComponent(g)}`, count: n })),
-  ],
+const SUBS: Record<string, { label: string; href: string }[]> = {
+  '/works/': workTags.map(([t]) => ({ label: t, href: `/works/?tag=${encodeURIComponent(t)}` })),
+  '/gallery/': shotGames.map(([g]) => ({ label: g, href: `/gallery/?game=${encodeURIComponent(g)}` })),
 };
 
 const items = NAV.map((item) => ({ ...item, sub: SUBS[item.href] ?? [] }));
-const pad = (n: number) => String(n).padStart(2, '0');
 
-/* 侧边面板底部的社交链接（ReactBits StaggeredMenu 的 socialItems 位） */
-const socials = [
-  SITE.github && { label: 'GitHub', href: SITE.github },
-  SITE.bilibili && { label: 'Bilibili', href: SITE.bilibili },
-  SITE.email && { label: 'Email', href: `mailto:${SITE.email}` },
-  { label: 'RSS', href: '/rss.xml' },
-].filter(Boolean) as { label: string; href: string }[];
+/* 参考导航右侧是「Star on GitHub · 47.5K」+「Get Pro」。
+   本站映射为：GitHub（带真实 star 数）+ Bilibili（站点真实入口）。 */
+let stars: string | null = null;
+try {
+  const r = await fetch('https://api.github.com/repos/CloudWingX/cloudwing', {
+    headers: { 'user-agent': 'cloudwing-build' },
+    signal: AbortSignal.timeout(4000),
+  });
+  if (r.ok) {
+    const j = await r.json();
+    const n = Number(j.stargazers_count);
+    if (Number.isFinite(n) && n > 0) stars = n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n);
+  }
+} catch {
+  /* 离线或限流：不显示数字，只显示 "GitHub" */
+}
 ---
+
 <header class="site-header" data-nav>
-  {/* 悬浮玻璃胶囊：宽 min(1200px, 100% - 40px)、距顶 16px、高 56px（滚动后 52px）、圆角 999px。
-      玻璃材质与尺寸都走 --nav-* 令牌（见样式里的「导航胶囊令牌」块）——
-      想换成浅色玻璃只改那一块，不必动结构。 */}
-  <div class="hd">
-    {/* 内容行：Logo · 中间留白 · 右侧链接组 */}
-    <div class="hd-in">
-    <a class="brand" href="/" aria-label="CloudWing 云翼 · 回到首页">
-      {/* 品牌标志：横版字标（云 + 三根羽翼 + CLOUD/WING），见 BrandMark.astro */}
-      <BrandMark variant="horizontal" height={30} />
-      {/* 空间充足时附带中文站点名；极窄屏由 CSS 隐藏（品牌标本身已含字标） */}
-      <span class="bname">{SITE.title}</span>
+  <div class="header-container">
+    <a class="logo" href="/" aria-label={`${SITE.title} · 回到首页`}>
+      {/* 站点的横版品牌字标（云 + 羽翼 + CLOUDWING）就是本站的 wordmark，
+          对应参考里 "React Bits" 那个位置；高度与参考一致（20px / 滚动后 18px）。 */}
+      <BrandMark variant="horizontal" height={20} />
     </a>
 
-    <nav class="nav" aria-label="主导航">
+    <ul class="nav-links">
       {
-        items.map((item) =>
-          item.sub.length > 0 ? (
-            <span class="nav-item has-sub" data-nav-sub>
-              <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
-                {item.label}
-              </a>
-              <button
-                type="button"
-                class="nav-caret"
-                data-nav-caret
-                aria-expanded="false"
-                aria-haspopup="true"
-                aria-label={`展开${item.label}的分类`}
-              >
-                <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-                  <path d="M2.6 4.4 6 7.8l3.4-3.4" />
-                </svg>
-              </button>
-              <ul class="nav-sub" data-nav-panel hidden>
-                {item.sub.map((s) => (
-                  <li>
-                    <a href={s.href} class:list={[{ 'is-all': s.sub }]}>
-                      <span class="ns-label">{s.label}</span>
-                      {s.count !== undefined && <span class="ns-count">{pad(s.count)}</span>}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </span>
-          ) : (
+        items.map((item) => (
+          <li>
             <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
-              {item.label}
+              {item.label.replace(/作品库$/, '作品').replace(/^关于$/, '档案')}
             </a>
-          ),
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="nav-actions">
+      {
+        SITE.github && (
+          <a class="btn btn-github" href={SITE.github} target="_blank" rel="noreferrer" title="Star on GitHub">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.11.81 2.25 0 1.635-.015 2.955-.015 3.36 0 .315.225.69.825.57C20.565 21.795 24 17.31 24 12c0-6.63-5.37-12-12-12z"></path>
+            </svg>
+            <span>Star on GitHub{stars ? ` · ${stars}` : ''}</span>
+          </a>
         )
       }
-    </nav>
-
-    <div class="acts">
-      {SITE.github && (
-        <a class="pill ext" href={SITE.github} target="_blank" rel="noreferrer" title="GitHub">
-          <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
-          </svg>
-          <span>GitHub</span>
-        </a>
-      )}
-      {/* 搜索改成悬浮窗触发（原先是 /search/ 独立页面，见 ui.js 的 searchModal()） */}
-      <button type="button" class="pill search-pill" data-search-open aria-label="站内搜索" title="站内搜索（⌘/Ctrl + K）">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m16.2 16.2 4.3 4.3" />
-        </svg>
-        <span>搜索</span>
-      </button>
-      {/* 主题开关已删除：站点只有一套暗色电影感主题（见 global.css 的 :root 注释） */}
-      {/* 可访问性：给"动态背景"一个显式的暂停入口（WCAG 2.2.2 暂停/停止/隐藏）。
-          默认仅在 hover/focus 时淡入，不干扰画面；由 VideoBackground 的脚本接管。 */}
+      {SITE.bilibili && <a class="btn btn-pro" href={SITE.bilibili} target="_blank" rel="noreferrer">Bilibili</a>}
       <button
         type="button"
         class="motion-toggle"
@@ -127,13 +94,12 @@ const socials = [
         title="暂停 / 播放背景动态"
       >
         <svg class="mt-pause" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
-          <path d="M9 5v14M15 5v14" />
+          <path d="M9 5v14M15 5v14"></path>
         </svg>
         <svg class="mt-play" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
-          <path d="M7 4.8 19 12 7 19.2Z" />
+          <path d="M7 4.8 19 12 7 19.2Z"></path>
         </svg>
       </button>
-      {/* 移动端汉堡（照 ReactBits：三条线，点开变叉号） */}
       <button
         type="button"
         class="hamburger"
@@ -147,262 +113,238 @@ const socials = [
         <span></span>
       </button>
     </div>
-    </div>
   </div>
 
-  {/* ── 移动端菜单（照 ReactBits：从顶部下拉的玻璃面板，淡入 + 轻微下移）── */}
+  {/* ── 移动端菜单：从顶部下拉（参考同款：淡入 + 轻微下移 + 逐项错峰）── */}
   <div id="cw-mobile-menu" class="mobile-menu" data-mnav-panel hidden>
     {items.map((item) => (
       <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
     ))}
+    {
+      items
+        .filter((i) => i.sub.length > 0)
+        .map((i) => (
+          <div class="mm-group">
+            <span class="mm-group-t">{i.label}分类</span>
+            <div class="mm-chips">
+              {i.sub.map((s) => (
+                <a class="mm-chip" href={s.href}>{s.label}</a>
+              ))}
+            </div>
+          </div>
+        ))
+    }
     <div class="mm-actions">
-      <button type="button" class="mm-btn" data-search-open>搜索</button>
-      {socials.slice(0, 2).map((s) => (
-        <a class="mm-btn" href={s.href} target={s.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
-          {s.label}
-        </a>
-      ))}
+      {SITE.github && <a class="mm-btn" href={SITE.github} target="_blank" rel="noreferrer">GitHub</a>}
+      {SITE.bilibili && <a class="mm-btn" href={SITE.bilibili} target="_blank" rel="noreferrer">Bilibili</a>}
+      <a class="mm-btn" href="/rss.xml">RSS</a>
     </div>
   </div>
 </header>
 
-
-
 <style>
   /* ============================================================
-     顶部导航（参考 reactbits.dev 主站导航）
-     细玻璃条 + 左侧品牌 + 常驻链接胶囊 + 右侧幽灵胶囊按钮
+     导航令牌（几何全部取自参考实测值）
+     未滚动：max-w 1280 / h 64 / pad 32 / radius 0
+     滚动后：max-w 1120 / h 56 / pad 24 / radius 999 / 玻璃加深
      ============================================================ */
   .site-header {
-    position: sticky;
-    top: 0;
-    z-index: 70;
-    padding: 0; /* 抵消旧版顶栏全局留白 */
-    /* 下滑自动收起（ui.js 的 autoHideHeader 切 .hd-hidden）；上滑滑回。
-       侧栏的吸顶位移用更短的时长（见 shell.css），保证导航栏滑回时
-       侧栏已经让开，两者任何时刻都不重叠。 */
-    transition: transform 0.28s var(--ease), opacity 0.28s var(--ease);
-    will-change: transform, opacity;
-  }
-  .site-header.hd-hidden {
-    transform: translateY(-102%);
-    opacity: 0;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .site-header {
-      transition: none;
-    }
-  }
-
-  /* ══════════════════════════════════════════════════════════════
-     移动端菜单 —— 照 ReactBits 的 .mobile-menu
-     顶部下拉的玻璃面板：淡入 + 轻微下移（translateY(-10px) → 0）
-     配色换成站点令牌（ReactBits 原文是 rgba(10,10,15,.95) + 白字，这里一致）
-     ══════════════════════════════════════════════════════════════ */
-  .hamburger {
-    display: none; /* 桌面隐藏，≤768px 显示 */
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 8px;
-    min-width: 40px;
-    min-height: 40px;
-    background: none;
-    border: 0;
-    border-radius: 10px;
-    color: var(--nav-ink);
-    cursor: pointer;
-    transition: background 0.2s ease;
-  }
-  .hamburger:hover { background: var(--nav-hover-bg); }
-  .hamburger span {
-    width: 20px;
-    height: 2px;
-    background: currentColor;
-    border-radius: 2px;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-  }
-  /* 打开后变叉号 */
-  .site-header.mnav-open .hamburger span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
-  .site-header.mnav-open .hamburger span:nth-child(2) { opacity: 0; }
-  .site-header.mnav-open .hamburger span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
-
-  .mobile-menu {
-    position: fixed;
-    /* 贴在导航下方：未滚动时导航 64px 高、滚动后 16+52px */
-    top: var(--mn-top, 64px);
-    left: 0;
-    width: 100%;
-    padding: 16px 32px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    background: rgba(10, 10, 15, 0.95);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    backdrop-filter: blur(20px) saturate(1.4);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    z-index: 60;
-    transform: translateY(-10px);
-    opacity: 0;
-    pointer-events: none;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-  }
-  /* 滚动后导航下沉 16px，菜单跟着下移，避免被胶囊压住 */
-  html[data-scrolled='1'] .mobile-menu { --mn-top: 68px; }
-  .mobile-menu.is-open {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .mobile-menu[hidden] { display: none; }
-  .mobile-menu a {
-    color: var(--nav-ink);
-    text-decoration: none;
-    font-size: 16px;
-    font-weight: 500;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  }
-  .mobile-menu a[aria-current='page'] { color: var(--accent); }
-  .mm-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
-  .mm-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    padding: 0 18px;
-    border-radius: 999px;
-    border: 1px solid var(--nav-border-scrolled);
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--nav-ink);
-    font-family: inherit;
-    font-size: 14px;
-    cursor: pointer;
-    text-decoration: none;
-  }
-  @media (max-width: 768px) {
-    .hamburger { display: flex; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .hamburger span,
-    .mobile-menu { transition: none; }
-  }
-
-  /* ── 顶部指示线：悬停跟随 + 当前页激活 ── */
-  .nav { position: relative; }
-  .nav-ind {
-    position: absolute;
-    left: 0;
-    bottom: 2px;
-    height: 2px;
-    width: 0;
-    border-radius: 2px;
-    background: var(--accent);
-    pointer-events: none;
-    opacity: 0;
-    will-change: transform, width, opacity;
-  }
-  .nav-ind--hover { background: color-mix(in srgb, var(--accent) 55%, transparent); }
-
-  /* ══════════════════════════════════════════════════════════════
-     导航令牌 —— 想换配色只改这一块（结构/尺寸/交互与配色解耦）
-     ══════════════════════════════════════════════════════════════ */
-  .site-header {
-    /* ══ 滚缩参数（照 ReactBits 的 shrink-on-scroll）══
-       未滚动：贴顶通栏（padding-top 0、容器 1280 宽 64 高、无圆角、无底色）
-       滚动后：下沉 16px 收成胶囊（1120 宽 52 高、圆角 999px、玻璃底）
-       只改这几个变量，形态过渡全部由 CSS transition 完成。 */
-    --nav-top: 0px;
-    --nav-top-scrolled: 16px;
     --nav-w: 1280px;
     --nav-w-scrolled: 1120px;
     --nav-h: 64px;
-    --nav-h-scrolled: 52px;
+    --nav-h-scrolled: 56px;
     --nav-pad-x: 32px;
-    --nav-pad-x-scrolled: 22px;
-    /* 内容行内边距：未滚动时靠容器 padding 即可，滚动后容器 padding 22px 已含，
-       内容行给一点内侧留白避免贴边 */
-    --nav-in-pad-scrolled: 0px;
-    /* 形态过渡曲线（与 ReactBits 一致） */
-    --ease-nav: cubic-bezier(0.4, 0, 0.2, 1);
+    --nav-pad-x-scrolled: 24px;
+    --nav-top: 0px;
+    --nav-top-scrolled: 16px;
     --nav-radius: 0px;
-    --nav-radius-scrolled: 999px;
-    /* 未滚动：完全透明（贴顶通栏，让视频铺满）
-       滚动后：半透明玻璃 + 描边 + 阴影 */
+    --nav-radius-scrolled: 9999px;
     --nav-bg: transparent;
-    --nav-bg-scrolled: rgba(9, 12, 16, 0.7);
+    --nav-bg-scrolled: rgba(10, 10, 15, 0.7);
     --nav-border: transparent;
-    --nav-border-scrolled: rgba(255, 255, 255, 0.2);
+    --nav-border-scrolled: rgba(255, 255, 255, 0.08);
     --nav-shadow: none;
-    --nav-shadow-scrolled: 0 4px 20px rgba(0, 0, 0, 0.36);
+    --nav-shadow-scrolled: 0 4px 20px rgba(0, 0, 0, 0.15);
     --nav-blur: none;
-    --nav-blur-scrolled: blur(12px) saturate(1.8);
+    --nav-blur-scrolled: blur(12px) saturate(180%);
     --nav-ink: #ffffff;
-    --nav-ink-dim: #c9d1d9;
-    --nav-hover-bg: rgba(255, 255, 255, 0.08);
+    --nav-ink-muted: rgba(255, 255, 255, 0.7);
+    --nav-ink-dim: rgba(255, 255, 255, 0.5);
+    --nav-hover-bg: rgba(255, 255, 255, 0.05);
     --nav-link-fs: 14px;
-    --nav-link-fs-scrolled: 13px;
-    --nav-link-gap: 24px;
-    --nav-link-gap-scrolled: 16px;
-    --nav-link-pad: 8px 14px;
-    --nav-link-pad-scrolled: 6px 11px;
-    --nav-link-radius: 10px;
-    /* 顶栏控件：滚动后同步收小 */
-    --nav-ctl-h: 40px;
-    --nav-ctl-h-scrolled: 34px;
-    /* 移动端下拉面板必须**基本不透明**：它盖在正文之上，0.92 这类半透明会让
-       下方的正文与视频透上来（实测像素差 347/765，观感像重影）。
-       保留一点渐变与模糊，让它仍是"玻璃片"而不是死板色块。 */
-    --nav-drawer-bg: linear-gradient(180deg, rgba(9, 12, 16, 0.99), rgba(9, 12, 16, 0.97));
+    --nav-link-fs-scrolled: 14px;
+    --nav-link-gap: 32px;
+    --nav-link-gap-scrolled: 24px;
+    --nav-ctl-fs: 13px;
+    --nav-ctl-fs-scrolled: 12px;
+    --nav-ctl-gap: 12px;
+    --nav-ctl-gap-scrolled: 8px;
+    --nav-ctl-pad: 8px 16px;
+    --nav-ctl-pad-scrolled: 6px 14px;
+    --nav-ctl-radius: 8px;
+    --nav-ctl-radius-scrolled: 9999px;
+    --nav-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --nav-drawer-bg: rgba(10, 10, 15, 0.95);
+
+    /* position:fixed（与参考一致）—— 导航不占文档流，Hero 从 y=0 开始，
+       正是参考里 hero.getBoundingClientRect().y === 0 的成因。
+       子页面内容由 .shell 的 padding-top 让位（见 shell.css）。 */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 70;
+    /* 只留纵向 padding：横向留白放到 .header-container 上。
+       原因：父层的横向 padding 会让子元素 max-width:100% 解析成"父层内容宽"
+       （实测 1024 下容器只有 911.6 而不是 1009），参考是满宽容器。 */
+    padding: var(--nav-top) 0 0;
+    /* 站点全局 body 是 line-height:1.8，会把导航撑高（实测 64→71）；
+       参考用的是 normal，这里显式跟随，保证容器高度就是 --nav-h。 */
+    line-height: normal;
+    transition: padding-top 0.4s var(--nav-ease);
   }
 
-  .hd {
-    /* 胶囊本体。未滚动时是"贴顶通栏"，滚动后收成浮起的圆角玻璃片。
-       不要用 overflow:hidden —— .nav-sub（二级菜单）是它的绝对定位后代，会被裁掉。 */
-    position: relative;
-    isolation: isolate;
+  /* ── 容器条 ──
+     ⚠️ max-width 必须写字面 px：写成 var(--nav-w) 时 Astro 的作用域编译会把它
+     变成 `calc(0.1066% + 1278.64px)`，在带 padding 的父层下算不到 1280。 */
+  .header-container {
     box-sizing: border-box;
     width: 100%;
-    max-width: var(--nav-w);
+    max-width: 1280px;
     margin: 0 auto;
+    /* 窄于 max-width 时由 margin 撑开左右留白（等价于参考的 padding 效果），
+       宽于 max-width 时用 padding 让内容与页面栅格对齐 */
     padding: 0 var(--nav-pad-x);
     height: var(--nav-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    line-height: normal; /* 参考值；站点全局 1.8 会把 64px 的条撑成 71px */
     border-radius: var(--nav-radius);
     background: var(--nav-bg);
     border: 1px solid var(--nav-border);
     box-shadow: var(--nav-shadow);
+    /* ⚠️ -webkit- 必须写在标准属性之前（否则构建压缩会整条丢掉，见 HANDOFF §22） */
     -webkit-backdrop-filter: var(--nav-blur);
     backdrop-filter: var(--nav-blur);
-    /* 形态过渡（0.4s / cubic-bezier(0.4,0,0.2,1)，与 ReactBits 一致） */
     transition:
-      max-width 0.4s var(--ease-nav),
-      height 0.4s var(--ease-nav),
-      padding 0.4s var(--ease-nav),
-      border-radius 0.4s var(--ease-nav),
-      background 0.4s var(--ease-nav),
-      border-color 0.4s var(--ease-nav),
-      box-shadow 0.4s var(--ease-nav),
-      backdrop-filter 0.4s var(--ease-nav);
+      max-width 0.4s var(--nav-ease),
+      height 0.4s var(--nav-ease),
+      padding 0.4s var(--nav-ease),
+      border-radius 0.4s var(--nav-ease),
+      background 0.4s var(--nav-ease),
+      border-color 0.4s var(--nav-ease),
+      box-shadow 0.4s var(--nav-ease),
+      backdrop-filter 0.4s var(--nav-ease);
   }
-  /* 外层负责"下沉 16px"：padding-top 0 → 16px */
-  .site-header {
-    transition: transform 0.28s var(--ease), padding-top 0.4s var(--ease-nav);
+
+  /* ── 左侧品牌 ── */
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 20px; /* 固定行高：站点全局 1.8 会把容器撑高 */
+    color: var(--nav-ink);
+    text-decoration: none;
+    flex: none;
+    transition: font-size 0.4s var(--nav-ease), gap 0.4s var(--nav-ease);
   }
-  /* 移动端：左右各留 16px（规格要求比桌面的 20px 更窄） */
-  @media (max-width: 640px) {
-    .site-header {
-      --nav-w: 100%;
-      --nav-w-scrolled: calc(100% - 32px);
-    }
+  .logo :global(.brandmark) { display: block; flex: none; height: 20px; width: auto; transition: height 0.4s var(--nav-ease); }
+  .logo-name { white-space: nowrap; }
+
+  /* ── 中间链接组 ── */
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: var(--nav-link-gap);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    line-height: 20px;
+    transition: gap 0.4s var(--nav-ease);
   }
-  /* 向下滚动超过 80px：下沉 + 收成胶囊（见 ui.js 的 setMaterial） */
-  html[data-scrolled='1'] .site-header {
-    padding-top: var(--nav-top-scrolled);
+  .nav-links a {
+    position: relative;
+    display: inline-block;
+    color: var(--nav-ink-muted);
+    text-decoration: none;
+    font-size: var(--nav-link-fs);
+    font-weight: 400;
+    line-height: 20px;
+    white-space: nowrap;
+    transition: color 0.2s ease, font-size 0.4s var(--nav-ease);
   }
-  html[data-scrolled='1'] .site-header .hd {
-    max-width: var(--nav-w-scrolled);
-    height: var(--nav-h-scrolled);
+  .nav-links a:hover { color: var(--nav-ink); }
+  .nav-links a[aria-current='page'] { color: var(--nav-ink); }
+  /* 当前页/悬停的下划线：用站点雾蓝强调色（参考里是文字变色，这里保留品牌色） */
+  .nav-links a[aria-current='page']::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  /* ── 右侧动作组 ── */
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: none;
+  }
+  .btn {
+    box-sizing: border-box; /* 少了这条 height 会被 padding 撑到 44px（实测） */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 34px;
+    padding: var(--nav-ctl-pad);
+    border: none;
+    border-radius: var(--nav-ctl-radius);
+    font-size: var(--nav-ctl-fs);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: normal;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s var(--nav-ease);
+    /* 站点 global.css 在 ≤640px 给 .btn 加了 min-height:44px（Apple HIG 触控规则），
+       会把手机端导航从 64px 撑到 44px 高的按钮行。参考在手机端仍是紧凑条，
+       导航的触控面积由整条导航保证，所以这里显式取消那条规则。 */
+    min-height: 0;
+  }
+  .btn-github {
+    background: var(--nav-hover-bg);
+    border: 1px solid var(--nav-border-scrolled);
+    color: var(--nav-ink);
+  }
+  .btn-github:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  .btn-github svg { width: 16px; height: 16px; flex: none; transition: width 0.4s var(--nav-ease), height 0.4s var(--nav-ease); }
+  /* 「Get Pro」→ 站点 Bilibili 入口：用品牌强调色做底（不用参考的紫粉红渐变）。
+     参考里 .btn-pro 是 32px 高（比 GitHub 那颗矮 2px），这里照做。
+     ⚠️ 底色必须**不透明**：半透明的 accent 压在暗色视频上会合成成近黑，
+     深色文字对比度只剩 1:1（contrast-audit 抓到过）。 */
+  .btn-pro {
+    height: 32px;
+    background: var(--accent);
+    color: #0a0a0f;
+  }
+  .btn-pro:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+  /* ── 滚动收缩态 ── */
+  html[data-scrolled='1'] .site-header { padding-top: var(--nav-top-scrolled); }
+  html[data-scrolled='1'] .header-container {
+    max-width: 1120px;
+    height: 56px;
     padding: 0 var(--nav-pad-x-scrolled);
     border-radius: var(--nav-radius-scrolled);
     background: var(--nav-bg-scrolled);
@@ -411,310 +353,177 @@ const socials = [
     -webkit-backdrop-filter: var(--nav-blur-scrolled);
     backdrop-filter: var(--nav-blur-scrolled);
   }
-  /* 内部元素同步收缩 */
-  html[data-scrolled='1'] .site-header .hd-in { padding: 0 var(--nav-in-pad-scrolled, 0px); }
-  html[data-scrolled='1'] .site-header .nav { gap: var(--nav-link-gap-scrolled); }
-  html[data-scrolled='1'] .site-header .nav a {
-    font-size: var(--nav-link-fs-scrolled);
-    padding: var(--nav-link-pad-scrolled);
+  html[data-scrolled='1'] .logo { font-size: 14px; gap: 8px; }
+  html[data-scrolled='1'] .logo :global(.brandmark) { height: 18px; }
+  html[data-scrolled='1'] .nav-links { gap: var(--nav-link-gap-scrolled); }
+  html[data-scrolled='1'] .btn {
+    height: 32px;
+    padding: var(--nav-ctl-pad-scrolled);
+    font-size: var(--nav-ctl-fs-scrolled);
+    border-radius: var(--nav-ctl-radius-scrolled);
   }
-  html[data-scrolled='1'] .site-header :is(.pill, .sm-toggle) { height: var(--nav-ctl-h-scrolled); }
+  html[data-scrolled='1'] .btn-github svg { width: 14px; height: 14px; }
+
   @media (prefers-reduced-motion: reduce) {
-    .hd,
-    .site-header { transition: none; }
+    .site-header,
+    .header-container,
+    .logo,
+    .nav-links,
+    .nav-actions,
+    .btn { transition: none; }
   }
 
-  /* 内容行：Logo · 中间留白 · 右侧链接组 */
-  .hd-in {
-    height: 100%;
-    /* 容器已给左右 padding（32 → 22），这里只留很小的内侧微调 */
-    padding: 0 4px;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  /* 背景动态开关（可访问性）：与主题开关同尺寸；默认低调，不抢画面 */
+  /* ── 可访问性：暂停背景动态（WCAG 2.2.2）── */
   .motion-toggle {
-    flex: none;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    border: var(--line-w) solid var(--line-2);
-    background: transparent;
-    color: var(--ink-3);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: none;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--nav-ink-dim);
     cursor: pointer;
-    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    opacity: 0;
+    transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
+  .site-header:hover .motion-toggle,
+  .motion-toggle:focus-visible { opacity: 1; }
   .motion-toggle:hover,
-  .motion-toggle:focus-visible {
-    color: var(--ink);
-    border-color: var(--line-hover);
-    background: var(--accent-soft);
-  }
+  .motion-toggle:focus-visible { color: var(--nav-ink); border-color: var(--nav-border-scrolled); }
   .motion-toggle .mt-play { display: none; }
   .motion-toggle[aria-pressed='true'] { color: var(--accent-deep); border-color: var(--accent); }
   .motion-toggle[aria-pressed='true'] .mt-pause { display: none; }
   .motion-toggle[aria-pressed='true'] .mt-play { display: inline-flex; }
-  /* —— 品牌（品牌稿横版字标 BrandMark）——
-     标志自带 CLOUD/WING 字标，右侧的中文站名只在空间足够时出现。 */
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
-    text-decoration: none;
-    color: var(--nav-ink);
-    flex: none;
-  }
-  .brand :global(.brandmark) { display: block; flex: none; }
-  .brand .bname {
-    font-family: var(--font-display);
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    line-height: 1;
-    color: var(--brand-cloud);
-    padding-left: 0.6rem;
-    border-left: 1px solid var(--nav-border);
-    white-space: nowrap;
-  }
-  /* 窄屏：字标已经表达了品牌名，中文站名让位（避免与链接组挤在一起） */
-  @media (max-width: 1180px) {
-    .brand .bname { display: none; }
-  }
-    display: block;
-    font-family: var(--font-mono);
-    font-size: 0.54rem;
-    font-weight: 500;
-    letter-spacing: 0.24em;
-    color: var(--nav-ink-dim);
-  }
 
-  /* —— 中部链接胶囊 —— */
-  .nav {
-    display: flex;
-    align-items: center;
+  /* ── 汉堡按钮（参考同款：三条线 → 叉号）── */
+  .hamburger {
+    display: none;
+    flex-direction: column;
     justify-content: center;
-    gap: 4px;
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  /* —— 链接：14px / 500 / padding 8px 14px / 圆角 10px —— */
-  .nav a {
-    position: relative;
-    display: inline-flex;
     align-items: center;
-    padding: var(--nav-link-pad);
-    border-radius: var(--nav-link-radius);
-    border: 0;
-    font-family: var(--font-body);
-    font-size: var(--nav-link-fs);
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    color: var(--nav-ink-dim);
-    text-decoration: none;
-    white-space: nowrap;
-    transition: color 0.2s ease, background 0.2s ease;
+    gap: 5px;
+    padding: 4px;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    background: none;
+    border: none;
+    cursor: pointer;
   }
-  .nav a:hover {
-    color: var(--nav-ink);
-    background: var(--nav-hover-bg);
-  }
-  /* 当前页：底部 2px 雾蓝短横线（**不整块高亮**，保持轻盈） */
-  .nav a[aria-current='page'] {
-    color: var(--nav-ink);
-    background: transparent;
-  }
-  .nav a[aria-current='page']::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: 3px;
-    translate: -50% 0;
-    width: 18px;
+  .hamburger span {
+    display: block;
+    width: 20px;
     height: 2px;
     border-radius: 2px;
-    background: var(--accent);
+    background: var(--nav-ink);
+    transition: all 0.3s var(--nav-ease);
   }
+  .site-header.mnav-open .hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .site-header.mnav-open .hamburger span:nth-child(2) { opacity: 0; transform: translateX(-10px); }
+  .site-header.mnav-open .hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-  /* —— 导航二级菜单（各子页面的分类）—— */
-  .nav-item {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-  }
-  .nav-caret {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: 0;
-    border-radius: 999px;
-    background: transparent;
-    color: var(--ink-3);
-    cursor: pointer;
-    transition: transform 0.18s var(--ease), color 0.16s ease, background 0.16s ease;
-  }
-  .nav-caret:hover {
-    color: var(--accent-deep);
-    background: var(--accent-soft);
-  }
-  .nav-item[data-open='true'] .nav-caret {
-    color: var(--accent-deep);
-    transform: rotate(180deg);
-  }
-  .nav-item[data-open='true'] > a {
-    color: var(--ink);
-    background: var(--accent-soft);
-  }
-  .nav-sub {
+  /* ── 移动端下拉菜单 ── */
+  .mobile-menu {
     position: absolute;
-    top: calc(100% + 10px);
-    left: 50%;
-    transform: translateX(-50%) translateY(-6px);
-    min-width: 190px;
-    margin: 0;
-    padding: 0.4rem;
-    list-style: none;
-    /* 与顶栏同一套玻璃：明显的边框 + 边框内高斯模糊。
-       背景用 --glass-panel（比 --glass-strong 更实）：二级菜单浮在正文/卡片之上，
-       太透会让底下的内容透进来、看起来像渲染错乱（实测就是这个症状）。 */
-    border: var(--line-w) solid var(--line-2);
-    border-radius: 14px;
-    background: var(--glass-panel);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-    box-shadow: var(--shadow-lg);
+    top: 100%;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 32px 20px;
+    background: var(--nav-drawer-bg);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--nav-border-scrolled);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.18s var(--ease), transform 0.18s var(--ease), visibility 0.18s;
-    z-index: 80;
+    pointer-events: none;
+    transform: translateY(-16px);
+    transition: opacity 0.35s var(--nav-ease), transform 0.35s var(--nav-ease), visibility 0.35s;
   }
-  .nav-item[data-open='true'] .nav-sub {
+  .mobile-menu.is-open {
     opacity: 1;
     visibility: visible;
-    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+    transform: translateY(0);
   }
-  .nav-sub[hidden] {
-    display: block; /* 用 opacity/visibility 做动画，这里不让 hidden 直接掐掉过渡 */
+  .mobile-menu[hidden] { display: none; }
+  .mobile-menu > a {
+    color: var(--nav-ink);
+    text-decoration: none;
+    font-size: 16px;
+    padding: 8px 0;
   }
-  .nav-sub li + li {
-    margin-top: 2px;
+  .mobile-menu > a[aria-current='page'] { color: var(--accent); }
+  .mm-group { display: flex; flex-direction: column; gap: 8px; }
+  .mm-group-t {
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--nav-ink-dim);
   }
-  .nav-sub a {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.8rem;
-    padding: 0.4rem 0.6rem;
-    border-radius: 10px;
-    font-size: 0.76rem;
-    letter-spacing: 0.04em;
-    color: var(--ink-2);
+  .mm-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mm-chip {
+    padding: 5px 12px;
+    border-radius: 9999px;
+    border: 1px solid var(--nav-border-scrolled);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--nav-ink-muted);
+    font-size: 13px;
+    text-decoration: none;
   }
-  .nav-sub a:hover {
-    color: var(--ink);
-    background: var(--accent-soft);
-  }
-  .nav-sub a.is-all {
-    color: var(--accent-deep);
-    font-weight: 500;
-  }
-  .nav-sub .ns-count {
-    font-family: var(--font-mono);
-    font-size: 0.64rem;
-    color: var(--ink-3);
-    font-variant-numeric: tabular-nums;
-  }
-  .nav-sub li + li.is-all,
-  .nav-sub li:first-child + li {
-    border-top: 1px solid var(--line-1);
-  }
-  .nav-sub li:first-child + li {
-    margin-top: 0.3rem;
-    padding-top: 0.3rem;
+  .mm-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
+  .mm-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--nav-border-scrolled);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--nav-ink);
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
   }
 
-  /* —— 右侧动作（幽灵胶囊按钮簇） —— */
-  .acts {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: none;
-  }
-  .pill,
-  .pill {
-    padding: 0 1rem;
-  }
-  .pill:hover,
-    color: var(--accent-deep);
-    border-color: var(--accent);
-    background: var(--accent-soft);
-    transform: translateY(-1px);
-  }
-    width: 40px;
-    flex: none;
-    padding: 0;
-  }
-
-
-  /* —— 移动端菜单：从顶部下拉的玻璃面板 ——
-     规格：背景 rgba(255,255,255,.92) + blur(24px)、圆角 20px、淡入 + 轻微下移 */
-  .drawer[hidden] { display: none; }
-  /* 抽屉里的二级分类（缩进一级，挂在对应页面项下面） */
-  @keyframes nav-in {
-    from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: none; }
-  }
-  /* 抽屉里的「搜索」是按钮（触发悬浮窗），外观与链接一致 */
-  .drawer-search:hover { background: var(--accent-soft); color: var(--ink); }
-
-  /* 桌面链接组收起得更早一些（原 960）：胶囊里品牌标（约 184px）+ 5 个链接
-     + 右侧控件在 1000–1180px 之间放不下，会把 .acts 挤出胶囊
-     （实测 1000px 视口下 .acts 右缘 1005 > 内容区 990）。
-     收进侧边菜单后链接依然可点，只是改从菜单进入。 */
+  /* ── 断点（参考实测：≤1024 pad 24 且容器满宽、≤768 换汉堡）──
+     参考在 768–1100 之间没有处理，因为它的 4 个链接比本站 5 个短；
+     本站链接更宽，故在 1100 以下先收窄间距，避免内容被容器挤出。 */
   @media (max-width: 1100px) {
-    .nav { display: none; }
+    .site-header {
+      --nav-pad-x: 24px;
+      --nav-pad-x-scrolled: 20px;
+      --nav-link-gap: 24px;
+      --nav-link-gap-scrolled: 18px;
+    }
   }
-  @media (max-width: 960px) {
-    .nav { display: none; }
+  /* 参考：≤1024 时容器满宽（参考实测 w=1009 = 视口宽 − 滚动条） */
+  @media (max-width: 1024px) {
+    .header-container { max-width: 100%; }
+    html[data-scrolled='1'] .header-container { max-width: calc(100% - 40px); }
   }
-  /* 菜单开关常驻（与 ReactBits 一致；宽屏下与链接组并存） */
-  /* 手机端：品牌标 + 4 个圆按钮要挤在一条胶囊里，必须把品牌标缩小。
-     BrandMark 的尺寸由内联 width/height 决定，这里用 :global 覆盖成响应式高度
-     （viewBox 会按比例缩放，所以只改高度即可）。 */
-  @media (max-width: 620px) {
-    .brand { gap: 0.4rem; min-width: 0; overflow: hidden; }
-    .brand :global(.brandmark) { height: 20px; width: auto; }
-    .acts { gap: 4px; }
-    .pill, .pill.ext, .pill.search-pill { width: 36px; }
-    .nav-caret { width: 18px; height: 18px; }
-  }
-  @media (max-width: 400px) {
-    /* 极窄屏再收一档，保证不横向溢出 */
-    .brand :global(.brandmark) { height: 18px; width: auto; }
-    .acts { gap: 2px; }
-    .pill, .pill.ext, .pill.search-pill { width: 34px; }
-  }
-  @media (max-width: 520px) {
-    .pill.ext span { display: none; }
-    .pill.ext { padding: 0; }
-    .pill.search-pill span { display: none; }
-    .pill.search-pill { padding: 0; }
-  }
-  /* 中等宽度（≤960）导航链接隐藏时，搜索胶囊保留文字更易识别 */
-  @media (max-width: 960px) and (min-width: 521px) {
-    .pill.search-pill { padding: 0 0.85rem; }
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .hamburger { display: flex; }
+    .site-header {
+      --nav-pad-x: 20px;
+      --nav-pad-x-scrolled: 16px;
+    }
+    .header-container { max-width: 100%; }
+    html[data-scrolled='1'] .header-container { max-width: 100%; height: 52px; }
+    .btn-github span { display: none; }
+    .btn-github { padding: 8px 10px; }
+    .mobile-menu { padding: 16px 20px 20px; }
+    .motion-toggle { opacity: 1; }
   }
 </style>
 
 <script>
-  // 移动端汉堡菜单 + 顶部指示线，见 scripts/nav-mobile.js
+  // 移动端汉堡菜单（下拉玻璃面板的开关、Esc/点外部收起、aria 同步）。
+  // ⚠️ 这段 import 不能丢：nav-mobile.js 只在这里被引用，删掉汉堡就没反应
+  // （2026-09-18 改版时曾漏掉，verify-nav-shrink 的移动端断言抓到了）。
   import '../scripts/nav-mobile.js';
 </script>

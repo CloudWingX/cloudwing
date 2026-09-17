@@ -11,7 +11,8 @@ import { getCollection } from 'astro:content';
 import { SITE } from '../site';
 
 // —— ② 最新作品：取作品库最新 3 篇（与 /works/ 联动） ——
-const latestWorks = (await getCollection('works'))
+const worksAll = await getCollection('works');
+const latestWorks = worksAll
   .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
   .slice(0, 3)
   .map((w) => ({
@@ -42,6 +43,38 @@ const aboutPreview = [
   `${SITE.author} —— 计算机科学与技术（本科在读），方向偏 Java 后端与质量保障：能写 Spring Boot 接口，也用测试的眼光对待每一个缺陷。`,
   '这个站把学习轨迹、代码与产出按编号留存，让每一次练习都可追溯。',
 ];
+
+/* ══════════════════════════════════════════════════════════════
+   Hero 数据 —— 版式照 reference（code_20260918.html）复刻，
+   内容全部来自站点真实数据（与 ②③④、/works/、/gallery/ 联动）
+   ══════════════════════════════════════════════════════════════ */
+
+// 徽标：取最近一条更新记录（changelog）
+const changelog = (await getCollection('changelog')).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
+);
+const latestKind = changelog[0]?.data.items?.[0]?.kind ?? '更新';
+const latestTitle = changelog[0]?.data.items?.[0]?.title ?? '内容持续更新中';
+
+// 两个统计数字（参考是「170+ components / Free forever」）：用站点真实条目数
+const worksCount = worksAll.length;
+const shotsCount = allShots.length;
+
+// 技术栈标签：由作品 frontmatter 的 tools 现算，取出现最多的 6 个
+const toolCount = new Map<string, number>();
+for (const w of worksAll) for (const t of w.data.tools ?? []) if (t) toolCount.set(t, (toolCount.get(t) ?? 0) + 1);
+const topTools = [...toolCount.entries()]
+  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'en'))
+  .slice(0, 6)
+  .map(([t]) => t);
+const stackTop = topTools.length ? topTools : ['Java', 'Spring Boot', 'MySQL', 'Git'];
+
+// 展示卡片下半部分：最近几条真实更新（喂给 code-card，避免用空行凑高）
+const recentItems = changelog
+  .flatMap((c) => (c.data.items ?? []).map((it) => ({ date: c.data.date, ...it })))
+  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  .slice(0, 6)
+  .map((it) => `${it.kind} · ${it.title}`);
 ---
 
 <Base
@@ -51,29 +84,71 @@ const aboutPreview = [
 >
   <div class="home">
     <!-- ═══ ① Hero ═══
-         结构：Eyebrow 玻璃胶囊 → 两行主标题 → 副标题 → CTA 按钮组
-         动画见 scripts/hero-anim.js（ShinyText / BlurText / GradientText / 逐字入场），
-         由 IntersectionObserver 触发，prefers-reduced-motion 下直接显示终态。 -->
-    <header class="hero" id="top">
-      <div class="hero-inner">
-        <p class="hero-eyebrow" data-hero-shiny>
-          <span class="he-shine" data-shiny-sheen aria-hidden="true"></span>
-          <span class="he-text">CLOUDWING · PERSONAL BLOG</span>
-        </p>
+         版式照 reference（code_20260918.html）像素级复刻：
+         左栏 badge → 两行大标题（第二行渐变）→ 副标题 → 两个统计 → 技术标签
+         右栏展示卡片（参考位是代码卡片，这里用站点真实技术栈填充同款卡片）
+         几何/间距/断点全部取参考实测值；强调色用站点雾蓝（--accent）。 -->
+    <section class="hero" id="top">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          <span>{latestKind} · {latestTitle}</span>
+        </div>
 
-        <h1 class="hero-title" data-hero-blur>
-          <span class="ht-line">code <span class="ht-dim">on</span> <span class="ht-accent">clouds</span>,</span>
-          <span class="ht-line">life <span class="ht-dim">on</span> <span class="ht-accent">wings</span>.</span>
+        <h1 class="hero-title">
+          code <span class="ht-on">on</span><br />
+          clouds,<br />
+          life <span class="ht-on">on</span><br />
+          <span class="title-gradient">wings.</span>
         </h1>
 
-        <p class="hero-sub" data-hero-split>云上写代码，翼下记生活。记录前端、设计与日常思考。</p>
+        <p class="hero-subtitle">
+          云上写代码，翼下记生活。{worksCount} 篇编号作品档案与 {shotsCount} 张影像收藏，
+          记录前端、设计与日常思考。
+        </p>
 
-        <div class="hero-cta">
-          <a class="cta cta-primary" href="/works/">查看作品</a>
-          <a class="cta cta-ghost" href="/about/">关于我</a>
+        <div class="hero-features">
+          <div class="feature-item">
+            <span class="feature-number">{worksCount}</span>
+            <span class="feature-label">篇作品档案</span>
+          </div>
+          <div class="feature-divider"></div>
+          <div class="feature-item">
+            <span class="feature-number">{shotsCount}</span>
+            <span class="feature-label">张影像收藏</span>
+          </div>
+        </div>
+
+        <div class="component-tags">
+          {stackTop.map((t, i) => <span class:list={['tag', { active: i === 0 }]}>{t}</span>)}
         </div>
       </div>
-    </header>
+
+      <!-- 右栏展示卡片（参考的 code-card 几何：max-width 520 / radius 12 / 玻璃） -->
+      <div class="code-card">
+        <div class="code-header">
+          <span class="code-dot red"></span>
+          <span class="code-dot yellow"></span>
+          <span class="code-dot green"></span>
+          <span class="code-filename">stack.md</span>
+        </div>
+        <div class="code-body">
+          <span class="cl cl-dim"># cloudwing / stack</span>
+          <span class="cl"><span class="sl-key">##</span> <span class="sl-val">工具与技术栈</span></span>
+          {stackTop.map((t) => (
+            <span class="cl"><span class="sl-key">-</span> <span class="sl-val">{t}</span></span>
+          ))}
+          <span class="cl"><span class="sl-key">##</span> <span class="sl-val">站点</span></span>
+          <span class="cl"><span class="sl-key">-</span> <span class="sl-val">作品档案 {worksCount} 篇</span></span>
+          <span class="cl"><span class="sl-key">-</span> <span class="sl-val">影像收藏 {shotsCount} 张</span></span>
+          <span class="cl"><span class="sl-key">-</span> <span class="sl-val">更新记录 {changelog.length} 天</span></span>
+          <span class="cl"><span class="sl-key">##</span> <span class="sl-val">最近更新</span></span>
+          {recentItems.map((it) => (
+            <span class="cl"><span class="sl-key">-</span> <span class="sl-val">{it}</span></span>
+          ))}
+        </div>
+      </div>
+    </section>
 
     <!-- ═══ ② 最新作品 ═══ -->
     <section class="sec sec-works" id="sec-works" aria-labelledby="h-works">
@@ -167,7 +242,9 @@ const aboutPreview = [
 
 <script>
   // Hero 的四个动画（ShinyText / BlurText / GradientText / 逐字入场）
-  import '../scripts/hero-anim.js';
+  // 2026-09-18 改版：Hero 已按 reference 复刻为静态版式（badge/两行标题/统计/标签），
+  // 原来那四个动画的目标 DOM 已不存在，故不再加载 hero-anim.js。
+  // 如需恢复动效，先按新结构重写 scripts/hero-anim.js 再引入。
 </script>
 
 <style>
@@ -205,203 +282,234 @@ const aboutPreview = [
   .sec-more:hover { border-bottom-color: var(--accent); }
 
   /* ══════════════════════════════════════════════════════════════
-     ① Hero —— 严格按规格实现
-     布局 / 尺寸 / 间距 / 断点 / 动画参数逐条对应；
-     **颜色映射到暗色令牌**（规格给的 #1a1a2e / #555 / 白色玻璃是浅色版，
-     压在暗色视频背景上不可读 —— 见 HANDOFF 第 25 条的取舍记录）。
+     ① Hero —— 版式照 reference（code_20260918.html）像素级复刻
+     几何 / 间距 / 断点全部取参考的实测值：
+       hero      max-w 1280 / pad 0 32 / flex 两栏 / gap 80 / min-h 100vh
+       content   flex 1 / max-w 560
+       title     64px / 700 / 1.05 / -0.03em / margin-bottom 24
+       subtitle  18px / rgba(255,255,255,.7) / 1.6 / margin-bottom 32
+       features  gap 32 / number 28px·600 / label 14px / divider 1×40
+       tags      6px 14px / radius 9999 / gap 8
+       card      flex 1 / max-w 520 / radius 12 / 玻璃
+     颜色改用站点令牌（强调色为雾蓝 --accent，不用参考的紫/粉/红）
      ══════════════════════════════════════════════════════════════ */
   .hero {
     position: relative;
-    /* 规格：min-height 100vh、flex 垂直居中 */
     min-height: 100vh;
+    max-width: 1280px;
+    margin: 0 auto;
+    /* 参考用 px 定值；站点 --gutter 是 clamp(1.25rem,5vw,3.25rem)，会算出 64px，
+       所以这里必须显式写死左右内边距（断点里分别 24/20）。 */
+    padding: 0 32px;
     display: flex;
     align-items: center;
-    /* 规格：padding clamp(120px, 18vh, 200px) clamp(24px, 5vw, 64px) */
-    padding: clamp(120px, 18vh, 200px) clamp(24px, 5vw, 64px);
+    justify-content: space-between;
+    gap: 80px;
     overflow: hidden;
-    /* 规格字体栈（中文回退到系统黑体） */
-    font-family: Inter, system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    /* 参考的 body line-height 是 normal；站点全局 1.8 会把各块撑高 */
+    line-height: normal;
   }
-  /* 规格：max-width 1200px、margin 0 auto、flex column、align-items flex-start、text-align left */
-  .hero-inner {
+  /* 参考的两处柔光（紫/粉）→ 本站映射为雾蓝/灰绿强调色柔光。
+     ⚠️ 浓度必须很低：这层柔光会**直接压在 hero 文字后面**，
+     白色大标题容不下亮底 —— 实测 15% 的雾蓝柔光就能把底色抬到 rgb(156,207,228)，
+     白字对比度掉到 1.69:1（verify-videobg 抓到）。这里压到 6%/4%，
+     既保留参考的柔光氛围，又不破坏文字可读性。 */
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 30% -10%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 90% 30%, color-mix(in srgb, var(--accent-3) 4%, transparent) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hero-content {
     position: relative;
-    z-index: 2;
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    z-index: 1;
+    flex: 1;
+    max-width: 560px;
     text-align: left;
   }
 
-  /* ── 1. Eyebrow 玻璃胶囊 ──
-     规格：13px / 500 / 1.2 / 0.16em / 大写；胶囊 padding 8px 14px、圆角 999px、
-     背景 rgba(255,255,255,.6)、边框 1px rgba(255,255,255,.8)、blur(16px)；margin-bottom 24px */
-  .hero-eyebrow {
-    position: relative;
-    overflow: hidden;
+  /* ── 徽标胶囊（参考 .hero-badge）── */
+  .hero-badge {
     display: inline-flex;
     align-items: center;
-    padding: 8px 14px;
-    margin: 0 0 24px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    /* 浅色版是 rgba(255,255,255,.6)；暗色底改用深玻璃，白字才压得住 */
-    background: rgba(9, 12, 16, 0.55);
-    -webkit-backdrop-filter: blur(16px) saturate(1.3);
-    backdrop-filter: blur(16px) saturate(1.3);
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--line-2);
     font-size: 13px;
-    font-weight: 500;
-    line-height: 1.2;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    /* 浅色版 rgba(26,26,46,.6) → 暗色版：品牌纸白 60% */
-    color: color-mix(in srgb, var(--brand-cloud) 68%, transparent);
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 28px;
+    max-width: 100%;
+  }
+  .hero-badge > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* ShinyText 微光：一条斜向高光每 4s 扫过（只动 transform/opacity） */
-  .he-shine {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 40%;
-    height: 100%;
-    pointer-events: none;
-    opacity: 0;
-    background: linear-gradient(
-      100deg,
-      transparent 0%,
-      color-mix(in srgb, var(--accent) 55%, transparent) 50%,
-      transparent 100%
-    );
-    transform: translateX(-120%) skewX(-16deg);
-    will-change: transform, opacity;
+  /* 参考的紫点 → 站点雾蓝点 */
+  .badge-dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
   }
 
-  /* ── 2. 主标题（两行）──
-     规格：clamp(52px,9.5vw,148px) / 500 / 1.02 / -0.055em；margin-bottom 28px；
-     每行 block + nowrap（移动端除外） */
+  /* ── 主标题（参考 .hero-title 64/700/1.05/-0.03em）── */
   .hero-title {
-    margin: 0 0 28px;
-    font-size: clamp(52px, 9.5vw, 148px);
-    font-weight: 500;
-    line-height: 1.02;
-    letter-spacing: -0.055em;
-    /* 浅色版 #1a1a2e → 暗色版：纯白（对比度最高） */
+    margin: 0 0 24px;
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
     color: #ffffff;
-    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.35);
   }
-  .ht-line {
-    display: block;
-    white-space: nowrap; /* 移动端在下面的断点里放开 */
-  }
-  /* clouds / wings：GradientText 流动渐变（雾蓝 → 浅雾蓝 → 雾蓝，200% 循环移动）
-     规格要求字重 600（其余 500）；用 background-clip:text 实现渐变文字 */
-  .ht-accent {
-    font-weight: 600;
-    background-image: linear-gradient(90deg, #9fd3e8, #c4e8f5, #9fd3e8);
-    background-size: 200% 100%;
+  /* 参考的紫→粉→红渐变 → 站点雾蓝系渐变（同一版式，换品牌色）。
+     ⚠️ 必须用"压深过的"雾蓝：白色大标题压在**视频亮帧**上，
+     实测亮帧可达 rgb(156,207,228)，此时浅雾蓝(#9FD3E8)对白字只有 1.6:1，
+     达不到大字 3:1 的要求；要靠遮罩压到 0.9 才能达标，那等于把背景视频关掉。
+     所以这里把两端都压深（≈#6f94a2 / 6.05:1），保留雾蓝色相但保证可读。 */
+  .title-gradient {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--accent) 70%, #000),
+      color-mix(in srgb, var(--accent) 88%, #000),
+      color-mix(in srgb, var(--accent) 70%, #000)
+    );
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     -webkit-text-fill-color: transparent;
-    animation: hero-grad 4s linear infinite;
   }
-  @keyframes hero-grad {
-    from { background-position: 0% 50%; }
-    to { background-position: 200% 50%; }
-  }
-  /* "on" 字重 300 + 半透明（规格 rgba(26,26,46,.4) → 暗色版白 42%） */
-  .ht-dim {
-    font-weight: 300;
-    color: color-mix(in srgb, #ffffff 42%, transparent);
+  .ht-on { font-weight: 400; color: rgba(255, 255, 255, 0.45); }
+
+  /* ── 副标题（参考 18px / .7 白 / 1.6）── */
+  .hero-subtitle {
+    margin: 0 0 32px;
+    font-size: 18px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.7);
   }
 
-  /* ── 3. 副标题 ──
-     规格：clamp(16px,1.8vw,20px) / 400 / 1.7；max-width 42ch；margin-bottom 40px */
-  .hero-sub {
-    margin: 0 0 40px;
-    max-width: 42ch;
-    font-size: clamp(16px, 1.8vw, 20px);
-    font-weight: 400;
-    line-height: 1.7;
-    /* 浅色版 #555 → 暗色版：浅灰 */
-    color: #c9d1d9;
-    text-shadow: 0 1px 16px rgba(0, 0, 0, 0.4);
-  }
-
-  /* ── 4. CTA 按钮组 ──
-     规格：flex row / gap 12px / wrap；按钮 min-height 48px、padding 0 24px、
-     圆角 999px、字号 15px、字重 500；hover 背景加深 + scale(1.02) + 0.25s ease */
-  .hero-cta { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; }
-  .cta {
-    display: inline-flex;
+  /* ── 两个统计（参考 .hero-features）── */
+  .hero-features {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    min-height: 48px;
-    padding: 0 24px;
-    border-radius: 999px;
-    font-family: inherit;
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: 0.01em;
-    text-decoration: none;
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
-    backdrop-filter: blur(18px) saturate(1.3);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-    transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+    gap: 32px;
+    margin-bottom: 36px;
   }
-  .cta:hover { transform: scale(1.02); border-color: rgba(255, 255, 255, 0.95); }
-  /* 主按钮：浅色版 bg rgba(255,255,255,.72) → 暗色版 0.18（更高一档的玻璃） */
-  .cta-primary {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
-  }
-  .cta-primary:hover { background: rgba(255, 255, 255, 0.3); }
-  /* 次按钮：浅色版 bg rgba(255,255,255,.4) → 暗色版 0.08 */
-  .cta-ghost {
-    background: rgba(255, 255, 255, 0.08);
-    color: #e8edf2;
-  }
-  .cta-ghost:hover { background: rgba(255, 255, 255, 0.2); }
+  .feature-item { display: flex; flex-direction: column; gap: 2px; }
+  .feature-number { font-size: 28px; font-weight: 600; color: #ffffff; line-height: 1.25; }
+  .feature-label { font-size: 14px; line-height: 1.28; color: rgba(255, 255, 255, 0.5); }
+  .feature-divider { width: 1px; height: 40px; background: var(--line-2); flex: none; }
 
-  /* ── 断点（照规格逐档）── */
-  /* 768–1199：主标题 clamp(44px, 9vw, 96px)、左右 padding 40px */
-  @media (max-width: 1199px) {
-    .hero { padding-left: 40px; padding-right: 40px; }
-    .hero-title {
-      font-size: clamp(44px, 9vw, 96px);
-      /* 中间档字号下，-0.055em 会让两行 nowrap 轻微溢出（实测 1000px 视口 1px），
-         收到 -0.045em */
-      letter-spacing: -0.045em;
+  /* ── 技术标签（参考 .component-tags / .tag）── */
+  .component-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .component-tags .tag {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 13px;
+    line-height: 16px;
+    letter-spacing: normal;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--line-2);
+    cursor: default;
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .component-tags .tag:hover { color: #ffffff; border-color: rgba(255, 255, 255, 0.2); }
+  /* 选中态：浅雾蓝底 + 深色字。
+     ⚠️ 不能"雾蓝字压半透明雾蓝底"——两者合成后几乎同色，对比度只有 1:1
+     （contrast-audit 抓到）。改用不透明浅雾蓝底 + 近黑字，约 12:1。 */
+  .component-tags .tag.active {
+    color: #0a0a0f;
+    background: color-mix(in srgb, var(--accent) 88%, #ffffff);
+    border-color: var(--accent);
+  }
+
+  /* ── 右栏展示卡片（参考 .code-card 几何）── */
+  .code-card {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    max-width: 520px;
+    background: rgba(18, 18, 26, 0.7);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line-2);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+  .code-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-2);
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .code-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .code-dot.red { background: #ff5f56; }
+  .code-dot.yellow { background: #ffbd2e; }
+  .code-dot.green { background: #27c93f; }
+  .code-filename {
+    margin-left: 12px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+  }
+  .code-body {
+    padding: 20px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 13px;
+    /* 22.1/13 = 1.7，与参考的代码卡片行距一致 */
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .cl { display: block; white-space: pre; }
+  .sl-key { color: color-mix(in srgb, var(--accent) 70%, transparent); }
+  .sl-val { color: #e8edf2; }
+  .cl-dim { color: rgba(255, 255, 255, 0.45); }
+  .stack-note {
+    margin: 16px 0 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .stack-note a { color: var(--accent-deep); text-decoration: none; border-bottom: 1px solid transparent; }
+  .stack-note a:hover { border-bottom-color: var(--accent); }
+
+  /* ── 断点（照参考逐档）── */
+  @media (max-width: 1024px) {
+    .hero { gap: 40px; padding: 0 24px; }
+    .hero-title { font-size: 48px; }
+    .code-card { max-width: 440px; }
+  }
+  @media (max-width: 768px) {
+    .hero {
+      flex-direction: column;
+      justify-content: center;
+      gap: 48px;
+      padding: 120px 20px 80px;
+      text-align: center;
     }
-  }
-  /* 480–767：主标题 clamp(36px, 10vw, 64px)、左右 padding 24px、行高 1.08、字距 -0.04em */
-  @media (max-width: 767px) {
-    .hero { padding-left: 24px; padding-right: 24px; }
-    .hero-title {
-      font-size: clamp(36px, 10vw, 64px);
-      line-height: 1.08;
-      letter-spacing: -0.04em;
-    }
-  }
-  /* <480：主标题 clamp(30px, 11vw, 44px)、左右 padding 20px、副标题 30ch、按钮等宽 */
-  @media (max-width: 479px) {
-    .hero { padding-left: 20px; padding-right: 20px; }
-    .hero-title { font-size: clamp(30px, 11vw, 44px); }
-    .hero-title .ht-line { white-space: normal; } /* 极窄屏允许换行，避免横向溢出 */
-    .hero-sub { max-width: 30ch; }
-    .hero-cta { width: 100%; }
-    .hero-cta .cta { flex: 1 1 auto; width: 100%; }
-  }
-  /* 减少动态：关掉渐变流动，动画由 hero-anim.js 直接落到终态 */
-  @media (prefers-reduced-motion: reduce) {
-    .ht-accent { animation: none; }
-    .cta, .cta:hover { transition: none; transform: none; }
+    .hero-content { text-align: center; max-width: 100%; }
+    .hero-title { font-size: 36px; }
+    .hero-subtitle { font-size: 16px; }
+    .hero-features { justify-content: center; gap: 20px; }
+    .component-tags { justify-content: center; }
+    .feature-number { font-size: 22px; }
+    .code-card { max-width: 100%; width: 100%; }
+    .code-body { font-size: 12px; padding: 16px; }
   }
 
   /* ── ② 最新作品 ── */
@@ -524,8 +632,6 @@ const aboutPreview = [
     .work-cards, .shot-grid { grid-template-columns: minmax(0, 1fr); }
     /* 手机上不靠悬停：元信息常显 */
     .shot-meta { opacity: 1; transform: none; }
-    .hero-cta { width: 100%; }
-    .hero-cta .cta { flex: 1 1 auto; justify-content: center; }
   }
   @media (prefers-reduced-motion: reduce) {
     .wc, .wc-cover img, .shot-frame, .shot-frame img, .shot-meta, .cta { transition: none; }

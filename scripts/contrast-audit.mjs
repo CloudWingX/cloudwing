@@ -22,6 +22,11 @@ const AUDIT_FN = `(() => {
   };
   const ratio = (a, b) => { const l1 = lum(...a), l2 = lum(...b); const hi = Math.max(l1, l2), lo = Math.min(l1, l2); return (hi + 0.05) / (lo + 0.05); };
   const parse = (s) => {
+    // color(srgb r g b) —— 现代 Chrome 把 color-mix() 的结果算成这个形式（分量 0~1）。
+    // 旧实现只认 rgb()/rgba()，遇到渐变里的 color-mix 就解析失败，
+    // 渐变文字因此退回"全透明前景"→ 报出假的 1:1（2026-09-18 实测）。
+    const cs2 = String(s).match(/color\\(srgb\\s+([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)/);
+    if (cs2) return { c: [+cs2[1] * 255, +cs2[2] * 255, +cs2[3] * 255], a: 1 };
     const m = String(s).match(/rgba?\\(([^)]+)\\)/); if (!m) return null;
     const p = m[1].split(/[,\\/]/).map((x) => parseFloat(x));
     return { c: [p[0], p[1], p[2]], a: p.length > 3 && !isNaN(p[3]) ? p[3] : 1 };
@@ -77,30 +82,38 @@ const AUDIT_FN = `(() => {
     const fg = parse(cs.color); if (!fg) return;
 
     // 渐变裁切文字（background-clip:text + color:transparent）：computed color 全透明，
-    // 直接按前景算会得到假 1:1。改用渐变各停靠点的平均色近似评估。
+    // 直接按前景算会得到假 1:1。改成取渐变**所有停靠点**逐个评估，用最差的那个定结论
+    // （平均值会把"最亮那一档"掩盖掉）。
     const clip = cs.webkitBackgroundClip || cs.backgroundClip || '';
-    let fgColor = fg.c, fgAlpha = fg.a, approx = false;
+    let fgColor = fg.c, fgAlpha = fg.a, approx = false, stops = null;
     if (fg.a < 0.05 && /text/.test(clip)) {
-      const stops = (String(cs.backgroundImage).match(/rgba?\\([^)]+\\)/g) || []).map(parse).filter(Boolean);
-      if (stops.length) {
-        fgColor = [0, 1, 2].map((k) => stops.reduce((a, s) => a + s.c[k], 0) / stops.length);
-        fgAlpha = 1; approx = true;
-      }
+      const bgImg = String(cs.backgroundImage);
+      stops = [];
+      for (const m of bgImg.matchAll(/rgba?\\([^)]+\\)/g)) { const p = parse(m[0]); if (p) stops.push(p.c); }
+      for (const m of bgImg.matchAll(/color\\(srgb[^)]+\\)/g)) { const p = parse(m[0]); if (p) stops.push(p.c); }
+      if (stops.length) { fgColor = stops[0]; fgAlpha = 1; approx = true; }
     }
 
     const bgc = effBg(el);
-    const fr = [0, 1, 2].map((k) => fgColor[k] * fgAlpha + bgc[k] * (1 - fgAlpha));
     const size = parseFloat(cs.fontSize);
     const weight = parseInt(cs.fontWeight, 10) || 400;
     const large = size >= 24 || (size >= 18.66 && weight >= 700);
     const need = large ? 3.0 : 4.5;
-    const cr = ratio(fr, bgc);
+    // 前景先按 alpha 与背景合成再算对比度；渐变文字则取**所有停靠点里最差**的那个
+    const mixOn = (c) => [0, 1, 2].map((k) => c[k] * fgAlpha + bgc[k] * (1 - fgAlpha));
+    const fr = mixOn(fgColor);
+    let cr = ratio(fr, bgc);
+    let worstStop = null;
+    if (stops && stops.length) {
+      for (const s of stops) { const r2 = ratio(mixOn(s), bgc); if (r2 < cr) { cr = r2; worstStop = s.map(Math.round); } }
+    }
     const key = el.tagName + '|' + (typeof el.className === 'string' ? el.className : '') + '|' + cs.color + '|' + txt.slice(0, 12);
     if (seen.has(key)) return; seen.add(key);
     out.push({
       sel: el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\\s+/).slice(0, 2).join('.') : ''),
       txt: txt.slice(0, 26), cr: Math.round(cr * 100) / 100, need, size, weight,
-      color: cs.color, bg: 'rgb(' + bgc.join(',') + ')', ok: cr >= need, approx,
+      color: worstStop ? 'gradient worst stop rgb(' + worstStop.join(',') + ')' : cs.color,
+      bg: 'rgb(' + bgc.join(',') + ')', ok: cr >= need, approx,
     });
   });
   const lums = out.map((o) => lum(...o.bg.match(/\\d+/g).slice(0, 3).map(Number)));

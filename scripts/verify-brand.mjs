@@ -24,12 +24,12 @@ const waitFor = async (x, ms = 30000) => { const t0 = Date.now(); while (Date.no
 await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Page.navigate', { url: BASE + '/works/' });
-await waitFor(`!!document.querySelector('.brand')`);
+await waitFor(`!!document.querySelector('.logo')`);
 await sleep(2500);
 
 console.log('=== 导航栏品牌标志 ===');
 const brand = await ev(`(()=>{
-  const b=document.querySelector('.brand');
+  const b=document.querySelector('.logo');
   const svg=b.querySelector('svg.brandmark');
   if(!svg) return {有标志:false};
   const r=svg.getBoundingClientRect();
@@ -43,7 +43,7 @@ const brand = await ev(`(()=>{
     云体色:cloud?getComputedStyle(cloud).fill:null,
     羽翼色:wing?getComputedStyle(wing.querySelector('path')).stroke:null,
     中文站名:!!b.querySelector('.bname'),
-    旧六边形:document.querySelectorAll('.brand .hex').length,
+    旧六边形:document.querySelectorAll('.logo .hex').length,
   };})()`);
 console.log('  ' + JSON.stringify(brand));
 check('导航栏使用品牌标志', brand.有标志 === true);
@@ -51,7 +51,7 @@ check('用的是横版字标（viewBox 355.06×58）', String(brand.viewBox).sta
 check('云体为品牌稿纸白 #F4F7FA', /244,\s*247,\s*250/.test(String(brand.云体色)), String(brand.云体色));
 check('羽翼为品牌稿雾蓝 #9FD3E8', /159,\s*211,\s*232/.test(String(brand.羽翼色)), String(brand.羽翼色));
 check('旧六边形标志已移除', brand.旧六边形 === 0, String(brand.旧六边形));
-check('标志高度合理（24–40px）', (() => { const h = parseInt(brand.宽高.split('×')[1]); return h >= 24 && h <= 40; })(), brand.宽高);
+check('标志高度合理（20px，照参考的字标高度）', (() => { const h = parseInt(brand.宽高.split('×')[1]); return h === 20; })(), brand.宽高);
 
 console.log('\n=== 页脚品牌 ===');
 const foot = await ev(`(()=>{const f=document.querySelector('.site-footer .brandmark');
@@ -63,8 +63,8 @@ check('页脚也使用品牌标志（图标版）', foot.有 === true && String(
 
 console.log('\n=== 不遮挡 / 不溢出 ===');
 check('无横向溢出', (await ev(`document.documentElement.scrollWidth-document.documentElement.clientWidth`)) === 0);
-check('标志未超出导航胶囊', await ev(`(()=>{const s=document.querySelector('.brand svg').getBoundingClientRect();
-  const hd=document.querySelector('.hd').getBoundingClientRect();
+check('标志未超出导航胶囊', await ev(`(()=>{const s=document.querySelector('.logo svg').getBoundingClientRect();
+  const hd=document.querySelector('.header-container').getBoundingClientRect();
   return s.top>=hd.top-1 && s.bottom<=hd.bottom+1 && s.left>=hd.left-1 && s.right<=hd.right+1;})()`) === true);
 check('无 JS 异常', errs.length === 0, errs[0] || '');
 

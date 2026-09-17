@@ -305,8 +305,11 @@ html.js .sli.in {
 
 /* ============================================================
    V11 — 顶部导航：磨砂玻璃条（与站点玻璃材质一致、融入页面）
+   2026-09-18 改版：导航改成参考形态后，外层 padding 由 Header.astro 的
+   --nav-pad-x / --nav-top 令牌接管（水平 32→24、垂直 0→16）。
+   这里不能再给 .site-header 设 padding，否则会盖掉那套令牌
+   （旧值 12px var(--gutter) 0 曾把导航推下来 12px、并把左右撑到 64px）。
    ============================================================ */
-.site-header { padding: 12px var(--gutter) 0; }
 .topbar {
   position: relative;
   border-radius: 18px;

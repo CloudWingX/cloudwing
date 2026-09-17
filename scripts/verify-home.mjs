@@ -25,24 +25,26 @@ await s('Page.navigate', { url: BASE + '/' });
 await waitFor(`!!document.querySelector('.hero-title')`);
 await sleep(2500);
 
-console.log('=== ① Hero（细测见 verify-hero.mjs，这里只做概览）===');
+console.log('=== ① Hero（2026-09-18 照 reference 复刻；细测见 verify-hero.mjs）===');
 const hero = await ev(`(()=>{const t=s=>document.querySelector(s);
-  const prune=(s)=>String(s).replace(/[\\s\\u00A0]+/g,' ').trim();
-  return {行:[...document.querySelectorAll('.ht-line')].map(e=>prune(e.textContent)),
-    eyebrow:prune(t('.hero-eyebrow')?.textContent||''),
-    副标题:prune(t('.hero-sub')?.textContent||''),
-    强调色:getComputedStyle(t('.ht-accent')).color,
-    on字重:getComputedStyle(t('.ht-dim')).fontWeight,
-    CTA:[...document.querySelectorAll('.hero-cta .cta')].map(e=>e.textContent.trim()+'→'+e.getAttribute('href')),
-    描边残留:document.querySelectorAll('.stroke-text__svg').length};})()`);
+  const prune=(s)=>String(s||'').replace(/[\\s\\u00A0]+/g,' ').trim();
+  return {
+    标题:prune(t('.hero-title')?.textContent),
+    副标题:prune(t('.hero-subtitle')?.textContent),
+    徽标:prune(t('.hero-badge')?.textContent),
+    统计:document.querySelectorAll('.feature-item').length,
+    标签:document.querySelectorAll('.component-tags .tag').length,
+    卡片:!!t('.code-card'),
+    渐变行:!!t('.title-gradient'),
+    旧结构:document.querySelectorAll('.hero-eyebrow,.hero-inner,.hero-cta,.ht-line,.stroke-text__svg,.typed-hero').length};})()`);
 console.log('  ' + JSON.stringify(hero));
-check('标题两行正确', hero.行[0] === 'code on clouds,' && hero.行[1] === 'life on wings.', hero.行.join(' / '));
-check('eyebrow 文案正确', hero.eyebrow === 'CLOUDWING · PERSONAL BLOG', hero.eyebrow);
-check('副标题文案正确', hero.副标题.startsWith('云上写代码，翼下记生活。'), hero.副标题);
-check('clouds/wings 用渐变（含雾蓝 #9FD3E8）', /159,\s*211,\s*232/.test(String(hero.强调色)) || true, hero.强调色);
-check('"on" 字重 300', hero.on字重 === '300', hero.on字重);
-check('描边动画已移除', hero.描边残留 === 0, String(hero.描边残留));
-check('两个 CTA 指向 /works/ 与 /about/', hero.CTA[0].endsWith('/works/') && hero.CTA[1].endsWith('/about/'), hero.CTA.join(' '));
+check('Hero 版式四块齐全（徽标/标题/统计/标签）',
+  hero.徽标.length > 0 && hero.标题.length > 4 && hero.统计 === 2 && hero.标签 >= 4,
+  `${hero.统计} 统计 / ${hero.标签} 标签`);
+check('副标题文案正确', hero.副标题.startsWith('云上写代码，翼下记生活。'), hero.副标题.slice(0, 24) + '…');
+check('标题第二行走渐变', hero.渐变行 === true);
+check('右侧展示卡片存在（参考的 code-card 位）', hero.卡片 === true);
+check('旧 Hero 结构已清干净', hero.旧结构 === 0, String(hero.旧结构));
 
 console.log('\n=== ②③④ 结构与规范 ===');
 const st = await ev(`(()=>{

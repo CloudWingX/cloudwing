@@ -34,10 +34,12 @@ check('初始未拉取 pagefind-ui.js', (await ev(`!document.getElementById('pag
 check('初始未拉取 pagefind-ui.css', (await ev(`!document.getElementById('pagefind-ui-css')`)) === true);
 check('弹窗初始是关闭的', (await ev(`!document.querySelector('[data-search-modal]').open`)) === true);
 
-console.log('\n=== 用顶栏搜索按钮打开 ===');
-await ev(`document.querySelector('.search-pill[data-search-open]').click()`);
+console.log('\n=== 用 ⌘/Ctrl+K 打开（顶栏搜索按钮已按参考导航移除）===');
+// 2026-09-18 改版：导航照 reference 复刻，顶栏不再有搜索按钮。
+// 现存入口：⌘/Ctrl+K、左栏导航树的搜索按钮、移动端下拉菜单里的搜索按钮。
+await ev(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:true,ctrlKey:true,bubbles:true}))`);
 await waitFor(`document.querySelector('[data-search-modal]').open`);
-check('点击后弹窗打开', (await ev(`document.querySelector('[data-search-modal]').open`)) === true);
+check('快捷键后弹窗打开', (await ev(`document.querySelector('[data-search-modal]').open`)) === true);
 await waitFor(`!!document.querySelector('.pagefind-ui__search-input')`, 20000);
 check('Pagefind UI 已挂载（输入框出现）', (await ev(`!!document.querySelector('.pagefind-ui__search-input')`)) === true);
 check('打开后才加载 pagefind-ui.css', (await ev(`!!document.getElementById('pagefind-ui-css')`)) === true);
@@ -60,7 +62,7 @@ console.log('\n=== 关闭方式 ===');
 await ev(`document.querySelector('[data-search-close]').click()`);
 await sleep(400);
 check('点关闭按钮可关', (await ev(`document.querySelector('[data-search-modal]').open`)) === false);
-await ev(`document.querySelector('.search-pill[data-search-open]').click()`);
+await ev(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:true,ctrlKey:true,bubbles:true}))`);
 await waitFor(`document.querySelector('[data-search-modal]').open`);
 await ev(`document.querySelector('[data-search-modal]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
 await sleep(300);
@@ -81,7 +83,7 @@ console.log('\n=== 软导航后仍可用 ===');
 await ev(`[...document.querySelectorAll('a')].find(a=>a.getAttribute('href')==='/gallery/')?.click()`);
 await sleep(3500);
 check('换页后悬浮窗还在', (await ev(`!!document.querySelector('[data-search-modal]')`)) === true);
-await ev(`document.querySelector('.search-pill[data-search-open]')?.click()`);
+await ev(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:true,ctrlKey:true,bubbles:true}))`);
 await waitFor(`document.querySelector('[data-search-modal]').open`, 10000);
 check('换页后仍能打开', (await ev(`document.querySelector('[data-search-modal]').open`)) === true);
 check('换页后不再重复加载脚本', (await ev(`document.querySelectorAll('#pagefind-ui-js').length <= 1`)) === true);

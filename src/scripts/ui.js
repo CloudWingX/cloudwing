@@ -106,10 +106,10 @@ function boot() {
     typedEffects,       // 打字机（TextType 移植）
     startDriftWall,     // 影集页漂移墙背景
     tocSpy,             // 右侧栏「本页目录」滚动高亮（子页面三栏壳层）
-    sideSticky,         // 侧栏吸顶：导航栏可见时贴其下方，收起时随页面滚
-    autoHideHeader,     // 导航栏下滑收起 / 上滑滑回
+    sideSticky,         // 侧栏吸顶：始终贴在导航栏下方
+    autoHideHeader,     // 导航栏滚动收缩形态（改版后不再下滑收起）
     calPanel,           // 侧栏更新日历：点日期展开当天记录
-    navSub,             // 导航栏二级菜单（各子页面的分类）
+    // navSub 已移除：导航栏改成参考形态后不再有二级菜单（分类改由左栏导航树承担）
     weatherWidget,      // 左侧栏天气小帖（uapis.cn，浏览器端拉取 + 30 分钟缓存）
     musicPlayer,        // 左侧栏音乐播放器（歌曲见 site.ts 的 MUSIC）
     searchModal,        // 全站搜索悬浮窗（Pagefind，首次打开才加载）
@@ -1170,67 +1170,31 @@ function tocSpy() {
   map.forEach((_, el) => window.__cwTocIO.observe(el));
 }
 
-/* ---------- 导航栏下滑自动收起 / 上滑滑回 ----------
-   下滑超过阈值就收起来（.hd-hidden，CSS 里带 0.28s 位移过渡），上滑立刻滑回。
-   手机端抽屉菜单打开时不收，避免刚点开菜单就消失。
-   状态写在 <html data-hd="hidden|shown"> 上，供 sideSticky() 决定侧栏让位多少。 */
+/* ---------- 导航栏形态：滚动收缩（不做下滑收起） ----------
+   2026-09-18 改版：导航形态照 reference 复刻 —— 参考的导航**不会**随下滑隐藏，
+   只有"贴顶通栏 → 下沉 16px 收成胶囊"这一种形态变化。
+   故这里只保留 setMaterial()，不再切 .hd-hidden。
+   （.hd-hidden 与 html[data-hd] 的旧逻辑已废弃；sideSticky() 只按导航栏实际高度计算。） */
 function autoHideHeader() {
-  const setHidden = (hidden) => {
-    const header = document.querySelector('.site-header');
-    const root = document.documentElement;
-    if (!header) return;
-    if (hidden && header.classList.contains('menu-open')) return;
-    const now = root.dataset.hd === 'hidden';
-    if (now === hidden) return;
-    header.classList.toggle('hd-hidden', hidden);
-    root.dataset.hd = hidden ? 'hidden' : 'shown';
-    window.clearTimeout(window.__cwSideDelay);
-    if (hidden) {
-      // 收起时先等导航栏滑走（0.28s）再让侧栏占位，
-      // 否则侧栏会在导航栏还在屏幕上时往上挤，出现 1~2px 的贴合
-      window.__cwSideDelay = window.setTimeout(() => {
-        root.dataset.hdSide = 'free';
-        if (typeof window.__cwSideRefresh === 'function') window.__cwSideRefresh();
-      }, 280);
-    } else {
-      // 滑回时立刻把侧栏推回导航栏下方（侧栏过渡更快，导航栏到位前已让开）
-      root.dataset.hdSide = 'nav';
-      if (typeof window.__cwSideRefresh === 'function') window.__cwSideRefresh();
-    }
-  };
-
-  if (window.__cwHeaderWired) {
-    // 软导航后沿用同一套监听，但按新页面的滚动位置重置状态
-    window.__cwHeaderReset && window.__cwHeaderReset();
-    return;
-  }
-  window.__cwHeaderWired = true;
-
-  const THRESHOLD = 140; // 过了这个位置才允许收起（顶部附近始终显示）
-  const DELTA = 6; // 小于这个位移量不动，避免抖动
-  let last = window.scrollY;
+  // 向下滚动超过 80px → 下沉 16px + 变矮 + 玻璃加深。
+  // 只切一个 html 属性，具体样式在 Header.astro 的 [data-scrolled='1']。
+  const SCROLL_MATERIAL_AT = 80;
   let ticking = false;
 
-  // 导航胶囊材质：向下滚动超过 80px → 变矮 + 玻璃加深 + 阴影加重。
-  // 只切一个 html 属性，具体样式在 Header.astro 的 [data-scrolled='1']（用 class/属性切换，
-  // **不硬切 position**）。向上滚回 80px 以内立即恢复。
-  const SCROLL_MATERIAL_AT = 80;
   const setMaterial = (y) => {
     const want = y > SCROLL_MATERIAL_AT ? '1' : '0';
     const root = document.documentElement;
     if (root.dataset.scrolled !== want) root.dataset.scrolled = want;
   };
 
-  const onScroll = () => {
-    const y = window.scrollY;
-    setMaterial(y);
-    if (Math.abs(y - last) < DELTA) return;
-    if (y <= THRESHOLD) setHidden(false);
-    else if (y > last) setHidden(true);
-    else setHidden(false);
-    last = y;
-  };
-  setMaterial(window.scrollY);
+  if (window.__cwHeaderWired) {
+    // 软导航后沿用同一套监听，但按新页面的滚动位置重置形态
+    window.__cwHeaderReset && window.__cwHeaderReset();
+    return;
+  }
+  window.__cwHeaderWired = true;
+
+  const onScroll = () => setMaterial(window.scrollY);
 
   window.addEventListener(
     'scroll',
@@ -1244,23 +1208,14 @@ function autoHideHeader() {
     },
     { passive: true },
   );
-  window.__cwHeaderReset = () => {
-    window.clearTimeout(window.__cwSideDelay);
-    last = window.scrollY;
-    setMaterial(last);
-    // 进新页面先按「导航栏在场」布局并显示它；若新页停在深处，随后的滚动事件会再收起
-    document.documentElement.dataset.hdSide = 'nav';
-    setHidden(false);
-  };
-  setHidden(false);
+  window.__cwHeaderReset = () => setMaterial(window.scrollY);
+  onScroll();
 }
 
-/* ---------- 侧栏吸顶：导航栏展开时贴它下方，收起时随页面滚 ----------
+/* ---------- 侧栏吸顶：恒贴在导航栏下方 ----------
    侧栏不自己滚动（无内部滚动条）。两栏共用同一个 sticky top，齐步移动、同一时刻停住。
-     · 导航栏可见 → top 恒为 82px（64px 头部 + 18px 呼吸位），绝不取负值，
-       这样侧栏内容不会钻到导航栏底下被半透明玻璃盖住；
-     · 导航栏收起后 → 按「栏高 vs 视口高」算（可为负值），长栏就能随页面滚到底再停住，
-       此时屏幕上没有导航栏，不存在重叠。
+     · 导航栏始终在场（改版后不再下滑收起）→ top 恒为「导航栏高度 + 18px 呼吸位」，
+       绝不取负值，这样侧栏内容不会钻到导航栏底下被半透明玻璃盖住。
    软导航会重建 DOM，故每次 page-load 与 resize 都重算。 */
 function sideSticky() {
   const sides = [...document.querySelectorAll('.shell-left, .shell-right')];
@@ -1269,15 +1224,15 @@ function sideSticky() {
     return;
   }
 
-  const HEADER = 64; // 站点头部高度
-  const GAP = 18; // 吸顶时与头部/视口边缘的呼吸位
-  const MIN_VISIBLE = 360; // 任何一栏至少留这么多像素可见（防止共用值把矮栏挤出屏幕）
+  const HEADER = 64; // 站点头部高度（未滚动时；滚动后 56，见下）
+  const GAP = 18; // 吸顶时与导航栏的呼吸位
 
   const apply = () => {
     const vh = window.innerHeight;
-    // hdSide 由 autoHideHeader 控制：'nav' = 导航栏在（侧栏贴它下方），
-    // 'free' = 导航栏已收起（侧栏可用整屏，长栏可滚到底）
-    const navHidden = document.documentElement.dataset.hdSide === 'free';
+    /* 导航栏高度每次现量：未滚动 64px、滚动收缩后 56px（移动端 52px），
+       且外层还有 0→16px 的 padding-top。写死 64 会在滚动后让侧栏压到导航栏底下。 */
+    const header = document.querySelector('.site-header');
+    const navH = header ? Math.round(header.getBoundingClientRect().height) : HEADER;
 
     // 先把上一轮的等高清掉，量出两栏各自的自然高度（读取会强制回流）
     sides.forEach((el) => {
@@ -1295,19 +1250,15 @@ function sideSticky() {
       if (el.style.minHeight !== `${maxH}px`) el.style.minHeight = `${maxH}px`;
     });
 
-    const navTop = navHidden ? 10 : HEADER + GAP;
+    /* 导航栏现在**始终在场**（改版后不再下滑收起，见 autoHideHeader 的注释），
+       所以吸顶值恒为「导航栏高度 + 呼吸位」，绝不取负值 ——
+       侧栏内容不会钻到导航栏底下被半透明玻璃盖住。 */
+    const navTop = navH + GAP;
     sides.forEach((el) => el.style.removeProperty('--side-top'));
-    const info = heights.map((h) => ({ own: Math.min(navTop, vh - h - GAP), floor: MIN_VISIBLE - h }));
-    // 导航栏可见时不允许负值（负值=内容压到导航栏下面）；收起时才放开滚动范围
-    const base = navHidden ? Math.min(...info.map((i) => i.own)) : navTop;
-    const floor = navHidden ? Math.max(...info.map((i) => i.floor)) : navTop;
-    const shared = Math.round(Math.max(base, Math.min(floor, navTop)));
+    const shared = Math.round(navTop);
     sides.forEach((el) => {
-      // 回程（导航栏要出现了，侧栏瞬间回到 82px）必须**瞬间归位**：栏比视口高时
-      // 侧栏可能停在负值，任何时长的动画都会经过 0~82px 这一段，而导航栏 0.28s 才滑下来，
-      // 中途就会出现「侧栏压在导航栏下」的帧（实测 /gallery/ 2 帧）。
-      // 去程（导航栏已收起）保持 0.16s，与导航栏收起节奏一致。
-      el.style.setProperty('--side-dur', navHidden ? '0.16s' : '0s');
+      // 导航栏高度在滚动前后会变（64↔56），用 0.16s 平滑跟住这次变化。
+      el.style.setProperty('--side-dur', '0.16s');
       el.style.setProperty('--side-top', shared + 'px');
     });
   };
@@ -1428,68 +1379,6 @@ function calPanel() {
       close(cl.closest('[data-cal-panel]'));
     }
   });
-}
-
-/* ---------- 导航栏二级菜单（各子页面的分类）----------
-   桌面：悬停展开（也支持点击小箭头，便于触屏/键盘）；Esc 或点别处收起。
-   软导航会重建 header，所以状态每次刷新，监听只绑一次 document 委托。 */
-function navSub() {
-  const items = () => [...document.querySelectorAll('[data-nav-sub]')];
-  const closeAll = (except) => {
-    items().forEach((it) => {
-      if (it === except) return;
-      it.removeAttribute('data-open');
-      const caret = it.querySelector('[data-nav-caret]');
-      if (caret) caret.setAttribute('aria-expanded', 'false');
-      const panel = it.querySelector('[data-nav-panel]');
-      if (panel) panel.setAttribute('hidden', '');
-    });
-  };
-  const openItem = (it) => {
-    closeAll(it);
-    it.setAttribute('data-open', 'true');
-    const caret = it.querySelector('[data-nav-caret]');
-    if (caret) caret.setAttribute('aria-expanded', 'true');
-    const panel = it.querySelector('[data-nav-panel]');
-    if (panel) panel.removeAttribute('hidden');
-  };
-
-  if (window.__cwNavSubWired) {
-    closeAll();
-    return;
-  }
-  window.__cwNavSubWired = true;
-
-  const fine = window.matchMedia('(hover: hover) and (pointer: fine)');
-
-  document.addEventListener('pointerover', (ev) => {
-    if (!fine.matches) return;
-    const it = ev.target.closest('[data-nav-sub]');
-    if (it) openItem(it);
-    else if (!ev.target.closest('[data-nav-panel]')) closeAll();
-  });
-
-  document.addEventListener('click', (ev) => {
-    const caret = ev.target.closest('[data-nav-caret]');
-    if (caret) {
-      ev.preventDefault();
-      const it = caret.closest('[data-nav-sub]');
-      if (it.getAttribute('data-open') === 'true') closeAll();
-      else openItem(it);
-      return;
-    }
-    // 点面板里的分类链接后收起；点页面其它地方也收起
-    if (ev.target.closest('[data-nav-panel] a')) {
-      window.setTimeout(() => closeAll(), 60);
-      return;
-    }
-    if (!ev.target.closest('[data-nav-sub]')) closeAll();
-  });
-
-  document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape') closeAll();
-  });
-  closeAll();
 }
 
 /* ---------- 侧栏天气小帖 ----------

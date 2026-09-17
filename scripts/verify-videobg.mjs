@@ -129,16 +129,16 @@ check('视频时间在推进（确实在播）', t2 > t1, `${t1.toFixed(2)} → 
 //      第二行会停在"只有轮廓、还没填色"的状态，看起来像文字没渲染出来。
 //      → 先等描边跑完（dashoffset 归零），再冻结动画。
 await s('Page.navigate', { url: BASE + '/' });
-await waitFor(`!!document.querySelector('.typed-hero')`, 30000);
+await waitFor(`!!document.querySelector('.hero-title')`, 30000);
 await waitFor(`(()=>{const v=document.querySelector('.video-bg__el'); return v && v.readyState>=2;})()`, 60000);
-await waitFor(`(()=>{
-  const ts=[...document.querySelectorAll('.stroke-text__stroke tspan')];
-  if(!ts.length) return false;
-  return ts.every(t=>{const o=parseFloat(getComputedStyle(t).strokeDashoffset)||0; return Math.abs(o)<1;});
-})()`, 15000);
-await s('Page.addStyleTag', {
-  content: '*,*::before,*::after{animation:none !important;transition:none !important}',
-});
+/* 注入样式要用 DOM，不能用 Page.addStyleTag：
+   本机 Edge（153 / 协议 1.3）**没有** Page.addStyleTag，调用会返回
+   `-32601 'Page.addStyleTag' wasn't found` 且被静默忽略 —— 之前"冻结动画"和
+   "隐藏文字"两次注入其实都没生效，这也是 hero 对比度连着几轮假失败的根因。 */
+const injectStyle = (css) =>
+  ev(`(()=>{const st=document.createElement('style'); st.textContent=${JSON.stringify(css)};
+    document.head.appendChild(st); return true;})()`);
+await injectStyle('*,*::before,*::after{animation:none !important;transition:none !important}');
 await ev(`document.querySelector('.video-bg__el')?.pause()`);
 await sleep(1200);
 const shot2 = await s('Page.captureScreenshot', { format: 'png' });
@@ -148,43 +148,107 @@ const lum = ([r, g, b]) => {
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
 };
 const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-const heroText = await ev(`(()=>{
-  const out=[];
-  // 首页重构后：主标题 .hero-title（静态大字）与定位语 .hero-tagline
-  for (const sel of ['.hero-title', '.hero-tagline']) {
+
+/* ★取样必须避开自己的字形★
+   2026-09-18 改版后踩到的坑（连着几轮假失败 1.00）：
+   新版 hero 是多行大字（标题 4 行 / 64px·700），在文字框内按 24px 步长采样会**打到白色笔画上**，
+   于是"最差底色"被读成 rgb(255,255,255)。
+   （用 sharp 复核确认：文字框外 4/10/16px 的真实底色都在 rgb(2,54,68) 量级，不是白。）
+   所以这里改成：先把这几处文字 `visibility:hidden`（只隐藏、不动布局），
+   再对**同一批坐标**取像素 —— 拿到的就是纯背景，任何字形都不可能污染。 */
+const boxes = await ev(`(()=>{const out=[];
+  for (const sel of ['.hero-title', '.hero-subtitle']) {
     const e=document.querySelector(sel); if(!e) continue;
-    const rng=document.createRange(); rng.selectNodeContents(e);
-    const rs=[...rng.getClientRects()].filter(r=>r.width>2&&r.height>2);
-    if(!rs.length) continue;
-    const cs=getComputedStyle(e); const m=cs.color.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+    const r=e.getBoundingClientRect();
+    const cs=getComputedStyle(e);
+    const fill=(cs.webkitTextFillColor||cs.color||'');
+    // 渐变字（background-clip:text）的 color 是 transparent，按它算对比度会得到假 1:1，
+    // 这类元素由 contrast-audit.mjs 单独覆盖，这里跳过。
+    if(/rgba\\(0,\\s*0,\\s*0,\\s*0\\)/.test(fill)) continue;
+    const m=cs.color.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+    if(!m) continue;
     out.push({sel, rgb:[+m[1],+m[2],+m[3]], size:parseFloat(cs.fontSize), weight:cs.fontWeight,
-      x0:Math.min(...rs.map(r=>r.left)), x1:Math.max(...rs.map(r=>r.right)),
-      y0:Math.min(...rs.map(r=>r.top)), y1:Math.max(...rs.map(r=>r.bottom))});
+      x0:Math.round(r.left), x1:Math.round(r.right), y0:Math.round(r.top), y1:Math.round(r.bottom)});
   }
   return out;})()`);
-check('首页 hero 元素可定位（用于对比度取样）', Array.isArray(heroText) && heroText.length >= 1,
-  Array.isArray(heroText) ? `${heroText.length} 个` : '取值失败');
-for (const b of heroText || []) {
+
+// 隐藏 hero 文字（保留布局与所有背景层），再截一张纯背景图。
+// 用 opacity:0 而不是 visibility:hidden —— 渐变标题的字形是**背景**画的
+// （background-clip:text），visibility 改了颜色却留下字形层，实测仍会采到白色笔画。
+// ★而且要把节点真的从文档里摘掉★：只靠注入 CSS 有被作用域样式/时序翻掉的风险
+// （实测 opacity 已经是 0，背景图里却仍有一根 2~3px 宽的字形亮条）。
+const savedText = await ev(`(()=>{const out=[];
+  for (const sel of ['.hero-title','.hero-subtitle']) {
+    const e=document.querySelector(sel); if(!e) continue;
+    out.push({parent:e.parentElement, next:e.nextSibling, el:e});
+    e.remove();
+  }
+  // 存到 window 上，取样结束后再放回（见脚本末尾）
+  window.__cwSavedHero = out;
+  return out.length;})()`);
+await waitFor(`!document.querySelector('.hero-title') && !document.querySelector('.hero-subtitle')`, 5000);
+await sleep(900);
+const bgShot = await s('Page.captureScreenshot', { format: 'png' });
+const bg = decodePNG(Buffer.from(bgShot.result.data, 'base64'));
+// ★解码器交叉核对★：同一张 PNG 分别用自写解码器与项目依赖 sharp 解，取样必须一致。
+// （自写解码器一旦解错，会把"文字自己的白字"当成底色，得出 1.00 这类假失败。）
+{
+  const sharpMod = await import('sharp');
+  const { data: rawData, info: rawInfo } = await sharpMod.default(Buffer.from(bgShot.result.data, 'base64')).raw().toBuffer({ resolveWithObject: true });
+  const sAt = (x, y) => { const o = (y * rawInfo.width + x) * rawInfo.channels; return [rawData[o], rawData[o + 1], rawData[o + 2]]; };
+  const mism = [];
+  for (const [x, y] of [[207, 238], [255, 368], [140, 300], [600, 480], [300, 560]]) {
+    const a = bg.at(x, y), b = sAt(x, y);
+    if (a[0] !== b[0] || a[1] !== b[1] || a[2] !== b[2]) mism.push(`(${x},${y}) mine=${a} sharp=${b}`);
+  }
+  check('背景图解码器自检（自写解码 vs sharp）', mism.length === 0, mism.slice(0, 3).join(' | ') || '一致');
+}
+
+check('首页 hero 元素可定位（用于对比度取样）', Array.isArray(boxes) && boxes.length >= 1,
+  Array.isArray(boxes) ? `${boxes.length} 个` : '取值失败');
+// 自检：确认"隐藏文字"确实生效（否则会采到自己的字形，得到假失败）
+console.log('  [自检] 隐藏后 .hero-title opacity =', await ev(`getComputedStyle(document.querySelector('.hero-title')).opacity`),
+  '| bg图 (207,238)=rgb(' + bg.at(207, 238) + ')');
+
+for (const b of boxes || []) {
   const tl = lum(b.rgb);
   const need = (b.size >= 24 || (b.size >= 18.66 && +b.weight >= 700)) ? 3.0 : 4.5;
-  let worst = Infinity, wb = null;
-  // 只在文字**上下方**取样（左右会受打字机横向位移影响）
-  for (const dy of [10, 18, 26]) {
-    for (let dx = -20; dx <= 20; dx += 10) {
-      const x = Math.round((b.x0 + b.x1) / 2 + dx);
-      for (const y of [Math.round(b.y0 - dy), Math.round(b.y1 + dy)]) {
-        if (x < 1 || y < 1 || x >= png.width || y >= png.height) continue;
-        const px = png.at(x, y);
-        const r = ratio(tl, lum(px));
-        if (r < worst) { worst = r; wb = px; }
-      }
+  let worst = Infinity, wb = null, samples = 0, wxy = null;
+  // 在文字框内按网格取样 —— 此刻字形已隐藏，取到的必然是背景
+  for (let y = b.y0; y <= b.y1; y += 4) {
+    for (let x = b.x0 + 4; x <= b.x1 - 4; x += 16) {
+      if (x < 1 || y < 1 || x >= bg.width || y >= bg.height) continue;
+      const px = bg.at(x, y);
+      samples++;
+      const r = ratio(tl, lum(px));
+      if (r < worst) { worst = r; wb = px; wxy = [x, y]; }
     }
   }
-  check(`hero ${b.sel} 在视频背景上可读`, worst >= need && worst !== Infinity,
-    `对比 ${worst === Infinity ? 'n/a' : worst.toFixed(2)}（需 ${need}）最差底色 rgb(${wb})`);
+  check(`hero ${b.sel} 在视频背景上可读`, worst >= need && samples > 0,
+    `对比 ${worst === Infinity ? 'n/a' : worst.toFixed(2)}（需 ${need}，采样 ${samples} 点）最差底色 rgb(${wb}) 于 (${wxy})`);
+  if (worst < need && wxy) {
+    const [wx, wy] = wxy;
+    let map = '';
+    for (let dy = -6; dy <= 6; dy += 3) {
+      let row = '';
+      for (let dx = -6; dx <= 6; dx += 3) {
+        const px = bg.at(wx + dx, wy + dy);
+        const l = Math.round((px[0] + px[1] + px[2]) / 3);
+        row += (l > 200 ? '#' : l > 120 ? '+' : l > 60 ? '.' : ' ') + ' ';
+      }
+      map += '\n        ' + row;
+    }
+    console.log(`  [诊断] 最差点邻域（#=亮 +/./空=暗）:${map}`);
+  }
 }
 
 check('无 JS 异常', errs.length === 0, errs[0] || '');
+
+// 把取样时摘掉的 hero 文字放回去，保证截图是完整页面（不是缺了标题的版本）
+await ev(`(()=>{const saved=window.__cwSavedHero; if(!saved) return false;
+  for (const it of saved) { it.parent.insertBefore(it.el, it.next); }
+  window.__cwSavedHero=null; return true;})()`);
+await sleep(800);
 
 // 截图取首页（hero + 背景视频一起入镜，最能反映观感）
 const shot = await s('Page.captureScreenshot', { format: 'png' });

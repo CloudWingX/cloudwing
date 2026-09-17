@@ -28,7 +28,7 @@ await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme
 await s('Page.addScriptToEvaluateOnNewDocument', { source: `try{localStorage.setItem('cw-theme-pref','${THEME}');}catch(e){}` });
 await s('Page.navigate', { url: BASE + '/works/' });
 const waitFor = async (x, ms = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ev(x)) return true; await sleep(400); } return false; };
-await waitFor(`!!document.querySelector('.hd')`);
+await waitFor(`!!document.querySelector('.header-container')`);
 await sleep(1500);
 
 // ⚠️ 顶部是**刻意透明贴顶**的（ReactBits shrink 形态），胶囊在滚动后才成型 ——
@@ -40,8 +40,9 @@ await ev(`window.scrollTo(0, 340)`);
 await sleep(1200);
 
 console.log(`=== 导航胶囊（主题 ${THEME}，滚动后）===`);
-// 导航已从"通栏条"改为"顶部悬浮玻璃胶囊"：玻璃材质直接落在 .hd 上（不再有 .hd-glass 层）。
-const bar = await ev(`(()=>{const hd=document.querySelector('.hd'); if(!hd) return null; const c=getComputedStyle(hd);
+// 2026-09-18 改版：导航照 reference 复刻 —— 玻璃材质落在 .header-container 上
+// （旧的 .hd / .hd-glass 两层结构已移除）。
+const bar = await ev(`(()=>{const hd=document.querySelector('.header-container'); if(!hd) return null; const c=getComputedStyle(hd);
   const b=hd.getBoundingClientRect();
   return {边框:c.borderTopWidth+' '+c.borderTopStyle+' '+c.borderTopColor,
     // 注意：构建时的 CSS 压缩可能只保留 -webkit-backdrop-filter（Chrome 认这个，效果一样），
@@ -54,7 +55,7 @@ const bar = await ev(`(()=>{const hd=document.querySelector('.hd'); if(!hd) retu
     pointerEvents:c.pointerEvents,
     最右:Math.round(b.right), 最左:Math.round(b.left)};})()`);
 console.log('  ' + JSON.stringify(bar));
-// 胶囊：宽 min(1200px, 100% - 40px) 居中、距顶 16px、圆角 999px（完全圆头）
+// 参考实测：滚动后 1120 宽、下沉 16px、圆角 9999px（完全圆头）
 const expW = Math.min(1120, bar.视口宽);
 check('滚动后胶囊宽度收到 1120', Math.abs(bar.宽 - expW) <= 2, `宽=${bar.宽} 期望=${expW}`);
 check('胶囊居中', Math.abs(bar.最左 - (bar.视口宽 - bar.宽) / 2) <= 2, `左=${bar.最左}`);
@@ -66,33 +67,29 @@ check('边框不是透明', !/rgba\([^)]*,\s*0\)/.test(String(bar.边框)), bar.
 check('胶囊内有高斯模糊', /blur\(\s*\d+/.test(String(bar.模糊)) && parseFloat(String(bar.模糊).match(/blur\((\d+)/)[1]) >= 12, String(bar.模糊));
 check('背景为半透明玻璃（非纯色）', /rgba\(/.test(String(bar.背景)), String(bar.背景));
 
-console.log('\n=== 二级菜单（下拉容器）===');
-await ev(`(()=>{const c=document.querySelector('[data-nav-caret]'); if(c) c.click();})()`);
-await sleep(700);
-const sub = await ev(`(()=>{const el=document.querySelector('.nav-sub'); const c=getComputedStyle(el);
+console.log('\n=== 分类入口（已从导航二级菜单迁到左栏导航树）===');
+// 2026-09-18 改版：导航栏不再有二级菜单（照 reference），分类链接改由左栏承担。
+// 注意：移动端下拉菜单里也有同款 ?tag= 链接（默认 hidden），所以必须显式限定在左栏内，
+// 否则 querySelector 会命中隐藏菜单里的那一份，误判成"不在左栏"。
+const sub = await ev(`(()=>{const el=document.querySelector('.shell-left a[href*="?tag="]');
+  if(!el) return null;
   const b=el.getBoundingClientRect();
-  return {可见:c.visibility==='visible'&&parseFloat(c.opacity)>0.9,
-    边框:c.borderTopWidth+' '+c.borderTopStyle+' '+c.borderTopColor,
-    模糊:c.backdropFilter||c.webkitBackdropFilter,
-    背景:(c.backgroundImage||c.backgroundColor||'').slice(0,60),
-    尺寸:Math.round(b.width)+'×'+Math.round(b.height),
-    子项数:el.querySelectorAll('li').length};})()`);
+  const cs=getComputedStyle(el);
+  return {在左栏:!!el.closest('.shell-left'), 可见:cs.visibility!=='hidden'&&b.width>0,
+    宽高:Math.round(b.width)+'×'+Math.round(b.height),
+    文字:(el.textContent||'').trim().slice(0,20)};})()`);
 console.log('  ' + JSON.stringify(sub));
-const subW = parseFloat(String(sub.边框));
-check('二级菜单已展开', sub.可见 === true && sub.子项数 > 0, `${sub.子项数} 项`);
-check('二级菜单有可见边框', subW >= 1, sub.边框);
-check('二级菜单边框内有高斯模糊', /blur\(\s*\d+/.test(String(sub.模糊)) && parseFloat(String(sub.模糊).match(/blur\((\d+)/)[1]) >= 12, String(sub.模糊));
-// 背景必须足够实：太透会让底下的卡片文字透进来（历史症状）
-const alpha = String(sub.背景).match(/rgba?\([^)]*?,\s*(0?\.\d+)\)/g) || [];
-const minA = alpha.length ? Math.min(...alpha.map((x) => parseFloat(x.match(/,\s*(0?\.\d+)\)/)[1]))) : 1;
-check('二级菜单背景足够实（不透字）', minA >= 0.9 || !String(sub.背景).includes('rgba'), `最低 alpha=${minA}`);
+check('导航栏已无二级菜单（照参考）', (await ev(`document.querySelectorAll('[data-nav-sub], .nav-sub').length`)) === 0);
+check('分类入口仍在（左栏导航树，可见）', !!sub && sub.在左栏 === true && sub.可见 === true,
+  sub ? `${sub.文字}（${sub.宽高}）` : '未找到左栏 ?tag= 链接');
+check('已无遗留的二级菜单开关', (await ev(`document.querySelectorAll('[data-nav-caret]').length`)) === 0);
 
 console.log('\n=== 布局未受影响 ===');
 check('无横向溢出', (await ev(`document.documentElement.scrollWidth-document.documentElement.clientWidth`)) === 0);
-check('导航项仍可点击（元素在最上层）', (await ev(`(()=>{const a=document.querySelector('.nav a[href="/works/"]');
+check('导航项仍可点击（元素在最上层）', (await ev(`(()=>{const a=document.querySelector('.nav-links a[href="/works/"]');
   if(!a) return false; const b=a.getBoundingClientRect();
   const top=document.elementFromPoint(Math.round(b.left+b.width/2), Math.round(b.top+b.height/2));
-  return a===top||a.contains(top)||top?.closest('.nav')!==null;})()`)) === true);
+  return a===top||a.contains(top)||top?.closest('.nav-links')!==null;})()`)) === true);
 check('无 JS 异常', errs.length === 0, errs[0] || '');
 
 const shot = await s('Page.captureScreenshot', { format: 'png' });

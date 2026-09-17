@@ -24,14 +24,16 @@ const results = [];
 const check = (n, ok, d = '') => { results.push({ n, ok }); console.log(`  ${ok ? '✅' : '❌'} ${n}${d ? '  —— ' + d : ''}`); };
 const waitFor = async (x, ms = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ev(x)) return true; await sleep(400); } return false; };
 
-const cap = () => ev(`(()=>{const h=document.querySelector('.site-header'), d=document.querySelector('.hd');
+const cap = () => ev(`(()=>{const h=document.querySelector('.site-header'), d=document.querySelector('.header-container');
   const cs=getComputedStyle(d), hs=getComputedStyle(h), b=d.getBoundingClientRect();
-  const nav=document.querySelector('.nav a'), pill=document.querySelector('.pill');
+  const nav=document.querySelector('.nav-links a'), nl=document.querySelector('.nav-links');
+  const gh=document.querySelector('.btn-github');
   return {外层paddingTop:hs.paddingTop, 宽:Math.round(b.width), 高:Math.round(b.height),
    圆角:cs.borderTopLeftRadius, 背景:cs.backgroundColor, 模糊:cs.backdropFilter||cs.webkitBackdropFilter,
    阴影:cs.boxShadow, 内边距:cs.paddingLeft,
-   链接字号:nav?getComputedStyle(nav).fontSize:null, 链接内距:nav?getComputedStyle(nav).paddingLeft:null,
-   控件高:pill?Math.round(pill.getBoundingClientRect().height):null,
+   链接字号:nav?getComputedStyle(nav).fontSize:null,
+   链接组gap:nl?getComputedStyle(nl).gap:null,
+   控件高:gh?Math.round(gh.getBoundingClientRect().height):null,
    溢出:document.documentElement.scrollWidth-document.documentElement.clientWidth,
    scrolled:document.documentElement.dataset.scrolled};})()`);
 
@@ -39,8 +41,12 @@ await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
 await s('Page.navigate', { url: BASE + '/works/' });
-await waitFor(`!!document.querySelector('.hd')`);
+await waitFor(`!!document.querySelector('.header-container')`);
 await sleep(2200);
+// 每次导航后先把滚动位置复位（history 恢复可能带回上一次的滚动位置，
+// 那样 data-scrolled 会是 1，导致"未滚动"态断言整片假失败）
+await ev(`window.scrollTo(0, 0)`);
+await sleep(900);
 
 console.log('=== 未滚动：贴顶通栏 ===');
 const top = await cap();
@@ -60,14 +66,14 @@ const sc = await cap();
 console.log('  ' + JSON.stringify(sc));
 check('外层下沉 16px', sc.外层paddingTop === '16px', sc.外层paddingTop);
 check('容器宽收到 1120', sc.宽 === 1120, String(sc.宽));
-check('容器高收到 52', sc.高 === 52, String(sc.高));
+check('容器高收到 56（参考实测值）', sc.高 === 56, String(sc.高));
 check('圆角 999px', parseFloat(sc.圆角) >= 900, sc.圆角);
-check('玻璃底 + 模糊', /rgba\(9, 12, 16, 0\.7\)/.test(sc.背景) && /blur\(12px\)/.test(String(sc.模糊)), `${sc.背景} | ${sc.模糊}`);
+check('玻璃底 + 模糊', /rgba\(10, 10, 15, 0\.7\)/.test(sc.背景) && /blur\(12px\)/.test(String(sc.模糊)), `${sc.背景} | ${sc.模糊}`);
 check('有阴影', !/none/.test(sc.阴影), sc.阴影.slice(0, 40));
-check('左右内边距收到 22px', sc.内边距 === '22px', sc.内边距);
-check('链接字号 14→13', sc.链接字号 === '13px', String(sc.链接字号));
-check('链接内距同步收紧', sc.链接内距 === '11px', String(sc.链接内距));
-check('顶栏控件 40→34', sc.控件高 === 34, String(sc.控件高));
+check('左右内边距收到 24px（参考实测值）', sc.内边距 === '24px', sc.内边距);
+check('链接字号保持 14px（参考滚动前后同号）', sc.链接字号 === '14px', String(sc.链接字号));
+check('链接组间距 32→24（参考实测值）', sc.链接组gap === '24px', String(sc.链接组gap));
+check('顶栏控件 32（参考滚动后值）', sc.控件高 === 32, String(sc.控件高));
 
 console.log('\n=== 回顶恢复 ===');
 await ev(`window.scrollTo(0, 0)`);
@@ -77,19 +83,16 @@ check('恢复 1280/64/无圆角/透明', back.宽 === 1280 && back.高 === 64 &&
   `${back.宽}/${back.高}/${back.圆角}/${back.背景}`);
 check('桌面无横向溢出', back.溢出 === 0, String(back.溢出));
 
-console.log('\n=== 指示线（保留）===');
-const ind = await ev(`(()=>{const nav=document.querySelector('.nav');
-  const a=nav.querySelector('.nav-ind--active'), h=nav.querySelector('.nav-ind--hover');
-  const cur=nav.querySelector("a[aria-current='page']");
-  const nb=nav.getBoundingClientRect();
-  return {有激活线:!!a, 有悬停线:!!h,
-    激活线x:Math.round(new DOMMatrixReadOnly(getComputedStyle(a).transform).m41),
-    当前项x:cur?Math.round(cur.getBoundingClientRect().left-nb.left):null,
-    悬停线opacity:getComputedStyle(h).opacity};})()`);
-console.log('  ' + JSON.stringify(ind));
-check('有两条指示线', ind.有激活线 && ind.有悬停线);
-check('激活线落在当前页项下方', ind.当前项x !== null && Math.abs(ind.激活线x - ind.当前项x) <= 12, `${ind.激活线x} vs ${ind.当前项x}`);
-check('悬停线初始隐藏', parseFloat(ind.悬停线opacity) < 0.05, ind.悬停线opacity);
+console.log('\n=== 形态说明（改版后不再下滑收起）===');
+// 参考的导航只做"贴顶通栏 ↔ 滚动胶囊"，没有下滑隐藏这回事。
+await ev(`window.scrollTo(0, 600)`);
+await sleep(900);
+const hidden = await ev(`(()=>{const h=document.querySelector('.site-header');
+  const b=h.getBoundingClientRect(); const c=getComputedStyle(h);
+  return {顶:Math.round(b.top), 隐藏类:h.classList.contains('hd-hidden'), 透明度:c.opacity};})()`);
+console.log('  ' + JSON.stringify(hidden));
+check('下滑后导航仍在视口内（参考不做下滑收起）', hidden.顶 >= 0 && !hidden.隐藏类 && hidden.透明度 === '1', JSON.stringify(hidden));
+check('已无遗留的顶部指示线（参考导航没有）', (await ev(`document.querySelectorAll('.nav-ind').length`)) === 0);
 
 console.log('\n=== 移动端：汉堡 + 顶部下拉菜单 ===');
 await s('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
@@ -98,7 +101,7 @@ await waitFor(`!!document.querySelector('[data-mnav-toggle]')`);
 await sleep(2200);
 const m0 = await ev(`(()=>({
   汉堡显示:getComputedStyle(document.querySelector('[data-mnav-toggle]')).display,
-  链接组:getComputedStyle(document.querySelector('.nav')).display,
+  链接组:getComputedStyle(document.querySelector('.nav-links')).display,
   菜单初始隐藏:document.querySelector('[data-mnav-panel]').hidden,
   溢出:document.documentElement.scrollWidth-document.documentElement.clientWidth}))()`);
 console.log('  ' + JSON.stringify(m0));
@@ -122,7 +125,8 @@ check('已到终态（opacity 1 / 无位移）', m1.透明度 === '1' && (m1.类
 check('玻璃底 + 模糊', /rgba\(10, 10, 15, 0\.95\)/.test(m1.背景) && /blur\(20px\)/.test(String(m1.模糊)), `${m1.背景} | ${m1.模糊}`);
 check('贴在导航下方', m1.顶部 >= 60, String(m1.顶部));
 check('菜单占满宽度', m1.宽 === 390, String(m1.宽));
-check('含导航链接', m1.链接数 >= 5, String(m1.链接数));
+// 5 个主导航 + 分类 chips + 底部动作按钮
+check('含导航链接与分类入口', m1.链接数 >= 5, String(m1.链接数));
 check('汉堡变叉号（mnav-open）', m1.汉堡叉号 === true);
 check('aria-expanded=true', m1.aria === 'true');
 
@@ -139,7 +143,7 @@ await sleep(700);
 await ev(`window.scrollTo(0, 140)`);
 await sleep(1200);
 const m2 = await ev(`(()=>{const p=document.querySelector('[data-mnav-panel]').getBoundingClientRect();
-  const h=document.querySelector('.hd').getBoundingClientRect();
+  const h=document.querySelector('.header-container').getBoundingClientRect();
   return {菜单顶:Math.round(p.top), 胶囊底:Math.round(h.bottom), 胶囊高:Math.round(h.height),
     视口:innerHeight};})()`);
 console.log('  ' + JSON.stringify(m2));

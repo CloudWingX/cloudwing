@@ -184,14 +184,16 @@ const main = async () => {
       }
       return false;
     };
-    await waitFor(`[...document.querySelectorAll('.nav-sub a')].some((x) => x.search && x.search.includes('tag='))`);
+    // 分类入口：2026-09-18 导航改版后不再有二级菜单（照 reference 复刻），
+    // 分类改由左栏导航树的 ?tag= 链接承担 —— 所以这里点侧栏的分类链接。
+    await waitFor(`[...document.querySelectorAll('a[href*="?tag="]')].some((x) => x.closest('.shell-left'))`);
     await waitFor(`!!document.querySelector('[data-cal-day]')`);
-    // 点导航栏「作品库」二级菜单里的第一个分类
+    // 点左栏导航树里的第一个分类
     const href = await evaluate(`(() => {
-      const a = [...document.querySelectorAll('.nav-sub a')].find((x) => x.search && x.search.includes('tag='));
+      const a = [...document.querySelectorAll('a[href*="?tag="]')].find((x) => x.closest('.shell-left'));
       return a ? a.getAttribute('href') : null; })()`);
     if (href) {
-      await evaluate(`[...document.querySelectorAll('.nav-sub a')].find((x) => x.getAttribute('href') === ${JSON.stringify(href)}).click()`);
+      await evaluate(`[...document.querySelectorAll('a[href*="?tag="]')].find((x) => x.getAttribute('href') === ${JSON.stringify(href)}).click()`);
       // 轮询等筛选生效：线上软导航 + 水合比本地慢，固定 sleep 会读到"还没过滤"的中间态
       let d = null;
       const t0 = Date.now();
@@ -202,21 +204,22 @@ const main = async () => {
           chip: document.getElementById('catnow') ? !document.getElementById('catnow').hidden : null }))()`);
         if (d && d.hidden > 0 && d.chip === true) break;
       }
-      check('导航分类 → 列表按分类过滤', !!d && d.hidden > 0, `${d ? d.url : '?'}（隐藏 ${d ? d.hidden : '?'} 项）`);
+      check('侧栏分类 → 列表按分类过滤', !!d && d.hidden > 0, `${d ? d.url : '?'}（隐藏 ${d ? d.hidden : '?'} 项）`);
       check('分类回显条出现', !!d && d.chip === true);
     } else {
-      check('导航栏存在分类二级菜单', false, '未找到 ?tag= 链接');
+      check('左栏存在分类入口', false, '未找到 ?tag= 链接');
     }
     // 更新日历：点有记录的日期应展开明细
     await evaluate(`document.querySelector('[data-cal-day]')?.click()`);
     await sleep(800);    const cal = await evaluate(`(() => { const p = document.querySelector('[data-cal-panel]');
       return p ? { open: !p.hidden, items: p.querySelectorAll('li').length } : null; })()`);
     check('侧栏更新日历可展开当天记录', !!cal && cal.open && cal.items > 0, cal ? `${cal.items} 条` : '无日历');
-    // 搜索悬浮窗：触发能开、能关（页面本体已从 /search/ 改为弹窗，见 verify-search.mjs 的细测）
-    await evaluate(`document.querySelector('.search-pill[data-search-open]')?.click()`);
+    // 搜索悬浮窗：2026-09-18 改版后顶栏不再有搜索按钮（照 reference 的导航），
+    // 只剩 ⌘/Ctrl+K 与侧栏/移动端按钮三种入口 —— 这里测键盘入口。
+    await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true }))`);
     await sleep(900);
     const modalOpen = await evaluate(`!!document.querySelector('[data-search-modal]')?.open`);
-    check('搜索悬浮窗可打开', modalOpen === true);
+    check('搜索悬浮窗可打开（⌘/Ctrl+K）', modalOpen === true);
     await evaluate(`document.querySelector('[data-search-close]')?.click()`);
     await sleep(500);
     const modalClosed = await evaluate(`!document.querySelector('[data-search-modal]')?.open`);
