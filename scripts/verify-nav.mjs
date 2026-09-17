@@ -31,7 +31,15 @@ const waitFor = async (x, ms = 30000) => { const t0 = Date.now(); while (Date.no
 await waitFor(`!!document.querySelector('.hd')`);
 await sleep(1500);
 
-console.log(`=== 导航胶囊（主题 ${THEME}）===`);
+// ⚠️ 顶部是**刻意透明贴顶**的（ReactBits shrink 形态），胶囊在滚动后才成型 ——
+// 所以这里先滚下去再采样；顶部形态由 verify-nav-shrink.mjs 专测。
+await ev(`window.scrollTo(0, 400)`);
+await sleep(900);
+// 上滑一点让 autoHideHeader 把导航滑回来（否则它收在屏幕外，量到 top 为负）
+await ev(`window.scrollTo(0, 340)`);
+await sleep(1200);
+
+console.log(`=== 导航胶囊（主题 ${THEME}，滚动后）===`);
 // 导航已从"通栏条"改为"顶部悬浮玻璃胶囊"：玻璃材质直接落在 .hd 上（不再有 .hd-glass 层）。
 const bar = await ev(`(()=>{const hd=document.querySelector('.hd'); if(!hd) return null; const c=getComputedStyle(hd);
   const b=hd.getBoundingClientRect();
@@ -47,10 +55,10 @@ const bar = await ev(`(()=>{const hd=document.querySelector('.hd'); if(!hd) retu
     最右:Math.round(b.right), 最左:Math.round(b.left)};})()`);
 console.log('  ' + JSON.stringify(bar));
 // 胶囊：宽 min(1200px, 100% - 40px) 居中、距顶 16px、圆角 999px（完全圆头）
-const expW = Math.min(1200, bar.视口宽 - 40);
-check('胶囊宽度 = min(1200px, 100% - 40px)', Math.abs(bar.宽 - expW) <= 2, `宽=${bar.宽} 期望=${expW}`);
+const expW = Math.min(1120, bar.视口宽);
+check('滚动后胶囊宽度收到 1120', Math.abs(bar.宽 - expW) <= 2, `宽=${bar.宽} 期望=${expW}`);
 check('胶囊居中', Math.abs(bar.最左 - (bar.视口宽 - bar.宽) / 2) <= 2, `左=${bar.最左}`);
-check('距顶部 16px', Math.abs(bar.顶部距 - 16) <= 1, String(bar.顶部距));
+check('滚动后距顶部 16px（下沉）', Math.abs(bar.顶部距 - 16) <= 2, String(bar.顶部距));
 check('圆角 999px（完全圆头）', parseFloat(bar.圆角) >= 40, bar.圆角);
 const borderW = parseFloat(String(bar.边框));
 check('有可见边框（1px）', borderW >= 1, bar.边框);

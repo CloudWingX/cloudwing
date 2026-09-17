@@ -40,7 +40,9 @@ check('站点恒为暗色', (await ev(`document.documentElement.dataset.theme`))
 // 主题切换按钮已删除（亮色主题一并移除）
 check('主题切换按钮已删除', (await ev(`document.querySelectorAll('.theme-toggle').length`)) === 0);
 
-console.log('\n=== 玻璃材质 ===');
+console.log('\n=== 玻璃材质（滚动后；顶部刻意透明，见 verify-nav-shrink）===');
+await ev(`window.scrollTo(0, 300)`);
+await sleep(1200);
 const glass = await ev(`(()=>{
   const g=document.querySelector('.hd');
   const c=getComputedStyle(g);
@@ -61,7 +63,7 @@ console.log('  ' + JSON.stringify(glass));
 check('导航胶囊边框 = rgba(255,255,255,0.2)', /255,\s*255,\s*255,\s*0?\.2\b/.test(glass.栏边框), glass.栏边框);
 // 导航胶囊有自己的 --nav-blur（规格指定 saturate(1.4)），与全站玻璃令牌 --glass-blur
 // （saturate(1.2)，用于卡片/浮层）刻意分开，所以这里按导航自己的值断言。
-check('导航胶囊模糊 = blur(20px) saturate(1.4)', /blur\(20px\)/.test(String(glass.栏模糊)) && /saturate\(1\.4\)/.test(String(glass.栏模糊)), String(glass.栏模糊));
+check('导航胶囊模糊 = blur(12px) saturate(1.8)（滚动形态）', /blur\(12px\)/.test(String(glass.栏模糊)) && /saturate\(1\.8\)/.test(String(glass.栏模糊)), String(glass.栏模糊));
 check('全站玻璃令牌仍为 blur(20px) saturate(1.2)', /blur\(20px\) saturate\(1\.2\)/.test(String(glass.令牌)), String(glass.令牌));
 check('卡片是玻璃底（半透明，非纯色）', /rgba\(/.test(String(glass.卡底)), String(glass.卡底));
 check('卡片圆角在 16–24px', parseFloat(glass.卡圆角) >= 16 && parseFloat(glass.卡圆角) <= 24, String(glass.卡圆角));
@@ -86,9 +88,12 @@ await sleep(800);
 check('再点一次恢复播放', (await ev(`document.querySelector('.video-bg__el').paused`)) === false);
 
 console.log('\n=== 导航栏滚动过渡 ===');
+// 顶部是透明贴顶 → 滚下去变玻璃胶囊（形态由 verify-nav-shrink.mjs 细测）
+await ev(`window.scrollTo(0, 0)`);
+await sleep(900);
 const atTop = await ev(`getComputedStyle(document.querySelector('.hd')).backgroundColor`);
 await ev(`window.scrollTo(0, 400)`);
-await sleep(900);
+await sleep(1200);
 const scrolled = await ev(`getComputedStyle(document.querySelector('.hd')).backgroundColor`);
 console.log(`  顶部 ${atTop}  →  滚动后 ${scrolled}`);
 check('滚动后导航栏加深', atTop !== scrolled, `${atTop} → ${scrolled}`);

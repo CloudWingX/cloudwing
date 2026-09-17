@@ -32,7 +32,7 @@ const probe = `(() => {
     scrollH: document.documentElement.scrollHeight,
     offenders: overflow,
     侧栏左: cs(document.querySelector('.shell-left'), 'display'),
-    burger: cs(document.querySelector('.burger'), 'display'),
+    burger: cs(document.querySelector('[data-mnav-toggle]'), 'display'),
     吊牌容器: r(ly), 吊牌canvas: r(lyCanvas),
     吊牌高: ly ? Math.round(ly.getBoundingClientRect().height) : null,
     主标题: r(document.querySelector('h1')),

@@ -133,72 +133,40 @@ const socials = [
           <path d="M7 4.8 19 12 7 19.2Z" />
         </svg>
       </button>
-      {/* ReactBits StaggeredMenu 的开关：加号 ⇄ 叉号（整体旋转 225°，见 nav-staggered.js） */}
+      {/* 移动端汉堡（照 ReactBits：三条线，点开变叉号） */}
       <button
         type="button"
-        class="sm-toggle"
-        data-sm-toggle
+        class="hamburger"
+        data-mnav-toggle
         aria-label="打开菜单"
         aria-expanded="false"
-        aria-controls="cw-staggered-panel"
+        aria-controls="cw-mobile-menu"
       >
-        <span class="sm-toggle-textWrap" aria-hidden="true">
-          <span class="sm-toggle-textInner" data-sm-text>
-            <span class="sm-toggle-line">菜单</span>
-            <span class="sm-toggle-line">关闭</span>
-          </span>
-        </span>
-        <span class="sm-icon" data-sm-icon aria-hidden="true">
-          <span class="sm-icon-line" data-sm-plus-h></span>
-          <span class="sm-icon-line" data-sm-plus-v></span>
-        </span>
+        <span></span>
+        <span></span>
+        <span></span>
       </button>
     </div>
     </div>
   </div>
+
+  {/* ── 移动端菜单（照 ReactBits：从顶部下拉的玻璃面板，淡入 + 轻微下移）── */}
+  <div id="cw-mobile-menu" class="mobile-menu" data-mnav-panel hidden>
+    {items.map((item) => (
+      <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
+    ))}
+    <div class="mm-actions">
+      <button type="button" class="mm-btn" data-search-open>搜索</button>
+      {socials.slice(0, 2).map((s) => (
+        <a class="mm-btn" href={s.href} target={s.href.startsWith('http') ? '_blank' : undefined} rel="noreferrer">
+          {s.label}
+        </a>
+      ))}
+    </div>
+  </div>
 </header>
 
-{/* ── ReactBits 风格侧边菜单（StaggeredMenu）──
-    两层预层 + 主面板依次滑入；菜单项自下而上"旋转 + 上移"入场；社交链接最后淡入。
-    动画在 scripts/nav-staggered.js，参数照 ReactBits 原实现。
-    ★必须放在 </header> 之外★：.site-header 带 will-change: transform，
-    会让它成为 fixed 后代的**包含块** —— 面板会按 header 的高度（约 72px）定位，
-    而不是视口，手机上面板会被压成一条。
-    ⚠️ 它带 transition:persist 由 Astro 的 ClientRouter 复用，软导航后不回退。 */}
-<div class="sm-root" transition:persist="cw-staggered">
-  <div class="sm-prelayers" data-sm-prelayers aria-hidden="true">
-    <span class="sm-prelayer sm-prelayer--2"></span>
-    <span class="sm-prelayer sm-prelayer--1"></span>
-  </div>
-  <aside id="cw-staggered-panel" class="sm-panel" data-sm-panel aria-hidden="true" aria-label="站点菜单">
-    <ul class="sm-panel-list" data-numbering>
-      {items.map((item) => (
-        <li class="sm-panel-itemWrap">
-          <a class="sm-panel-item" href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
-            <span class="sm-panel-itemLabel">{item.label}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
-    <div class="sm-socials">
-      <p class="sm-socials-title">联系与订阅</p>
-      <ul class="sm-socials-list">
-        {socials.map((s) => (
-          <li>
-            <a
-              class="sm-socials-link"
-              href={s.href}
-              target={s.href.startsWith('http') ? '_blank' : undefined}
-              rel={s.href.startsWith('http') ? 'noreferrer' : undefined}
-            >
-              {s.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </aside>
-</div>
+
 
 <style>
   /* ============================================================
@@ -227,225 +195,99 @@ const socials = [
   }
 
   /* ══════════════════════════════════════════════════════════════
-     ReactBits 风格侧边菜单（StaggeredMenu）+ 顶部指示线
-     参数照 ReactBits 原实现（reactbits.dev）：
-       预层 xPercent 滑入，每层延迟 0.07s（power4.out）
-       菜单项 yPercent 140→0 + rotate 10→0，stagger 0.1（power4.out）
-       社交链接最后淡入
-     配色用页面的 --nav-* / --accent，保持暗色电影感。
+     移动端菜单 —— 照 ReactBits 的 .mobile-menu
+     顶部下拉的玻璃面板：淡入 + 轻微下移（translateY(-10px) → 0）
+     配色换成站点令牌（ReactBits 原文是 rgba(10,10,15,.95) + 白字，这里一致）
      ══════════════════════════════════════════════════════════════ */
-
-  /* ── 开关按钮：加号 ⇄ 叉号 ── */
-  .sm-toggle {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    height: 40px;
-    padding: 0 0.85rem;
-    border: var(--line-w) solid var(--line-2);
-    border-radius: 999px;
-    background: var(--glass-soft);
-    color: var(--nav-ink-dim);
-    font-family: var(--font-body);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1;
-    cursor: pointer;
-    overflow: visible; /* 图标旋转到 225° 时可能需要溢出一点，别裁掉 */
-    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-  }
-  .sm-toggle:hover,
-  .sm-toggle:focus-visible {
-    color: var(--nav-ink);
-    border-color: var(--line-hover);
-    background: var(--accent-soft);
-  }
-  /* 文案上下滚动切换（ReactBits 的 textCycle）：容器 1em 高，内部整体 yPercent 位移 */
-  .sm-toggle-textWrap {
-    position: relative;
-    display: inline-block;
-    height: 1em;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-  .sm-toggle-textInner {
-    display: flex;
+  .hamburger {
+    display: none; /* 桌面隐藏，≤768px 显示 */
     flex-direction: column;
-    line-height: 1;
-    will-change: transform;
-  }
-  .sm-toggle-line {
-    display: block;
-    height: 1em;
-    line-height: 1;
-  }
-  /* 加号：两条线十字交叉；外层整体旋转即变叉号 */
-  .sm-icon {
-    position: relative;
-    width: 14px;
-    height: 14px;
-    flex: 0 0 14px;
-    display: inline-flex;
     align-items: center;
     justify-content: center;
-    will-change: transform;
+    gap: 4px;
+    padding: 8px;
+    min-width: 40px;
+    min-height: 40px;
+    background: none;
+    border: 0;
+    border-radius: 10px;
+    color: var(--nav-ink);
+    cursor: pointer;
+    transition: background 0.2s ease;
   }
-  .sm-icon-line {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 100%;
+  .hamburger:hover { background: var(--nav-hover-bg); }
+  .hamburger span {
+    width: 20px;
     height: 2px;
     background: currentColor;
     border-radius: 2px;
-    transform: translate(-50%, -50%);
-    will-change: transform;
+    transition: transform 0.3s ease, opacity 0.3s ease;
   }
+  /* 打开后变叉号 */
+  .site-header.mnav-open .hamburger span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .site-header.mnav-open .hamburger span:nth-child(2) { opacity: 0; }
+  .site-header.mnav-open .hamburger span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 
-  /* ── 预层（2 层，依次滑入；只有 transform + opacity）── */
-  .sm-root {
-    /* 覆盖层容器：不参与布局，只作为面板/预层的父级（在 header 之外，避免 header 的
-       will-change: transform 成为 fixed 的包含块）*/
+  .mobile-menu {
     position: fixed;
-    inset: 0;
-    z-index: 64;
-    pointer-events: none;
-    /* ★必须裁切★：关闭态下面板/预层停在视口右侧之外（translateX(100%)），
-       不裁切会让文档产生约 380px 的横向溢出（实测窄视口溢出 1px）。 */
-    overflow: hidden;
-  }
-  /* 预层容器：主面板**之后**（更靠近观察者）会盖住菜单文字，
-     所以靠 z-index 把它压到面板下面 —— 面板是 z-index 2，预层 0，两者都在 .sm-root 内。 */
-  .sm-prelayers {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: var(--sm-panel-w);
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0;
-  }
-  .sm-prelayer {
-    position: absolute;
-    inset: 0;
-    transform: translateX(0);
-    opacity: 0;
-    will-change: transform, opacity;
-  }
-  /* 两层预层：--1 在下、--2 在上，形成"阶梯"错位 */
-  .sm-prelayer--2 { z-index: 1; background: color-mix(in srgb, var(--accent) 26%, #05070a); }
-  .sm-prelayer--1 { z-index: 0; background: color-mix(in srgb, var(--accent) 12%, #05070a); }
-
-  /* ── 主面板 ── */
-  .sm-panel {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    /* dvh 兜底：移动端浏览器工具栏收起/展开时视口高度会变，避免面板被截断 */
-    height: 100dvh;
-    width: var(--sm-panel-w);
-    padding: 6.2rem 2rem 2rem;
+    /* 贴在导航下方：未滚动时导航 64px 高、滚动后 16+52px */
+    top: var(--mn-top, 64px);
+    left: 0;
+    width: 100%;
+    padding: 16px 32px;
     display: flex;
     flex-direction: column;
-    background: var(--sm-panel-bg);
-    /* 面板与页面都很暗，仅靠边框分不开 —— 用"亮边 + 大范围投影"建立层次：
-       左缘一条雾蓝细线（--accent 低透明）＋ 向左的大范围暗影，让面板像浮在空中。 */
-    border-left: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-    -webkit-backdrop-filter: blur(26px) saturate(1.4);
-    backdrop-filter: blur(26px) saturate(1.4);
-    box-shadow: -1px 0 0 0 color-mix(in srgb, var(--accent) 22%, transparent),
-      -40px 0 90px rgba(0, 0, 0, 0.55);
-    z-index: 2;
+    gap: 16px;
+    background: rgba(10, 10, 15, 0.95);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    backdrop-filter: blur(20px) saturate(1.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 60;
+    transform: translateY(-10px);
     opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  /* 滚动后导航下沉 16px，菜单跟着下移，避免被胶囊压住 */
+  html[data-scrolled='1'] .mobile-menu { --mn-top: 68px; }
+  .mobile-menu.is-open {
+    transform: translateY(0);
+    opacity: 1;
     pointer-events: auto;
-    overflow-y: auto;
-    will-change: transform, opacity;
   }
-  html[data-sm-open='1'] .sm-panel { /* 打开时禁止页面滚动，由脚本加锁 */ }
-  .sm-panel-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    counter-reset: smItem;
-  }
-  .sm-panel-itemWrap { position: relative; overflow: hidden; line-height: 1; }
-  .sm-panel-item {
-    position: relative;
-    display: inline-block;
-    padding-right: 1.4em;
-    color: var(--ink-2);
-    font-family: var(--font-display);
-    font-size: clamp(2rem, 7vw, 3.2rem);
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    line-height: 1.06;
+  .mobile-menu[hidden] { display: none; }
+  .mobile-menu a {
+    color: var(--nav-ink);
     text-decoration: none;
-    transition: color 0.25s ease;
-  }
-  .sm-panel-item:hover { color: var(--accent); }
-  .sm-panel-item[aria-current='page'] { color: var(--accent); }
-  /* 编号（ReactBits 的 displayItemNumbering）*/
-  .sm-panel-list[data-numbering] .sm-panel-item::after {
-    counter-increment: smItem;
-    content: counter(smItem, decimal-leading-zero);
-    position: absolute;
-    top: 0.15em;
-    right: 0;
-    font-family: var(--font-body);
-    font-size: 13px;
-    font-weight: 400;
-    letter-spacing: 0.06em;
-    color: var(--accent);
-    opacity: var(--sm-num-opacity, 0);
-  }
-  /* 入场动画的作用对象（旋转 + 上移）*/
-  .sm-panel-itemLabel {
-    display: inline-block;
-    will-change: transform;
-    transform-origin: 50% 100%;
-  }
-
-  /* ── 社交链接（最后淡入）── */
-  .sm-socials {
-    margin-top: auto;
-    padding-top: 2.2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.7rem;
-  }
-  .sm-socials-title {
-    margin: 0;
-    font-size: 0.72rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--accent);
-    opacity: 0;
-  }
-  .sm-socials-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem 1.1rem;
-  }
-  .sm-socials-link {
-    font-size: 1rem;
+    font-size: 16px;
     font-weight: 500;
-    color: var(--ink-2);
-    text-decoration: none;
-    opacity: 0;
-    transition: color 0.3s ease, opacity 0.3s ease;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
-  /* 悬停时其余淡出、当前高亮（ReactBits 同款）*/
-  .sm-socials-list:hover .sm-socials-link:not(:hover) { opacity: 0.35 !important; }
-  .sm-socials-link:hover { color: var(--accent); }
+  .mobile-menu a[aria-current='page'] { color: var(--accent); }
+  .mm-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
+  .mm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid var(--nav-border-scrolled);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--nav-ink);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  @media (max-width: 768px) {
+    .hamburger { display: flex; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hamburger span,
+    .mobile-menu { transition: none; }
+  }
 
   /* ── 顶部指示线：悬停跟随 + 当前页激活 ── */
   .nav { position: relative; }
@@ -463,48 +305,52 @@ const socials = [
   }
   .nav-ind--hover { background: color-mix(in srgb, var(--accent) 55%, transparent); }
 
-  /* ── 侧边面板的尺寸令牌 ──
-     必须放在 :global(:root)：面板在 </header> 之外（见标记里的说明），
-     定义在 .site-header 上的自定义属性它继承不到，会退化成 auto。 */
-  :global(:root) {
-    --sm-panel-w: clamp(280px, 38vw, 420px);
-    /* 侧边菜单面板底色。同样必须在 :root —— 面板在 </header> 之外，
-       定义在 .site-header 上的变量它继承不到（会变成透明）。 */
-    --sm-panel-bg: rgba(7, 10, 14, 0.9);
-  }
-  @media (max-width: 640px) {
-    :global(:root) { --sm-panel-w: 100vw; }
-  }
-
   /* ══════════════════════════════════════════════════════════════
-     导航胶囊令牌 —— 想换配色只改这一块
-     结构/尺寸/交互与配色解耦：下面是"暗色玻璃"版，适配当前暗色电影感站点。
-     若要换成规格原文里的**浅色通透**版（白胶囊 + 深字），把这些值换成：
-       --nav-bg: rgba(255,255,255,.72);       --nav-bg-scrolled: rgba(255,255,255,.85);
-       --nav-border: rgba(255,255,255,.6);    --nav-shadow: 0 4px 24px rgba(0,0,0,.06);
-       --nav-shadow-scrolled: 0 8px 32px rgba(0,0,0,.10);
-       --nav-ink: #1a1a2e;   --nav-ink-dim: #555;   --nav-hover-bg: rgba(0,0,0,.04);
-       --nav-blur: blur(20px) saturate(1.4);  --nav-drawer-bg: rgba(255,255,255,.92);
+     导航令牌 —— 想换配色只改这一块（结构/尺寸/交互与配色解耦）
      ══════════════════════════════════════════════════════════════ */
   .site-header {
-    --nav-w: min(1200px, calc(100% - 40px));
-    --nav-top: 16px;
-    --nav-h: 56px;
+    /* ══ 滚缩参数（照 ReactBits 的 shrink-on-scroll）══
+       未滚动：贴顶通栏（padding-top 0、容器 1280 宽 64 高、无圆角、无底色）
+       滚动后：下沉 16px 收成胶囊（1120 宽 52 高、圆角 999px、玻璃底）
+       只改这几个变量，形态过渡全部由 CSS transition 完成。 */
+    --nav-top: 0px;
+    --nav-top-scrolled: 16px;
+    --nav-w: 1280px;
+    --nav-w-scrolled: 1120px;
+    --nav-h: 64px;
     --nav-h-scrolled: 52px;
-    /* 半透明 → 视频能透上来（保持暗色电影感） */
-    --nav-bg: rgba(9, 12, 16, 0.55);
-    --nav-bg-scrolled: rgba(9, 12, 16, 0.78);
-    --nav-border: rgba(255, 255, 255, 0.2);
-    --nav-border-scrolled: rgba(255, 255, 255, 0.3);
-    --nav-shadow: 0 4px 24px rgba(0, 0, 0, 0.28);
-    --nav-shadow-scrolled: 0 8px 32px rgba(0, 0, 0, 0.42);
-    --nav-blur: blur(20px) saturate(1.4);
+    --nav-pad-x: 32px;
+    --nav-pad-x-scrolled: 22px;
+    /* 内容行内边距：未滚动时靠容器 padding 即可，滚动后容器 padding 22px 已含，
+       内容行给一点内侧留白避免贴边 */
+    --nav-in-pad-scrolled: 0px;
+    /* 形态过渡曲线（与 ReactBits 一致） */
+    --ease-nav: cubic-bezier(0.4, 0, 0.2, 1);
+    --nav-radius: 0px;
+    --nav-radius-scrolled: 999px;
+    /* 未滚动：完全透明（贴顶通栏，让视频铺满）
+       滚动后：半透明玻璃 + 描边 + 阴影 */
+    --nav-bg: transparent;
+    --nav-bg-scrolled: rgba(9, 12, 16, 0.7);
+    --nav-border: transparent;
+    --nav-border-scrolled: rgba(255, 255, 255, 0.2);
+    --nav-shadow: none;
+    --nav-shadow-scrolled: 0 4px 20px rgba(0, 0, 0, 0.36);
+    --nav-blur: none;
+    --nav-blur-scrolled: blur(12px) saturate(1.8);
     --nav-ink: #ffffff;
     --nav-ink-dim: #c9d1d9;
     --nav-hover-bg: rgba(255, 255, 255, 0.08);
     --nav-link-fs: 14px;
+    --nav-link-fs-scrolled: 13px;
+    --nav-link-gap: 24px;
+    --nav-link-gap-scrolled: 16px;
     --nav-link-pad: 8px 14px;
+    --nav-link-pad-scrolled: 6px 11px;
     --nav-link-radius: 10px;
+    /* 顶栏控件：滚动后同步收小 */
+    --nav-ctl-h: 40px;
+    --nav-ctl-h-scrolled: 34px;
     /* 移动端下拉面板必须**基本不透明**：它盖在正文之上，0.92 这类半透明会让
        下方的正文与视频透上来（实测像素差 347/765，观感像重影）。
        保留一点渐变与模糊，让它仍是"玻璃片"而不是死板色块。 */
@@ -512,45 +358,77 @@ const socials = [
   }
 
   .hd {
-    /* 悬浮胶囊本体：不再是通栏条，而是一块居中、圆角 999px 的玻璃片。
-       这里不要用 overflow:hidden —— .nav-sub（二级菜单）是它的绝对定位后代，会被裁掉。 */
+    /* 胶囊本体。未滚动时是"贴顶通栏"，滚动后收成浮起的圆角玻璃片。
+       不要用 overflow:hidden —— .nav-sub（二级菜单）是它的绝对定位后代，会被裁掉。 */
     position: relative;
     isolation: isolate;
-    width: var(--nav-w);
+    box-sizing: border-box;
+    width: 100%;
+    max-width: var(--nav-w);
+    margin: 0 auto;
+    padding: 0 var(--nav-pad-x);
     height: var(--nav-h);
-    margin: var(--nav-top) auto 0;
-    border-radius: 999px;
+    border-radius: var(--nav-radius);
     background: var(--nav-bg);
     border: 1px solid var(--nav-border);
     box-shadow: var(--nav-shadow);
     -webkit-backdrop-filter: var(--nav-blur);
     backdrop-filter: var(--nav-blur);
-    /* 只过渡高度/背景/阴影/边框 —— 不硬切 position，也不动 transform（那是收起的职责） */
+    /* 形态过渡（0.4s / cubic-bezier(0.4,0,0.2,1)，与 ReactBits 一致） */
     transition:
-      height 0.28s var(--ease),
-      background 0.28s var(--ease),
-      box-shadow 0.28s var(--ease),
-      border-color 0.28s var(--ease);
+      max-width 0.4s var(--ease-nav),
+      height 0.4s var(--ease-nav),
+      padding 0.4s var(--ease-nav),
+      border-radius 0.4s var(--ease-nav),
+      background 0.4s var(--ease-nav),
+      border-color 0.4s var(--ease-nav),
+      box-shadow 0.4s var(--ease-nav),
+      backdrop-filter 0.4s var(--ease-nav);
+  }
+  /* 外层负责"下沉 16px"：padding-top 0 → 16px */
+  .site-header {
+    transition: transform 0.28s var(--ease), padding-top 0.4s var(--ease-nav);
   }
   /* 移动端：左右各留 16px（规格要求比桌面的 20px 更窄） */
   @media (max-width: 640px) {
-    .site-header { --nav-w: calc(100% - 32px); }
+    .site-header {
+      --nav-w: 100%;
+      --nav-w-scrolled: calc(100% - 32px);
+    }
   }
-  /* 向下滚动超过 80px：胶囊变矮、玻璃加深、阴影加重（见 ui.js 的 setMaterial） */
+  /* 向下滚动超过 80px：下沉 + 收成胶囊（见 ui.js 的 setMaterial） */
+  html[data-scrolled='1'] .site-header {
+    padding-top: var(--nav-top-scrolled);
+  }
   html[data-scrolled='1'] .site-header .hd {
+    max-width: var(--nav-w-scrolled);
     height: var(--nav-h-scrolled);
+    padding: 0 var(--nav-pad-x-scrolled);
+    border-radius: var(--nav-radius-scrolled);
     background: var(--nav-bg-scrolled);
     border-color: var(--nav-border-scrolled);
     box-shadow: var(--nav-shadow-scrolled);
+    -webkit-backdrop-filter: var(--nav-blur-scrolled);
+    backdrop-filter: var(--nav-blur-scrolled);
   }
+  /* 内部元素同步收缩 */
+  html[data-scrolled='1'] .site-header .hd-in { padding: 0 var(--nav-in-pad-scrolled, 0px); }
+  html[data-scrolled='1'] .site-header .nav { gap: var(--nav-link-gap-scrolled); }
+  html[data-scrolled='1'] .site-header .nav a {
+    font-size: var(--nav-link-fs-scrolled);
+    padding: var(--nav-link-pad-scrolled);
+  }
+  html[data-scrolled='1'] .site-header :is(.pill, .sm-toggle) { height: var(--nav-ctl-h-scrolled); }
   @media (prefers-reduced-motion: reduce) {
-    .hd { transition: none; }
+    .hd,
+    .site-header { transition: none; }
   }
 
   /* 内容行：Logo · 中间留白 · 右侧链接组 */
   .hd-in {
     height: 100%;
-    padding: 0 10px 0 18px;
+    /* 容器已给左右 padding（32 → 22），这里只留很小的内侧微调 */
+    padding: 0 4px;
     display: flex;
     align-items: center;
     gap: 1rem;
@@ -837,6 +715,6 @@ const socials = [
 </style>
 
 <script>
-  // ReactBits 风格侧边菜单（StaggeredMenu）+ 顶部指示线，见 scripts/nav-staggered.js
-  import '../scripts/nav-staggered.js';
+  // 移动端汉堡菜单 + 顶部指示线，见 scripts/nav-mobile.js
+  import '../scripts/nav-mobile.js';
 </script>

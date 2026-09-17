@@ -532,6 +532,34 @@ items:
       ② 侧边菜单关闭态停在视口外，让文档 `scrollWidth` 多出 5px（`.sm-root` 加 `overflow:hidden`）。
     - 旧的 `HomeStrokeTitle` 已彻底不参与首页（组件与验证脚本此前已删）。
 
+31. **★导航改为"滚动收缩"形态★ + 移动端改回汉堡**（2026-09-15，用户提供 ReactBits 的
+    shrink-effect 实现并要求照做，含移动端）：
+    之前那套"常驻悬浮胶囊 + 侧边 StaggeredMenu 面板"**已被替换**（`nav-staggered.js`、
+    `verify-nav-rb.mjs`、`verify-nav-capsule.mjs` 均已删除）。
+    - **形态**（照 ReactBits，只改 `Header.astro` 的 `--nav-*` 令牌与 `[data-scrolled]` 规则）：
+      | | 未滚动 | 滚动 >80px |
+      |---|---|---|
+      | 外层 `padding-top` | 0 | 16px（下沉） |
+      | 容器 `max-width` | 1280 | 1120 |
+      | 容器高 | 64 | 52 |
+      | 圆角 | 0 | 999px |
+      | 背景 | 透明 | `rgba(9,12,16,.7)` |
+      | 模糊 | none | `blur(12px) saturate(1.8)` |
+      | 阴影 / 边框 | none / 透明 | `0 4px 20px` / `rgba(255,255,255,.2)` |
+      | 左右内边距 | 32px | 22px |
+      | 链接字号 / 内距 | 14px / 14px | 13px / 11px |
+      | 顶栏控件高 | 40px | 34px |
+      过渡 `0.4s cubic-bezier(0.4,0,0.2,1)`，**只切 `html[data-scrolled]`**（见 ui.js 的 `setMaterial`）。
+    - **移动端**（≤768px）：汉堡按钮（3 条线，打开变叉号）+ 顶部下拉玻璃菜单
+      （`rgba(10,10,15,.95)` + `blur(20px)`、`translateY(-10px)→0` 淡入、圆角见 CSS）。
+      逻辑在 `src/scripts/nav-mobile.js`（含保留下来的顶部两条指示线）。
+    - **★排查记录★**：`autoHideHeader` 会"下滑收起导航"，所以**验证脚本不能在下滑后量导航**：
+      要"先滚下去让胶囊成型、再上滑一点让导航滑回来"（否则量到 `top = -53`）。
+      `verify-nav.mjs` / `verify-redesign.mjs` 原来都在页面顶部断言"胶囊已成型"，
+      现在顶部是**刻意透明贴顶**的，那两个脚本已改为滚动后采样。
+    - 自检：`node scripts/verify-nav-shrink.mjs [url]`（37 项：顶部/滚动/回顶三态逐项尺寸、
+      形态过渡、指示线、移动端汉堡与下拉菜单）。
+
 ---
 
 ## 7. 验证与调试
