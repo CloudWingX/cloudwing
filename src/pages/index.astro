@@ -368,8 +368,13 @@ const codeSample = [
   .hero-content {
     position: relative;
     z-index: 1;
-    flex: 1;
-    max-width: 560px;
+    /* flex-basis:0 + max-width → 两栏按"参考的比例"分配剩余空间。
+       ⚠️ 必须 min-width:0：flex 项默认 min-width:auto 会拿 min-content 当不可缩的底线，
+       标题 nowrap 时 min-content ≈ 870px，于是左栏永远占满 645、把卡片挤到 491/249
+       （踩过）。放开之后两栏才真的按 645:520 分。 */
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 645px;
     text-align: left;
   }
 
@@ -403,23 +408,34 @@ const codeSample = [
     box-shadow: 0 0 8px var(--accent);
   }
 
-  /* ── 主标题（两行）──
-     ★字号由"最长那行必须放得下"反解★：
-       实测这套字体下 "Code on clouds, life on wings"（28 字符）宽 ≈ 13.19 × 字号，
-       左栏 560px 减去字距影响 → 字号上限约 42px（原来 64px 会到 844px，放不下）。
-       所以这里不能用固定 64px，改用 clamp 随视口收；
-       上限 42px 保证 1440 放得下，下限 27px 保证 769（左栏 486px）也放得下。
-       两行都 nowrap，确保**严格两行**（需求要的就是两行）。 */
+  /* ── 主标题 ──
+     比例照参考站（左栏 645 / 卡片 520 / gap 111 的相对关系），字号按"第一行放得下"反解。
+     ★上限 48px 而不是参考的 66px★：我们的标题文案比参考长得多
+     （第一行 28 字符，实测每字号宽 13.19px）。参考在 645 栏里放 2 行用的是 66px，
+     但它的文案短；同样的 66px 换到我们这句话需要 870px —— 645 的栏放不下，
+     要么把标题变成 3 行、要么缩小字号。你之前明确要的是**两行**，所以这里保两行、缩字号。
+     （想要参考那样的 66px 大标题：把 .ht-l1 的 nowrap 去掉即可，它会自己折成 3 行。） */
   .hero-title {
     margin: 0 0 24px;
-    font-size: clamp(27px, 1.9vw, 42px);
+    /* 单一反解式：左栏每窄 1px，字号就少 1/13.19（13.19 = 第一行每字号宽度，实测）。
+       48px 上限照参考站 66px 的比例（我们文案更长，同样行数下只能到这个量级）；
+       30px 下限保证窄屏也读得清 —— 此时左栏放不下一行，靠自动换行兜住，不会溢出。 */
+    font-size: max(30px, min(48px, calc((100vw - 680px) / 13.19)));
     font-weight: 700;
     line-height: 1.05;
     letter-spacing: -0.03em;
     color: #ffffff;
   }
   .ht-l1,
-  .ht-l2 { display: block; white-space: nowrap; }
+  .ht-l2 { display: block; }
+  /* 只在"真的能放下"的宽度上锁两行：左栏拿到满 645px 时（≈1200px 视口起；
+     留了滚动条的余量），第一行在 48px 上限下放得下（需 633px）。
+     更窄时左栏被压缩，第一行放开换行 —— 否则 nowrap 会顶出容器
+     （实测 1152px 下 633px 的文字塞进 498px 的栏）。 */
+  @media (min-width: 1200px) {
+    .ht-l1,
+    .ht-l2 { white-space: nowrap; }
+  }
   /* 第一行纯白（继承 .hero-title），第二行走雾蓝渐变强调色。
      渐变必须用"压深过的"雾蓝：白色/亮色大字压在视频亮帧上，
      浅雾蓝(#9FD3E8)对白字只有 1.6:1；压深后 ≈#6f94a2（对比 6:1）。 */
@@ -445,6 +461,10 @@ const codeSample = [
   }
 
   /* ── 两个统计（参考 .hero-features）── */
+  /* ── 两个统计 ──
+     字号按参考的比例给（参考：标题 66px 时数字 26px、说明 13px，
+     即 ≈ 标题的 0.394 / 0.197 倍）。标题字号是随视口算的，
+     所以这里在 ≥660px 用 vw 跟随，窄屏回落。 */
   .hero-features {
     display: flex;
     align-items: center;
@@ -452,8 +472,13 @@ const codeSample = [
     margin-bottom: 36px;
   }
   .feature-item { display: flex; flex-direction: column; gap: 2px; }
-  .feature-number { font-size: 28px; font-weight: 600; color: #ffffff; line-height: 1.25; }
-  .feature-label { font-size: 14px; line-height: 1.28; color: rgba(255, 255, 255, 0.5); }
+  .feature-number {
+    font-size: clamp(22px, 1.8vw, 26px);
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.25;
+  }
+  .feature-label { font-size: clamp(13px, 0.9vw, 13.5px); line-height: 1.28; color: rgba(255, 255, 255, 0.5); }
   .feature-divider { width: 1px; height: 40px; background: var(--line-2); flex: none; }
 
   /* ── 技术标签（参考 .component-tags / .tag）── */
@@ -485,7 +510,8 @@ const codeSample = [
   .code-card {
     position: relative;
     z-index: 1;
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0; /* 同上：不加的话代码卡片的 min-content 会把自己顶宽，比例失真 */
     max-width: 520px;
     background: rgba(18, 18, 26, 0.7);
     -webkit-backdrop-filter: blur(10px);
@@ -621,12 +647,13 @@ const codeSample = [
   .stack-note a:hover { border-bottom-color: var(--accent); }
 
   /* ── 断点（照参考逐档）──
-     ⚠️ 这里**不要**再写死 .hero-title 的字号：标题字号由基础规则的
-     clamp(...) 按"最长行必须放得下"统一控制，写死会盖掉 clamp 的下限，
-     在手机上直接把两行 nowrap 的文字顶出容器（实测 390px 下需要 634px、容器只有 350px）。 */
+     ⚠️ 这里**不要**再写死 .hero-title 的字号：标题字号由基础规则的 calc(...)
+     按"最长行必须放得下"统一控制，写死会盖掉它，把两行 nowrap 的文字顶出容器
+     （踩过：390px 下需要 634px、容器只有 350px）。只有 <660px 那档例外（见下）。 */
   @media (max-width: 1024px) {
-    .hero { gap: 40px; padding: 0 24px; }
-    .code-card { max-width: 440px; }
+    /* 参考：≤1024 左右栏 gap 收到 72，卡片也变成整宽 */
+    .hero { gap: 72px; padding: 0 24px; }
+    .code-card { max-width: 100%; }
   }
   /* ── 手机端（≤768px）：照参考站手机端的表现优化 ──
      参考（reactbits.dev）在 390/360 下的实测结论：
@@ -639,17 +666,13 @@ const codeSample = [
       flex-direction: column;
       justify-content: center;
       align-items: stretch; /* 左栏不再被居中拉伸，内容真正从左边起排 */
-      gap: 32px;
+      gap: 40px;
       padding: 96px 20px 64px;
       text-align: left;
     }
     .hero-content { text-align: left; max-width: 100%; }
-    /* 标题：PC 上是"严格两行"，但第一行 28 字符在手机上（容器 280–374px）
-       无论怎么缩字号都放不进一行 —— 强行 nowrap 会顶出容器。
-       所以手机端放开第一行换行（第二行 19 字符放得下，继续 nowrap），
-       并把字号放回 36px（PC 那套 clamp 是为了"不换行"才压到 27px，手机上不需要）。 */
-    .hero-title { font-size: 36px; }
-    .ht-l1 { white-space: normal; }
+    /* 标题字号不在这里覆盖：基础规则的 max(30px, …) 已经托底，
+       第一行的换行由 @media (min-width:1200px) 控制（<1200 自动换行）。 */
     .hero-subtitle { font-size: 16px; }
     .hero-features { justify-content: flex-start; gap: 20px; }
     .component-tags { justify-content: flex-start; }
