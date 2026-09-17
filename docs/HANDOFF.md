@@ -481,6 +481,33 @@ items:
       viewBox 是否为横版字标、云体/羽翼取值是否等于品牌稿色值、旧六边形是否清除、
       标志尺寸是否在 24–40px、是否超出导航胶囊、无横向溢出）。
 
+29. **ReactBits 风格导航（StaggeredMenu + 指示线）**（2026-09-15，用户要求复刻 reactbits.dev）：
+    动画在 `src/scripts/nav-staggered.js`（vanilla JS + GSAP，与本项目其余交互一致）。
+    **参数照 ReactBits 原实现**（源码取自 `DavidHDev/react-bits` 的
+    `src/content/Components/StaggeredMenu/`，经 jsDelivr 拉取）：
+    - 预层滑入 `xPercent 100→0`，**每层延迟 0.07s**，`duration 0.5 / power4.out`
+    - 菜单项入场 `yPercent 140→0 + rotate 10→0 + opacity 0→1`，`duration 1`，
+      **stagger each 0.1 from 'start'**，`power4.out`
+    - 社交链接最后淡入：`delay 0.35`、`duration 0.6 / power2.out`、stagger 0.08
+    - 图标整体 `rotate 0→225`（加号→叉号），`duration 0.8 / power4.out`
+    - 关闭：面板 `xPercent→100 / 0.5 / power3.in`；菜单项 `yPercent→-140, rotate→-10, 0.32 / power3.in`
+    - 只动画 `transform` 与 `opacity`；`prefers-reduced-motion` 下直接切终态（无时间线）
+    - **★两个必须记住的坑★**：
+      1. **面板与预层必须放在 `</header>` 之外**。`.site-header` 带 `will-change: transform`，
+         会让它成为 fixed/absolute 后代的**包含块** —— 面板会按 header 的高度（约 72px）定位，
+         手机上面板被压成一条（实测 height 131px 而不是 844px）。
+      2. **`--sm-panel-*` 令牌必须定义在 `:root`**（`Header.astro` 里用 `:global(:root)`）。
+         面板已在 header 之外，定义在 `.site-header` 上的自定义属性它继承不到：
+         `--sm-panel-w` 会退化成 auto、`--sm-panel-bg` 会变成透明。
+      3. 预层在 DOM 里位于面板**之后**，必须靠 z-index 压到面板下面（面板 2 / 预层 0–1），
+         否则会盖住菜单文字。
+    - 顶部两条指示线（`nav-ind--hover` / `nav-ind--active`）：一条跟鼠标在菜单项间滑动、
+      一条停在当前路由下方，都用 `power4.out` 平滑移动；激活线在 `astro:page-load` 后重定位。
+    - 旧的汉堡抽屉已删除（标记 + CSS + 脚本），由侧边菜单取代。
+    - 自检：`node scripts/verify-nav-rb.mjs [url]`（27 项：结构、关闭态位移、**逐帧**验证
+      预层错峰与菜单项 stagger 递增、图标 225°、指示线跟随与落位、Esc、
+      减少动态立即到位、移动端铺满视口）。
+
 ---
 
 ## 7. 验证与调试

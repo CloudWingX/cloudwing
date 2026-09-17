@@ -72,32 +72,39 @@ check('Logo 15px / 600 / -0.01em',
   brand.字号 === '15px' && brand.字重 === '600' && Math.abs(brand.字距px - (15 * -0.01)) < 0.02,
   JSON.stringify(brand));
 
-console.log('\n=== 移动端下拉面板 ===');
+console.log('\n=== 移动端侧边菜单（ReactBits StaggeredMenu）===');
 await s('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 await s('Page.navigate', { url: BASE + '/works/' });
-await waitFor(`!!document.querySelector('.burger')`);
+await waitFor(`!!document.querySelector('[data-sm-toggle]')`);
 await sleep(1800);
 const mTop = await cap();
 check('移动端胶囊左右各留 16px', Math.abs(mTop.高 - 56) <= 1, `高=${mTop.高}`);
 const mWidth = await ev(`(()=>{const hd=document.querySelector('.hd'); const b=hd.getBoundingClientRect();
   return {左:Math.round(b.left), 右:Math.round(innerWidth-b.right), 视口:document.documentElement.clientWidth};})()`);
 check('左右留白各 16px', mWidth.左 === 16 && mWidth.右 === 16, JSON.stringify(mWidth));
-check('导航链接收进汉堡（桌面链接组隐藏）', (await ev(`getComputedStyle(document.querySelector('.nav')).display`)) === 'none');
-await ev(`document.querySelector('[data-nav-burger]')?.click()`);
-await sleep(700);
-const panel = await ev(`(()=>{const d=document.querySelector('.drawer'); if(!d||d.hidden) return null;
+check('导航链接收进菜单按钮（桌面链接组隐藏）', (await ev(`getComputedStyle(document.querySelector('.nav')).display`)) === 'none');
+// 侧边菜单已换成 ReactBits 风格 StaggeredMenu（细测见 verify-nav-rb.mjs），
+// 这里只校验它作为"移动端菜单"的基本可用性：能滑入、铺满视口、压得住内容。
+await ev(`document.querySelector('[data-sm-toggle]')?.click()`);
+await sleep(3000);
+const panel = await ev(`(()=>{const d=document.querySelector('[data-sm-panel]'); if(!d) return null;
   const c=getComputedStyle(d); const b=d.getBoundingClientRect();
-  // 注意：面板底色是**渐变**（background-image），只读 backgroundColor 会得到 rgba(0,0,0,0)
-  return {背景:c.backgroundColor, 背景图:(c.backgroundImage||'none').slice(0,70), 模糊:c.backdropFilter||c.webkitBackdropFilter, 圆角:c.borderTopLeftRadius,
-    动画:c.animationName, 顶部:Math.round(b.top), 左:Math.round(b.left), 右:Math.round(b.right)};})()`);
+  const m=new DOMMatrixReadOnly(c.transform);
+  return {背景:c.backgroundColor, 模糊:c.backdropFilter||c.webkitBackdropFilter,
+    顶部:Math.round(b.top), 底部:Math.round(b.bottom), 左:Math.round(b.left),
+    x:Math.round(m.m41), 视口高:document.documentElement.clientHeight,
+    菜单项:document.querySelectorAll('.sm-panel-item').length,
+    社交:document.querySelectorAll('.sm-socials-link').length};})()`);
 console.log('  ' + JSON.stringify(panel));
-check('面板从顶部下拉（在胶囊下方）', panel && panel.顶部 >= 70, String(panel && panel.顶部));
-check('面板圆角 20px', panel && panel.圆角 === '20px', String(panel && panel.圆角));
-check('面板模糊 24px', panel && /blur\(24px\)/.test(String(panel.模糊)), String(panel && panel.模糊));
+check('菜单面板已滑入（x=0）', panel && Math.abs(panel.x) <= 1, String(panel && panel.x));
+check('面板铺满视口高度', panel && Math.abs(panel.顶部) <= 1 && Math.abs(panel.底部 - panel.视口高) <= 2, panel ? `${panel.顶部}~${panel.底部} / ${panel.视口高}` : 'null');
+check('面板铺满视口宽度（移动端）', panel && panel.左 === 0, String(panel && panel.左));
+check('面板模糊为玻璃（≥20px）',
+  panel && /blur\((\d+)px\)/.test(String(panel.模糊)) && parseFloat(String(panel.模糊).match(/blur\((\d+)/)[1]) >= 20,
+  String(panel && panel.模糊));
 check('面板背景为深色玻璃（暗色电影感）',
-  /rgba\(9,\s*12,\s*16|#090c10/i.test(String(panel && panel.背景) + String(panel && panel.背景图)),
-  String(panel && panel.背景) + ' | ' + String(panel && panel.背景图));
-check('面板有淡入 + 下移动效', panel && panel.动画 !== 'none', String(panel && panel.动画));
+  /rgba\(7,\s*10,\s*14|#070a0e/i.test(String(panel && panel.背景)), String(panel && panel.背景));
+check('面板含菜单项与社交链接', panel && panel.菜单项 >= 5 && panel.社交 >= 3, panel ? `${panel.菜单项} 项 / ${panel.社交} 社交` : 'null');
 check('无 JS 异常', errs.length === 0, errs[0] || '');
 
 const shot = await s('Page.captureScreenshot', { format: 'png' });

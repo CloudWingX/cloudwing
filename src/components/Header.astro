@@ -35,6 +35,14 @@ const SUBS: Record<string, { label: string; href: string; count?: number; sub?: 
 
 const items = NAV.map((item) => ({ ...item, sub: SUBS[item.href] ?? [] }));
 const pad = (n: number) => String(n).padStart(2, '0');
+
+/* 侧边面板底部的社交链接（ReactBits StaggeredMenu 的 socialItems 位） */
+const socials = [
+  SITE.github && { label: 'GitHub', href: SITE.github },
+  SITE.bilibili && { label: 'Bilibili', href: SITE.bilibili },
+  SITE.email && { label: 'Email', href: `mailto:${SITE.email}` },
+  { label: 'RSS', href: '/rss.xml' },
+].filter(Boolean) as { label: string; href: string }[];
 ---
 <header class="site-header" data-nav>
   {/* 悬浮玻璃胶囊：宽 min(1200px, 100% - 40px)、距顶 16px、高 56px（滚动后 52px）、圆角 999px。
@@ -125,37 +133,72 @@ const pad = (n: number) => String(n).padStart(2, '0');
           <path d="M7 4.8 19 12 7 19.2Z" />
         </svg>
       </button>
-      <button type="button" class="burger" data-nav-burger aria-label="打开菜单" aria-expanded="false">
-        <span class="b-line"></span>
-        <span class="b-line"></span>
+      {/* ReactBits StaggeredMenu 的开关：加号 ⇄ 叉号（整体旋转 225°，见 nav-staggered.js） */}
+      <button
+        type="button"
+        class="sm-toggle"
+        data-sm-toggle
+        aria-label="打开菜单"
+        aria-expanded="false"
+        aria-controls="cw-staggered-panel"
+      >
+        <span class="sm-toggle-textWrap" aria-hidden="true">
+          <span class="sm-toggle-textInner" data-sm-text>
+            <span class="sm-toggle-line">菜单</span>
+            <span class="sm-toggle-line">关闭</span>
+          </span>
+        </span>
+        <span class="sm-icon" data-sm-icon aria-hidden="true">
+          <span class="sm-icon-line" data-sm-plus-h></span>
+          <span class="sm-icon-line" data-sm-plus-v></span>
+        </span>
       </button>
     </div>
     </div>
   </div>
-
-  <!-- 移动端抽屉 -->
-  <div class="drawer" data-nav-drawer hidden>
-    {items.map((item) => (
-      <>
-        <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
-        {item.sub.length > 1 && (
-          <div class="drawer-sub">
-            {item.sub.slice(1).map((s) => (
-              <a href={s.href}>
-                <span>{s.label}</span>
-                {s.count !== undefined && <i>{pad(s.count)}</i>}
-              </a>
-            ))}
-          </div>
-        )}
-      </>
-    ))}
-    <button type="button" class="drawer-search" data-search-open>搜索</button>
-    {SITE.github && (
-      <a class="ext" href={SITE.github} target="_blank" rel="noreferrer">GitHub ↗</a>
-    )}
-  </div>
 </header>
+
+{/* ── ReactBits 风格侧边菜单（StaggeredMenu）──
+    两层预层 + 主面板依次滑入；菜单项自下而上"旋转 + 上移"入场；社交链接最后淡入。
+    动画在 scripts/nav-staggered.js，参数照 ReactBits 原实现。
+    ★必须放在 </header> 之外★：.site-header 带 will-change: transform，
+    会让它成为 fixed 后代的**包含块** —— 面板会按 header 的高度（约 72px）定位，
+    而不是视口，手机上面板会被压成一条。
+    ⚠️ 它带 transition:persist 由 Astro 的 ClientRouter 复用，软导航后不回退。 */}
+<div class="sm-root" transition:persist="cw-staggered">
+  <div class="sm-prelayers" data-sm-prelayers aria-hidden="true">
+    <span class="sm-prelayer sm-prelayer--2"></span>
+    <span class="sm-prelayer sm-prelayer--1"></span>
+  </div>
+  <aside id="cw-staggered-panel" class="sm-panel" data-sm-panel aria-hidden="true" aria-label="站点菜单">
+    <ul class="sm-panel-list" data-numbering>
+      {items.map((item) => (
+        <li class="sm-panel-itemWrap">
+          <a class="sm-panel-item" href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+            <span class="sm-panel-itemLabel">{item.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+    <div class="sm-socials">
+      <p class="sm-socials-title">联系与订阅</p>
+      <ul class="sm-socials-list">
+        {socials.map((s) => (
+          <li>
+            <a
+              class="sm-socials-link"
+              href={s.href}
+              target={s.href.startsWith('http') ? '_blank' : undefined}
+              rel={s.href.startsWith('http') ? 'noreferrer' : undefined}
+            >
+              {s.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </aside>
+</div>
 
 <style>
   /* ============================================================
@@ -181,6 +224,253 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .site-header {
       transition: none;
     }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     ReactBits 风格侧边菜单（StaggeredMenu）+ 顶部指示线
+     参数照 ReactBits 原实现（reactbits.dev）：
+       预层 xPercent 滑入，每层延迟 0.07s（power4.out）
+       菜单项 yPercent 140→0 + rotate 10→0，stagger 0.1（power4.out）
+       社交链接最后淡入
+     配色用页面的 --nav-* / --accent，保持暗色电影感。
+     ══════════════════════════════════════════════════════════════ */
+
+  /* ── 开关按钮：加号 ⇄ 叉号 ── */
+  .sm-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 40px;
+    padding: 0 0.85rem;
+    border: var(--line-w) solid var(--line-2);
+    border-radius: 999px;
+    background: var(--glass-soft);
+    color: var(--nav-ink-dim);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    overflow: visible; /* 图标旋转到 225° 时可能需要溢出一点，别裁掉 */
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .sm-toggle:hover,
+  .sm-toggle:focus-visible {
+    color: var(--nav-ink);
+    border-color: var(--line-hover);
+    background: var(--accent-soft);
+  }
+  /* 文案上下滚动切换（ReactBits 的 textCycle）：容器 1em 高，内部整体 yPercent 位移 */
+  .sm-toggle-textWrap {
+    position: relative;
+    display: inline-block;
+    height: 1em;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .sm-toggle-textInner {
+    display: flex;
+    flex-direction: column;
+    line-height: 1;
+    will-change: transform;
+  }
+  .sm-toggle-line {
+    display: block;
+    height: 1em;
+    line-height: 1;
+  }
+  /* 加号：两条线十字交叉；外层整体旋转即变叉号 */
+  .sm-icon {
+    position: relative;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+  }
+  .sm-icon-line {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+    transform: translate(-50%, -50%);
+    will-change: transform;
+  }
+
+  /* ── 预层（2 层，依次滑入；只有 transform + opacity）── */
+  .sm-root {
+    /* 覆盖层容器：不参与布局，只作为面板/预层的父级（在 header 之外，避免 header 的
+       will-change: transform 成为 fixed 的包含块）*/
+    position: fixed;
+    inset: 0;
+    z-index: 64;
+    pointer-events: none;
+  }
+  /* 预层容器：主面板**之后**（更靠近观察者）会盖住菜单文字，
+     所以靠 z-index 把它压到面板下面 —— 面板是 z-index 2，预层 0，两者都在 .sm-root 内。 */
+  .sm-prelayers {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--sm-panel-w);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+  }
+  .sm-prelayer {
+    position: absolute;
+    inset: 0;
+    transform: translateX(0);
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  /* 两层预层：--1 在下、--2 在上，形成"阶梯"错位 */
+  .sm-prelayer--2 { z-index: 1; background: color-mix(in srgb, var(--accent) 26%, #05070a); }
+  .sm-prelayer--1 { z-index: 0; background: color-mix(in srgb, var(--accent) 12%, #05070a); }
+
+  /* ── 主面板 ── */
+  .sm-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    /* dvh 兜底：移动端浏览器工具栏收起/展开时视口高度会变，避免面板被截断 */
+    height: 100dvh;
+    width: var(--sm-panel-w);
+    padding: 6.2rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    background: var(--sm-panel-bg);
+    /* 面板与页面都很暗，仅靠边框分不开 —— 用"亮边 + 大范围投影"建立层次：
+       左缘一条雾蓝细线（--accent 低透明）＋ 向左的大范围暗影，让面板像浮在空中。 */
+    border-left: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    -webkit-backdrop-filter: blur(26px) saturate(1.4);
+    backdrop-filter: blur(26px) saturate(1.4);
+    box-shadow: -1px 0 0 0 color-mix(in srgb, var(--accent) 22%, transparent),
+      -40px 0 90px rgba(0, 0, 0, 0.55);
+    z-index: 2;
+    opacity: 0;
+    pointer-events: auto;
+    overflow-y: auto;
+    will-change: transform, opacity;
+  }
+  html[data-sm-open='1'] .sm-panel { /* 打开时禁止页面滚动，由脚本加锁 */ }
+  .sm-panel-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    counter-reset: smItem;
+  }
+  .sm-panel-itemWrap { position: relative; overflow: hidden; line-height: 1; }
+  .sm-panel-item {
+    position: relative;
+    display: inline-block;
+    padding-right: 1.4em;
+    color: var(--ink-2);
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 7vw, 3.2rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.06;
+    text-decoration: none;
+    transition: color 0.25s ease;
+  }
+  .sm-panel-item:hover { color: var(--accent); }
+  .sm-panel-item[aria-current='page'] { color: var(--accent); }
+  /* 编号（ReactBits 的 displayItemNumbering）*/
+  .sm-panel-list[data-numbering] .sm-panel-item::after {
+    counter-increment: smItem;
+    content: counter(smItem, decimal-leading-zero);
+    position: absolute;
+    top: 0.15em;
+    right: 0;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    opacity: var(--sm-num-opacity, 0);
+  }
+  /* 入场动画的作用对象（旋转 + 上移）*/
+  .sm-panel-itemLabel {
+    display: inline-block;
+    will-change: transform;
+    transform-origin: 50% 100%;
+  }
+
+  /* ── 社交链接（最后淡入）── */
+  .sm-socials {
+    margin-top: auto;
+    padding-top: 2.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .sm-socials-title {
+    margin: 0;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    opacity: 0;
+  }
+  .sm-socials-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.1rem;
+  }
+  .sm-socials-link {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--ink-2);
+    text-decoration: none;
+    opacity: 0;
+    transition: color 0.3s ease, opacity 0.3s ease;
+  }
+  /* 悬停时其余淡出、当前高亮（ReactBits 同款）*/
+  .sm-socials-list:hover .sm-socials-link:not(:hover) { opacity: 0.35 !important; }
+  .sm-socials-link:hover { color: var(--accent); }
+
+  /* ── 顶部指示线：悬停跟随 + 当前页激活 ── */
+  .nav { position: relative; }
+  .nav-ind {
+    position: absolute;
+    left: 0;
+    bottom: 2px;
+    height: 2px;
+    width: 0;
+    border-radius: 2px;
+    background: var(--accent);
+    pointer-events: none;
+    opacity: 0;
+    will-change: transform, width, opacity;
+  }
+  .nav-ind--hover { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+
+  /* ── 侧边面板的尺寸令牌 ──
+     必须放在 :global(:root)：面板在 </header> 之外（见标记里的说明），
+     定义在 .site-header 上的自定义属性它继承不到，会退化成 auto。 */
+  :global(:root) {
+    --sm-panel-w: clamp(280px, 38vw, 420px);
+    /* 侧边菜单面板底色。同样必须在 :root —— 面板在 </header> 之外，
+       定义在 .site-header 上的变量它继承不到（会变成透明）。 */
+    --sm-panel-bg: rgba(7, 10, 14, 0.9);
+  }
+  @media (max-width: 640px) {
+    :global(:root) { --sm-panel-w: 100vw; }
   }
 
   /* ══════════════════════════════════════════════════════════════
@@ -532,88 +822,14 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
   /* —— 移动端菜单：从顶部下拉的玻璃面板 ——
      规格：背景 rgba(255,255,255,.92) + blur(24px)、圆角 20px、淡入 + 轻微下移 */
-  .drawer {
-    position: absolute;
-    top: calc(100% + 10px);
-    left: 16px;
-    right: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 10px;
-    border-radius: 20px;
-    border: 1px solid var(--nav-border);
-    background: var(--nav-drawer-bg);
-    -webkit-backdrop-filter: blur(24px) saturate(1.4);
-    backdrop-filter: blur(24px) saturate(1.4);
-    box-shadow: var(--nav-shadow-scrolled);
-    animation: nav-in 0.24s var(--ease);
-  }
   .drawer[hidden] { display: none; }
   /* 抽屉里的二级分类（缩进一级，挂在对应页面项下面） */
-  .drawer-sub {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin: -2px 0 6px 1.15rem;
-    padding-left: 0.7rem;
-    border-left: var(--line-w) solid var(--line-2);
-  }
-  .drawer-sub a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.3rem 0.6rem;
-    border: var(--line-w) solid var(--line-2);
-    border-radius: 999px;
-    font-size: 0.74rem;
-    color: var(--ink-2);
-    background: transparent;
-  }
-  .drawer-sub a i {
-    font-family: var(--font-mono);
-    font-style: normal;
-    font-size: 0.62rem;
-    color: var(--ink-3);
-  }
-  .drawer-sub a:hover {
-    color: var(--accent-deep);
-    border-color: var(--accent);
-    background: var(--accent-soft);
-  }
   @keyframes nav-in {
     from { opacity: 0; transform: translateY(-8px); }
     to { opacity: 1; transform: none; }
   }
-  .drawer a {
-    display: block;
-    padding: 0.65rem 1rem;
-    border-radius: 12px;
-    color: var(--ink-2);
-    font-family: var(--font-mono);
-    font-size: 0.88rem;
-    letter-spacing: 0.08em;
-    text-decoration: none;
-  }
-  .drawer a:hover { background: var(--accent-soft); color: var(--ink); }
   /* 抽屉里的「搜索」是按钮（触发悬浮窗），外观与链接一致 */
-  .drawer-search {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 0.65rem 1rem;
-    border: 0;
-    border-radius: 12px;
-    background: transparent;
-    color: var(--ink-2);
-    font-family: var(--font-mono);
-    font-size: 0.88rem;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-  }
   .drawer-search:hover { background: var(--accent-soft); color: var(--ink); }
-  .drawer a[aria-current='page'] { color: var(--accent-deep); background: var(--accent-soft); }
-  .drawer a.ext { color: var(--ink-3); font-size: 0.8rem; }
 
   @media (max-width: 960px) {
     .nav { display: none; }
@@ -648,45 +864,6 @@ const pad = (n: number) => String(n).padStart(2, '0');
 </style>
 
 <script>
-  // 移动端菜单：汉堡切换抽屉。
-  // 用“全局单次监听 + document 事件委托”实现：ClientRouter 软导航会重建 Header，
-  // 若把监听绑在首屏元素上，导航后新汉堡会失效 —— 委托到 document 则 DOM 重建后依然生效。
-  const setOpen = (open) => {
-    const header = document.querySelector('[data-nav]');
-    const drawer = header?.querySelector('[data-nav-drawer]');
-    const burger = header?.querySelector('[data-nav-burger]');
-    if (!header || !drawer || !burger) return;
-    header.classList.toggle('menu-open', open);
-    drawer.hidden = !open;
-    burger.setAttribute('aria-expanded', String(open));
-    burger.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
-  };
-
-  const onDocClick = (e) => {
-    const burger = e.target.closest('[data-nav-burger]');
-    const header = document.querySelector('[data-nav]');
-    const drawer = header?.querySelector('[data-nav-drawer]');
-    if (!header || !drawer) return;
-
-    if (burger) {
-      // 点汉堡：当前 hidden → 打开，否则关闭
-      setOpen(drawer.hidden);
-      return;
-    }
-    // 点击抽屉内的链接 → 关闭（链接自身的导航由 ClientRouter 处理）
-    if (e.target.closest('[data-nav-drawer] a')) {
-      setOpen(false);
-      return;
-    }
-    // 点击抽屉/汉堡以外的区域 → 关闭
-    if (!e.target.closest('[data-nav-drawer]') && !e.target.closest('.site-header')) {
-      setOpen(false);
-    }
-  };
-
-  // 只挂载一次（脚本模块在软导航时会重新执行，幂等保护避免重复监听）
-  if (!window.__cwNavWired) {
-    window.__cwNavWired = true;
-    document.addEventListener('click', onDocClick);
-  }
+  // ReactBits 风格侧边菜单（StaggeredMenu）+ 顶部指示线，见 scripts/nav-staggered.js
+  import '../scripts/nav-staggered.js';
 </script>
