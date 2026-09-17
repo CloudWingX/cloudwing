@@ -31,34 +31,32 @@ const waitFor = async (x, ms = 30000) => { const t0 = Date.now(); while (Date.no
 await waitFor(`!!document.querySelector('.hd')`);
 await sleep(1500);
 
-console.log(`=== 导航栏（主题 ${THEME}）===`);
-const bar = await ev(`(()=>{const g=document.querySelector('.hd-glass'); if(!g) return null; const c=getComputedStyle(g);
-  const hd=document.querySelector('.hd'); const b=hd.getBoundingClientRect();
-  const inner=document.querySelector('.hd-in');
-  return {上边框:c.borderTopWidth+' '+c.borderTopStyle+' '+c.borderTopColor,
-    下边框:c.borderBottomWidth+' '+c.borderBottomStyle+' '+c.borderBottomColor,
-    左内边距:c.borderLeftWidth, 右内边距:c.borderRightWidth,
+console.log(`=== 导航胶囊（主题 ${THEME}）===`);
+// 导航已从"通栏条"改为"顶部悬浮玻璃胶囊"：玻璃材质直接落在 .hd 上（不再有 .hd-glass 层）。
+const bar = await ev(`(()=>{const hd=document.querySelector('.hd'); if(!hd) return null; const c=getComputedStyle(hd);
+  const b=hd.getBoundingClientRect();
+  return {边框:c.borderTopWidth+' '+c.borderTopStyle+' '+c.borderTopColor,
     // 注意：构建时的 CSS 压缩可能只保留 -webkit-backdrop-filter（Chrome 认这个，效果一样），
     // 所以两个属性都读，只读标准属性会误判成 none。
     模糊:c.backdropFilter||c.webkitBackdropFilter||'none',
-    背景:(c.backgroundImage||c.backgroundColor||'').slice(0,60),
-    圆角:c.borderRadius,
-    栏宽:Math.round(b.width), 视口宽:document.documentElement.clientWidth,
-    内容列宽:inner?Math.round(inner.getBoundingClientRect().width):null,
-    内容列左:inner?Math.round(inner.getBoundingClientRect().left):null,
-    pointerEvents:c.pointerEvents};})()`);
+    背景:c.backgroundColor,
+    圆角:c.borderTopLeftRadius,
+    宽:Math.round(b.width), 高:Math.round(b.height), 顶部距:Math.round(b.top),
+    视口宽:document.documentElement.clientWidth,
+    pointerEvents:c.pointerEvents,
+    最右:Math.round(b.right), 最左:Math.round(b.left)};})()`);
 console.log('  ' + JSON.stringify(bar));
-// 通栏：玻璃层铺满布局视口宽（用 clientWidth 而不是 innerWidth —— 后者含滚动条，
-// 会差出一个滚动条的宽度，误判成"没铺满"）。
-// 边框用底边一条实线做界定（四边描边只在悬浮胶囊上成立）。
-check('导航栏通栏（玻璃层铺满视口宽）', Math.abs(bar.栏宽 - bar.视口宽) <= 2, `栏宽=${bar.栏宽} 视口宽=${bar.视口宽}`);
-const bottomW = parseFloat(String(bar.下边框));
-// 暗色电影感重构后：边框统一为 1px rgba(255,255,255,.2)（细边框，靠亮度而非粗细建立轮廓）
-check('导航栏有可见的分隔边框（底边）', bottomW >= 1, bar.下边框);
-check('分隔边框不是透明', !/rgba\([^)]*,\s*0\)/.test(String(bar.下边框)), bar.下边框);
-check('导航栏边框内有高斯模糊', /blur\(\s*\d+/.test(String(bar.模糊)) && parseFloat(String(bar.模糊).match(/blur\((\d+)/)[1]) >= 12, String(bar.模糊));
-check('内容列仍限宽（与页面内容对齐）', bar.内容列宽 !== null && bar.内容列宽 <= bar.视口宽, `内容列=${bar.内容列宽}`);
-check('玻璃层不拦截点击（导航仍可用）', bar.pointerEvents === 'none', String(bar.pointerEvents));
+// 胶囊：宽 min(1200px, 100% - 40px) 居中、距顶 16px、圆角 999px（完全圆头）
+const expW = Math.min(1200, bar.视口宽 - 40);
+check('胶囊宽度 = min(1200px, 100% - 40px)', Math.abs(bar.宽 - expW) <= 2, `宽=${bar.宽} 期望=${expW}`);
+check('胶囊居中', Math.abs(bar.最左 - (bar.视口宽 - bar.宽) / 2) <= 2, `左=${bar.最左}`);
+check('距顶部 16px', Math.abs(bar.顶部距 - 16) <= 1, String(bar.顶部距));
+check('圆角 999px（完全圆头）', parseFloat(bar.圆角) >= 40, bar.圆角);
+const borderW = parseFloat(String(bar.边框));
+check('有可见边框（1px）', borderW >= 1, bar.边框);
+check('边框不是透明', !/rgba\([^)]*,\s*0\)/.test(String(bar.边框)), bar.边框);
+check('胶囊内有高斯模糊', /blur\(\s*\d+/.test(String(bar.模糊)) && parseFloat(String(bar.模糊).match(/blur\((\d+)/)[1]) >= 12, String(bar.模糊));
+check('背景为半透明玻璃（非纯色）', /rgba\(/.test(String(bar.背景)), String(bar.背景));
 
 console.log('\n=== 二级菜单（下拉容器）===');
 await ev(`(()=>{const c=document.querySelector('[data-nav-caret]'); if(c) c.click();})()`);

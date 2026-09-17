@@ -1315,9 +1315,10 @@ function autoHideHeader() {
   let last = window.scrollY;
   let ticking = false;
 
-  // 导航栏材质：顶部近乎透明（露出视频），一离开顶部就换成半透明暗色。
-  // 只切一个 html 属性，具体颜色在 Header.astro 里（[data-scrolled='1']）。
-  const SCROLL_MATERIAL_AT = 24;
+  // 导航胶囊材质：向下滚动超过 80px → 变矮 + 玻璃加深 + 阴影加重。
+  // 只切一个 html 属性，具体样式在 Header.astro 的 [data-scrolled='1']（用 class/属性切换，
+  // **不硬切 position**）。向上滚回 80px 以内立即恢复。
+  const SCROLL_MATERIAL_AT = 80;
   const setMaterial = (y) => {
     const want = y > SCROLL_MATERIAL_AT ? '1' : '0';
     const root = document.documentElement;

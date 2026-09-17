@@ -37,10 +37,11 @@ const items = NAV.map((item) => ({ ...item, sub: SUBS[item.href] ?? [] }));
 const pad = (n: number) => String(n).padStart(2, '0');
 ---
 <header class="site-header" data-nav>
+  {/* 悬浮玻璃胶囊：宽 min(1200px, 100% - 40px)、距顶 16px、高 56px（滚动后 52px）、圆角 999px。
+      玻璃材质与尺寸都走 --nav-* 令牌（见样式里的「导航胶囊令牌」块）——
+      想换成浅色玻璃只改那一块，不必动结构。 */}
   <div class="hd">
-    {/* 玻璃层：通栏铺满 + 底边框 + 栏内高斯模糊（见样式里的 .hd-glass） */}
-    <span class="hd-glass" aria-hidden="true"></span>
-    {/* 内容列：限宽居中，与页面内容左右对齐 */}
+    {/* 内容行：Logo · 中间留白 · 右侧链接组 */}
     <div class="hd-in">
     <a class="brand" href="/" aria-label="回到首页">
       <HexMark size={24} fill="var(--ink)" />
@@ -189,44 +190,84 @@ const pad = (n: number) => String(n).padStart(2, '0');
     }
   }
 
+  /* ══════════════════════════════════════════════════════════════
+     导航胶囊令牌 —— 想换配色只改这一块
+     结构/尺寸/交互与配色解耦：下面是"暗色玻璃"版，适配当前暗色电影感站点。
+     若要换成规格原文里的**浅色通透**版（白胶囊 + 深字），把这些值换成：
+       --nav-bg: rgba(255,255,255,.72);       --nav-bg-scrolled: rgba(255,255,255,.85);
+       --nav-border: rgba(255,255,255,.6);    --nav-shadow: 0 4px 24px rgba(0,0,0,.06);
+       --nav-shadow-scrolled: 0 8px 32px rgba(0,0,0,.10);
+       --nav-ink: #1a1a2e;   --nav-ink-dim: #555;   --nav-hover-bg: rgba(0,0,0,.04);
+       --nav-blur: blur(20px) saturate(1.4);  --nav-drawer-bg: rgba(255,255,255,.92);
+     ══════════════════════════════════════════════════════════════ */
+  .site-header {
+    --nav-w: min(1200px, calc(100% - 40px));
+    --nav-top: 16px;
+    --nav-h: 56px;
+    --nav-h-scrolled: 52px;
+    /* 半透明 → 视频能透上来（保持暗色电影感） */
+    --nav-bg: rgba(9, 12, 16, 0.55);
+    --nav-bg-scrolled: rgba(9, 12, 16, 0.78);
+    --nav-border: rgba(255, 255, 255, 0.2);
+    --nav-border-scrolled: rgba(255, 255, 255, 0.3);
+    --nav-shadow: 0 4px 24px rgba(0, 0, 0, 0.28);
+    --nav-shadow-scrolled: 0 8px 32px rgba(0, 0, 0, 0.42);
+    --nav-blur: blur(20px) saturate(1.4);
+    --nav-ink: #ffffff;
+    --nav-ink-dim: #c9d1d9;
+    --nav-hover-bg: rgba(255, 255, 255, 0.08);
+    --nav-link-fs: 14px;
+    --nav-link-pad: 8px 14px;
+    --nav-link-radius: 10px;
+    /* 移动端下拉面板必须**基本不透明**：它盖在正文之上，0.92 这类半透明会让
+       下方的正文与视频透上来（实测像素差 347/765，观感像重影）。
+       保留一点渐变与模糊，让它仍是"玻璃片"而不是死板色块。 */
+    --nav-drawer-bg: linear-gradient(180deg, rgba(9, 12, 16, 0.99), rgba(9, 12, 16, 0.97));
+  }
+
   .hd {
-    /* 通栏玻璃条：视觉层是 .hd 里的 .hd-glass（铺满整条、通栏），
-       内容由内部的 .hd-in 限宽居中，与页面内容列左右对齐。
-       这里不要用 overflow:hidden —— .nav-sub（二级菜单）是 .hd 的绝对定位后代，会被一起裁掉。 */
+    /* 悬浮胶囊本体：不再是通栏条，而是一块居中、圆角 999px 的玻璃片。
+       这里不要用 overflow:hidden —— .nav-sub（二级菜单）是它的绝对定位后代，会被裁掉。 */
     position: relative;
     isolation: isolate;
-    display: block;
+    width: var(--nav-w);
+    height: var(--nav-h);
+    margin: var(--nav-top) auto 0;
+    border-radius: 999px;
+    background: var(--nav-bg);
+    border: 1px solid var(--nav-border);
+    box-shadow: var(--nav-shadow);
+    -webkit-backdrop-filter: var(--nav-blur);
+    backdrop-filter: var(--nav-blur);
+    /* 只过渡高度/背景/阴影/边框 —— 不硬切 position，也不动 transform（那是收起的职责） */
+    transition:
+      height 0.28s var(--ease),
+      background 0.28s var(--ease),
+      box-shadow 0.28s var(--ease),
+      border-color 0.28s var(--ease);
   }
-  /* 玻璃层：通栏铺满 + 底边框 + 边框内的高斯模糊。
-     backdrop-filter 会把"本层范围内、元素背后"的内容模糊掉，视觉上就是"栏内磨砂"。
-     用真实元素而不是 ::before —— 伪元素的 backdrop-filter 读不到计算值，没法自检。
-     通栏后不再用「四边圆角描边」（那种框法只在悬浮胶囊上成立），改为底边一条实线做界定。 */
-  .hd-glass {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    border: 0;
-    border-bottom: var(--line-w) solid var(--line-2);
-    /* 半透明（--glass-nav）：给背景视频留出可见度。
-       模糊留着 —— 视频透上来时是"磨砂"而不是清晰的画面。 */
-    background: var(--glass-nav);
-    /* 顺序与 .nav-sub 一致（-webkit- 在前）：构建时的 CSS 压缩会合并这两个前缀，
-       顺序不同可能导致合并后把标准属性丢掉（实测过一次，结果计算值是 none）。 */
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 18px rgba(0, 0, 0, 0.14);
-    pointer-events: none;
-    /* 滚动时从"几乎透明"过渡到"半透明暗色"（见下面的 [data-scrolled='1']） */
-    transition: background 0.3s var(--ease), border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  /* 移动端：左右各留 16px（规格要求比桌面的 20px 更窄） */
+  @media (max-width: 640px) {
+    .site-header { --nav-w: calc(100% - 32px); }
   }
-  /* 离开页面顶部后：导航栏加深，保证压得住后面的内容 */
-  html[data-scrolled='1'] .site-header .hd-glass {
-    background: var(--glass-nav-solid);
-    border-bottom-color: var(--line-hover);
-    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.32);
+  /* 向下滚动超过 80px：胶囊变矮、玻璃加深、阴影加重（见 ui.js 的 setMaterial） */
+  html[data-scrolled='1'] .site-header .hd {
+    height: var(--nav-h-scrolled);
+    background: var(--nav-bg-scrolled);
+    border-color: var(--nav-border-scrolled);
+    box-shadow: var(--nav-shadow-scrolled);
   }
   @media (prefers-reduced-motion: reduce) {
-    .hd-glass { transition: none; }
+    .hd { transition: none; }
+  }
+
+  /* 内容行：Logo · 中间留白 · 右侧链接组 */
+  .hd-in {
+    height: 100%;
+    padding: 0 10px 0 18px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
   }
 
   /* 背景动态开关（可访问性）：与主题开关同尺寸；默认低调，不抢画面 */
@@ -254,34 +295,23 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .motion-toggle[aria-pressed='true'] { color: var(--accent-deep); border-color: var(--accent); }
   .motion-toggle[aria-pressed='true'] .mt-pause { display: none; }
   .motion-toggle[aria-pressed='true'] .mt-play { display: inline-flex; }
-  /* 内容列：限宽 + 左右留白，与 .wrap 同一套（--w-max / --gutter），
-     所以品牌、导航项、右侧按钮的位置和页面内容对齐。 */
-  .hd-in {
-    max-width: calc(var(--w-max) + 2 * var(--gutter));
-    margin: 0 auto;
-    padding: 10px var(--gutter);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  /* —— 品牌 —— */
+  /* —— 品牌（Logo）——
+     规格：15px / 字重 600 / --nav-ink / 字距 -0.01em */
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.55rem;
     text-decoration: none;
-    color: var(--ink);
+    color: var(--nav-ink);
     flex: none;
   }
   .brand .bname {
     font-family: var(--font-display);
-    font-size: 0.98rem;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    line-height: 1.05;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    text-transform: none; /* 胶囊风格下不再全大写，更轻盈 */
   }
   .brand .bname small {
     display: block;
@@ -289,7 +319,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     font-size: 0.54rem;
     font-weight: 500;
     letter-spacing: 0.24em;
-    color: var(--ink-3);
+    color: var(--nav-ink-dim);
   }
 
   /* —— 中部链接胶囊 —— */
@@ -301,28 +331,42 @@ const pad = (n: number) => String(n).padStart(2, '0');
     flex: 1 1 auto;
     min-width: 0;
   }
+  /* —— 链接：14px / 500 / padding 8px 14px / 圆角 10px —— */
   .nav a {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    padding: 0.45rem 0.95rem;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.08em;
-    color: var(--ink-2);
+    padding: var(--nav-link-pad);
+    border-radius: var(--nav-link-radius);
+    border: 0;
+    font-family: var(--font-body);
+    font-size: var(--nav-link-fs);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--nav-ink-dim);
     text-decoration: none;
     white-space: nowrap;
-    transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+    transition: color 0.2s ease, background 0.2s ease;
   }
   .nav a:hover {
-    color: var(--ink);
-    background: var(--accent-soft);
+    color: var(--nav-ink);
+    background: var(--nav-hover-bg);
   }
+  /* 当前页：底部 2px 雾蓝短横线（**不整块高亮**，保持轻盈） */
   .nav a[aria-current='page'] {
-    color: var(--accent-deep);
-    background: var(--accent-soft);
-    border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+    color: var(--nav-ink);
+    background: transparent;
+  }
+  .nav a[aria-current='page']::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 3px;
+    translate: -50% 0;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
   }
 
   /* —— 导航二级菜单（各子页面的分类）—— */
@@ -489,25 +533,24 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .site-header.menu-open .b-line:last-child { transform: translateY(-3.5px) rotate(-45deg); }
   .site-header.menu-open .burger { color: var(--accent-deep); }
 
-  /* —— 移动端抽屉 —— */
+  /* —— 移动端菜单：从顶部下拉的玻璃面板 ——
+     规格：背景 rgba(255,255,255,.92) + blur(24px)、圆角 20px、淡入 + 轻微下移 */
   .drawer {
     position: absolute;
-    top: calc(100% - 4px);
-    left: var(--gutter);
-    right: var(--gutter);
+    top: calc(100% + 10px);
+    left: 16px;
+    right: 16px;
     display: flex;
     flex-direction: column;
     gap: 2px;
     padding: 10px;
-    border-radius: 18px;
-    border: var(--line-w) solid var(--line-2);
-    /* 与顶栏/二级菜单同一套玻璃：更实的底 + 边框内高斯模糊
-       （太透会让底下的页面内容透进来） */
-    background: var(--glass-panel);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-    box-shadow: var(--shadow-lg);
-    animation: nav-in 0.22s var(--ease);
+    border-radius: 20px;
+    border: 1px solid var(--nav-border);
+    background: var(--nav-drawer-bg);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    backdrop-filter: blur(24px) saturate(1.4);
+    box-shadow: var(--nav-shadow-scrolled);
+    animation: nav-in 0.24s var(--ease);
   }
   .drawer[hidden] { display: none; }
   /* 抽屉里的二级分类（缩进一级，挂在对应页面项下面） */

@@ -28,7 +28,7 @@ const waitFor = async (x, ms = 40000) => { const t0 = Date.now(); while (Date.no
 await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Page.navigate', { url: BASE + '/works/' });
-await waitFor(`!!document.querySelector('.hd-glass')`);
+await waitFor(`!!document.querySelector('.hd')`);
 // 清偏好 → 站点默认（dark）
 await ev(`try{localStorage.clear();sessionStorage.clear();document.cookie.split(';').forEach(c=>{const k=c.split('=')[0].trim();document.cookie=k+'=;path=/;max-age=0';});}catch(e){}`);
 await s('Page.navigate', { url: BASE + '/works/' });
@@ -45,7 +45,7 @@ check('点主题开关后仍为暗色（不再切浅色）', (await ev(`document
 
 console.log('\n=== 玻璃材质 ===');
 const glass = await ev(`(()=>{
-  const g=document.querySelector('.hd-glass');
+  const g=document.querySelector('.hd');
   const c=getComputedStyle(g);
   const card=document.querySelector('.wk-card');
   const cc=card?getComputedStyle(card):null;
@@ -61,11 +61,18 @@ const glass = await ev(`(()=>{
     令牌:getComputedStyle(document.documentElement).getPropertyValue('--glass-blur').trim(),
   };})()`);
 console.log('  ' + JSON.stringify(glass));
-check('导航栏边框 = rgba(255,255,255,0.2)', /255,\s*255,\s*255,\s*0?\.2\b/.test(glass.栏边框), glass.栏边框);
-check('玻璃模糊 = blur(20px) saturate(1.2)', /blur\(20px\)/.test(String(glass.栏模糊)) && /saturate\(1\.2\)/.test(String(glass.栏模糊)), String(glass.栏模糊));
+check('导航胶囊边框 = rgba(255,255,255,0.2)', /255,\s*255,\s*255,\s*0?\.2\b/.test(glass.栏边框), glass.栏边框);
+// 导航胶囊有自己的 --nav-blur（规格指定 saturate(1.4)），与全站玻璃令牌 --glass-blur
+// （saturate(1.2)，用于卡片/浮层）刻意分开，所以这里按导航自己的值断言。
+check('导航胶囊模糊 = blur(20px) saturate(1.4)', /blur\(20px\)/.test(String(glass.栏模糊)) && /saturate\(1\.4\)/.test(String(glass.栏模糊)), String(glass.栏模糊));
+check('全站玻璃令牌仍为 blur(20px) saturate(1.2)', /blur\(20px\) saturate\(1\.2\)/.test(String(glass.令牌)), String(glass.令牌));
 check('卡片是玻璃底（半透明，非纯色）', /rgba\(/.test(String(glass.卡底)), String(glass.卡底));
 check('卡片圆角在 16–24px', parseFloat(glass.卡圆角) >= 16 && parseFloat(glass.卡圆角) <= 24, String(glass.卡圆角));
-check('导航栏滚动前近乎透明（≤0.35）', parseFloat(String(glass.栏底).match(/[\d.]+\)$/)?.[0] || '1') <= 0.35, String(glass.栏底));
+// 胶囊必须"半透明但可读"：太透会让下方正文透上来（实测 0.28 时导航文字读不清）
+check('导航胶囊半透明且可读（0.4–0.7）',
+  parseFloat(String(glass.栏底).match(/[\d.]+\)$/)?.[0] || '1') >= 0.4 &&
+  parseFloat(String(glass.栏底).match(/[\d.]+\)$/)?.[0] || '1') <= 0.7,
+  String(glass.栏底));
 
 console.log('\n=== 暂停动态（WCAG 2.2.2）===');
 const before = await ev(`document.querySelector('.video-bg__el').paused`);
@@ -82,10 +89,10 @@ await sleep(800);
 check('再点一次恢复播放', (await ev(`document.querySelector('.video-bg__el').paused`)) === false);
 
 console.log('\n=== 导航栏滚动过渡 ===');
-const atTop = await ev(`getComputedStyle(document.querySelector('.hd-glass')).backgroundColor`);
+const atTop = await ev(`getComputedStyle(document.querySelector('.hd')).backgroundColor`);
 await ev(`window.scrollTo(0, 400)`);
 await sleep(900);
-const scrolled = await ev(`getComputedStyle(document.querySelector('.hd-glass')).backgroundColor`);
+const scrolled = await ev(`getComputedStyle(document.querySelector('.hd')).backgroundColor`);
 console.log(`  顶部 ${atTop}  →  滚动后 ${scrolled}`);
 check('滚动后导航栏加深', atTop !== scrolled, `${atTop} → ${scrolled}`);
 
