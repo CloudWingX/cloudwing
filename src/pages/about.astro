@@ -85,10 +85,7 @@ import { SITE } from '../site';
         frontImage="/lanyard/avatar-front.svg"
         imageFit="cover"
       />
-      <p class="ly-hint" data-ly-hint aria-hidden="true">
-        <span class="ly-hint-arrow">↓</span>
-        <span class="ly-hint-text" data-ly-hint-text>下拉工牌 · 开灯 / 关灯</span>
-      </p>
+      {/* 「下拉工牌 · 开灯/关灯」提示已移除：那是切换主题的手势，随亮色主题一并删除 */}
     </div>
   </div>
 </SidebarLayout>
@@ -200,45 +197,10 @@ import { SITE } from '../site';
        这里从宿主页面调低（不动官方原码），两者一起收到 400px。 */
     .ly-floater { height: 400px; cursor: pointer; touch-action: manipulation; }
     .ly-floater :global(.lanyard-wrapper) { min-height: 400px; }
-    .ly-hint { bottom: 2px; opacity: 0.85; }
   }
 
-  /* 下拉提示（拉绳开关的说明；纯装饰，不拦指针） */
-  .ly-hint {
-    position: absolute;
-    left: 50%;
-    bottom: 6px;
-    transform: translateX(-50%);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin: 0;
-    padding: 0.34rem 0.85rem;
-    border-radius: 999px;
-    border: 1px solid var(--line-1);
-    background: var(--glass);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.08em;
-    color: var(--ink-3);
-    white-space: nowrap;
-    pointer-events: none;
-    opacity: 0.75;
-    transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-    z-index: 3;
-  }
-  .ly-hint-arrow { display: inline-block; transition: transform 0.2s ease; }
-  /* 正在下拉：箭头跟手 + 高亮 */
-  :global(.ly-floater.is-pulling) .ly-hint {
-    opacity: 1;
-    color: var(--accent-deep);
-    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  }
-  :global(.ly-floater.is-pulling) .ly-hint-arrow { transform: translateY(3px); }
-  /* 已触发：提示变结果文案 */
-  :global(.ly-floater.is-triggered) .ly-hint { opacity: 1; color: var(--accent-deep); }
+  /* 「下拉提示」与「灯闪」反馈已随亮色主题一并删除：
+     工牌原本是"拉绳切换白日/夜间"的开关，站点现在只有一套暗色主题，该手势不复存在。 */
 
   /* 正文拉丁词：光标邻近可变字重（原生实现，与标题的 VariableProximity 参数一致）
      逐字符 inline-block 但不插入空白，所以词内不断行、词间/中文排版不受影响。
@@ -250,21 +212,7 @@ import { SITE } from '../site';
     white-space: nowrap;
   }
 
-  /* 开关灯的“灯闪”反馈 */
-  :global(html.cw-lights-flash body)::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    pointer-events: none;
-    background: #fff;
-    animation: cw-lights 0.5s ease-out both;
-  }
-  :global(html[data-theme='dark'].cw-lights-flash body)::after { background: #000; }
-  @keyframes cw-lights {
-    0% { opacity: 0.85; }
-    100% { opacity: 0; }
-  }
+  /* 「灯闪」反馈与 .ly-hint 提示已随亮色主题删除（工牌不再切换主题） */
 
   @media (min-width: 1025px) {
     /* 贴页面右上边缘：挂点位于内容区顶边，绳子自然垂到工牌 */
@@ -281,7 +229,6 @@ import { SITE } from '../site';
       -webkit-user-select: none;
       user-select: none;
     }
-    .ly-hint { bottom: 14px; }
     .mb-shell { margin-top: 3rem; }
   }
 
@@ -297,7 +244,6 @@ import { SITE } from '../site';
       height: min(68vh, 520px);
       z-index: 3; /* 浮在正文之上 */
     }
-    .ly-hint { bottom: 10px; }
   }
 
   /* 灵感导航卡已删除 → bento 现为 5 卡；
@@ -314,50 +260,19 @@ import { SITE } from '../site';
      卡底色/辉光色由 AboutMagicBento.jsx 按主题切换；
      这里负责：浅色主题下卡片文字/边框/描边辉光变深色，深色主题维持原样。
      ============================================================ */
-  :global(html[data-theme='light'] .mb-wrap) {
-    --white: #1b1d22; /* 卡片内小标签默认色 */
-    --border-color: #cfd2d8;
-    --background-dark: #f6f7f8; /* 卡片底色（无内联色时走这里，纯 CSS 随主题切换） */
-  }
-  :global(html[data-theme='light'] .magic-bento-card) {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-  }
-  :global(html[data-theme='light'] .magic-bento-card__label) {
-    color: #3f4248;
-  }
-  :global(html[data-theme='light'] .magic-bento-card__title) {
-    color: #141416;
-  }
-  :global(html[data-theme='light'] .magic-bento-card__description) {
-    color: #55585f;
-  }
-  :global(html[data-theme='light'] .magic-bento-card--border-glow::after) {
-    background: radial-gradient(
-      var(--glow-radius) circle at var(--glow-x) var(--glow-y),
-      rgba(70, 74, 84, calc(var(--glow-intensity) * 0.75)) 0%,
-      rgba(70, 74, 84, calc(var(--glow-intensity) * 0.35)) 30%,
-      transparent 60%
-    );
-  }
-  :global(html[data-theme='light'] .particle::before) {
-    background: rgba(40, 42, 50, 0.16);
-  }
 </style>
 
 <script>
   // ============================================================
-  // 工牌 = 拉绳开关：向下拖拽工牌切换「白日 / 夜间」主题
-  // - pointerdown 在工牌容器内启动；move/up 监听挂在 window 上，
-  //   因此拖拽可以超出容器范围（拖到页面任意位置），范围不再受限
-  // - 下拉距离达到阈值即触发一次切换，本次拖拽内不重复触发
-  // - 触发时给 html 加 .cw-lights-flash，做一次“灯闪”反馈
-  // - 主题切换复用既有 .theme-toggle（保证 localStorage / cookie 三通道一致）
+  // 工牌拖拽：纯装饰性的"拉绳"手感（跟随指针、松手回弹）。
+  // ⚠️ 原来的「下拉工牌切换白日/夜间」已随亮色主题一并删除 —— 站点只有一套暗色主题，
+  //    留着这个手势只会点不动（.theme-toggle 已不存在）。
   //
   // ⚠️ 状态必须放在 window 全局单例上：Astro 软导航（ClientRouter）后本脚本会
   //    重新执行，若用模块级变量，新绑定的 pointerdown 与首屏挂上的 window 级
   //    move/up 监听会读写不同对象 → “切走再切回后功能失效”。
   // ============================================================
-  const PULL_THRESHOLD = 220; // 触发所需的下拉像素（拖得更远才切换）
+  const PULL_THRESHOLD = 220; // 记录拖拽幅度的参考值（仅用于手感反馈）
   const pull =
     window.__cwLanyardPull ||
     (window.__cwLanyardPull = {
@@ -369,33 +284,14 @@ import { SITE } from '../site';
       host: null,
     });
 
-  const triggerLights = () => {
-    const toggle = document.querySelector('.theme-toggle');
-    if (toggle instanceof HTMLElement) toggle.click();
-    else {
-      const root = document.documentElement;
-      root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
-    }
-    const root = document.documentElement;
-    root.classList.remove('cw-lights-flash');
-    void root.offsetWidth; // 重启 CSS 动画
-    root.classList.add('cw-lights-flash');
-    setTimeout(() => root.classList.remove('cw-lights-flash'), 620);
-  };
-
-  const hintText = (host) => host?.querySelector('[data-ly-hint-text]');
-  const HINT_IDLE = '下拉工牌 · 开灯 / 关灯';
-  const HINT_IDLE_TAP = '点一下工牌 · 开灯 / 关灯';
   const isDesktop = () => window.matchMedia('(min-width: 1025px)').matches;
-  // 提示文案随断点切换：手机端没有"下拉"这个手势，别写一个做不到的提示
-  const idleHint = () => (isDesktop() ? HINT_IDLE : HINT_IDLE_TAP);
 
   const onDown = (e) => {
     // document 级事件委托：软导航重建 DOM 后无需重新绑定，永远有效
     const host = e.target instanceof Element ? e.target.closest('[data-lanyard]') : null;
     if (!(host instanceof HTMLElement)) return;
-    // 仅桌面端（工牌绝对定位在右上角时）启用“下拉开关灯”；
-    // 移动端工牌是文档流中的大块区域，下拉会与页面滚动冲突，故不启用（改用点击，见 onTap）
+    // 仅桌面端（工牌绝对定位在右上角时）启用拖拽手感；
+    // 移动端工牌是文档流中的大块区域，下拉会与页面滚动冲突
     if (!isDesktop()) return;
     pull.active = true;
     pull.triggered = false;
@@ -412,75 +308,21 @@ import { SITE } from '../site';
     if (!host || !host.isConnected) return;
     const dy = e.clientY - pull.startY;
     if (dy <= 12) return;
-
-    if (pull.triggered) return;
     host.classList.add('is-pulling');
     pull.moved = true;
-
-    // 进度提示：越接近阈值文案越“急”，让“要拖更远”变得可感知
-    const ratio = dy / PULL_THRESHOLD;
-    const text = hintText(host);
-    if (text) {
-      if (ratio >= 0.75) text.textContent = '↓↓ 快到了，再加把劲';
-      else if (ratio >= 0.4) text.textContent = '↓↓ 继续往下拉…';
-      else text.textContent = '↓ ' + HINT_IDLE;
-    }
-
-    if (dy >= PULL_THRESHOLD) {
-      pull.triggered = true;
-      host.classList.remove('is-pulling');
-      host.classList.add('is-triggered');
-      // 用“切换前”的主题判断灯的状态（切换本身走 .theme-toggle）
-      const wasLight = document.documentElement.dataset.theme === 'light';
-      if (text) text.textContent = wasLight ? '已关灯 · 夜间' : '已开灯 · 白日';
-      triggerLights();
-    }
   };
 
   const onUp = (e) => {
     if (!pull.active) return;
     if (pull.pointerId !== null && e.pointerId !== pull.pointerId) return;
     const host = pull.host;
-    const wasTriggered = pull.triggered;
     pull.active = false;
     pull.pointerId = null;
     pull.host = null;
     pull.triggered = false;
     if (!host || !host.isConnected) return;
     host.classList.remove('is-pulling');
-    if (wasTriggered) {
-      setTimeout(() => {
-        if (!host.isConnected) return;
-        host.classList.remove('is-triggered');
-        const text = hintText(host);
-        if (text) text.textContent = idleHint();
-      }, 1400);
-    } else {
-      const text = hintText(host);
-      if (text) text.textContent = idleHint();
-    }
-  };
-
-  // 手机端：工牌改为「点一下」开关灯（下拉会与页面滚动冲突）。
-  // 同样走 document 委托；拖动过（pull.moved）就不当成点击。
-  const onTap = (e) => {
-    const host = e.target instanceof Element ? e.target.closest('[data-lanyard]') : null;
-    if (!(host instanceof HTMLElement)) return;
-    if (isDesktop()) return;   // 桌面端用下拉手势
-    if (pull.moved || pull.active) return;
-    // 拖动过后浏览器仍会补一个 click，这里靠 moved 标记挡住
-    pull.moved = false;
-    const wasLight = document.documentElement.dataset.theme === 'light';
-    host.classList.add('is-triggered');
-    const text = hintText(host);
-    if (text) text.textContent = wasLight ? '已关灯 · 夜间' : '已开灯 · 白日';
-    triggerLights();
-    setTimeout(() => {
-      if (!host.isConnected) return;
-      host.classList.remove('is-triggered');
-      const t = hintText(host);
-      if (t) t.textContent = idleHint();
-    }, 1400);
+    host.classList.remove('is-triggered');
   };
 
   const bindLanyard = () => {
@@ -498,15 +340,8 @@ import { SITE } from '../site';
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerup', onUp, { passive: true });
     window.addEventListener('pointercancel', onUp, { passive: true });
-    document.addEventListener('click', onTap);
   }
   bindLanyard();
-  // 提示文案按当前断点初始化（手机端说“点一下”）
-  {
-    const host = document.querySelector('[data-lanyard]');
-    const text = host ? hintText(host) : null;
-    if (text) text.textContent = idleHint();
-  }
 </script>
 
 <script>

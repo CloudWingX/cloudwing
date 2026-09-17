@@ -107,14 +107,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
         </svg>
         <span>搜索</span>
       </button>
-      <button type="button" class="theme-toggle" aria-label="当前为白日模式，点击切换到夜间模式" aria-pressed="false" title="白日 / 夜间">
-        <span class="ico-moon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 13.6A8.6 8.6 0 0 1 10.4 3.8a8.6 8.6 0 1 0 9.8 9.8Z"/></svg>
-        </span>
-        <span class="ico-sun" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.1"/><path d="M12 2.8v2.3M12 18.9v2.3M2.8 12h2.3M18.9 12h2.3M5.5 5.5l1.6 1.6M16.9 16.9l1.6 1.6M18.5 5.5l-1.6 1.6M7.1 16.9l-1.6 1.6"/></svg>
-        </span>
-      </button>
+      {/* 主题开关已删除：站点只有一套暗色电影感主题（见 global.css 的 :root 注释） */}
       {/* 可访问性：给"动态背景"一个显式的暂停入口（WCAG 2.2.2 暂停/停止/隐藏）。
           默认仅在 hover/focus 时淡入，不干扰画面；由 VideoBackground 的脚本接管。 */}
       <button
@@ -478,7 +471,6 @@ const pad = (n: number) => String(n).padStart(2, '0');
     flex: none;
   }
   .pill,
-  .theme-toggle,
   .burger {
     display: inline-flex;
     align-items: center;
@@ -503,13 +495,11 @@ const pad = (n: number) => String(n).padStart(2, '0');
     padding: 0 1rem;
   }
   .pill:hover,
-  .theme-toggle:hover {
     color: var(--accent-deep);
     border-color: var(--accent);
     background: var(--accent-soft);
     transform: translateY(-1px);
   }
-  .theme-toggle {
     width: 40px;
     flex: none;
     padding: 0;
@@ -632,8 +622,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .brand .bname { font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .brand .bname small { font-size: 0.46rem; letter-spacing: 0.16em; }
     .acts { gap: 5px; }
-    .pill, .theme-toggle, .burger { height: 36px; }
-    .pill.ext, .pill.search-pill { width: 36px; }
+    .pill,    .pill.ext, .pill.search-pill { width: 36px; }
     .nav-caret { width: 18px; height: 18px; }
   }
   @media (max-width: 520px) {

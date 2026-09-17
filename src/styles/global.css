@@ -101,7 +101,7 @@
 @media (max-width: 640px) {
   :root { --glass-blur: blur(12px) saturate(1.1); }
   /* 触控区域：交互控件不低于 44px 高（Apple HIG 建议） */
-  .pill, .pill-sm, .btn, .btn-lg, .theme-toggle, .burger, .tag, .chip { min-height: 44px; }
+  .pill, .pill-sm, .btn, .btn-lg, .burger, .tag, .chip { min-height: 44px; }
 }
 /* ============ 减少动态效果 ============
    视频本身由 VideoBackground.astro 的脚本暂停（只留首帧）；

@@ -31,7 +31,6 @@ const r = await send('Runtime.evaluate', {
       pick('.pf-links a', '个人信息链接'),
       pick('.chip', '标签'),
       pick('.topbar', '顶栏'),
-      pick('.theme-toggle', '主题切换'),
       pick('.art-toc', '正文目录'),
       '主题=' + document.documentElement.dataset.theme,
       '--line-1=' + getComputedStyle(document.documentElement).getPropertyValue('--line-1').trim(),

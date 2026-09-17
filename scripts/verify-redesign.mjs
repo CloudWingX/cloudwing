@@ -37,11 +37,8 @@ await sleep(2500);
 
 console.log('=== 单主题 ===');
 check('站点恒为暗色', (await ev(`document.documentElement.dataset.theme`)) === 'dark');
-// 点主题开关后仍应是 dark
-await ev(`document.querySelector('.theme-toggle')?.click()`);
-await sleep(600);
-check('点主题开关后仍为暗色（不再切浅色）', (await ev(`document.documentElement.dataset.theme`)) === 'dark',
-  await ev(`document.documentElement.dataset.theme`));
+// 主题切换按钮已删除（亮色主题一并移除）
+check('主题切换按钮已删除', (await ev(`document.querySelectorAll('.theme-toggle').length`)) === 0);
 
 console.log('\n=== 玻璃材质 ===');
 const glass = await ev(`(()=>{

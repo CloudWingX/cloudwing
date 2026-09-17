@@ -71,9 +71,6 @@ const on = Boolean(VIDEO_BG.src);
     object-fit: cover; /* 任意画幅都铺满视口，不留黑边 */
     opacity: var(--vid-opacity-dark, 0.5);
   }
-  html[data-theme='light'] .video-bg__el {
-    opacity: var(--vid-opacity-light, 0.3);
-  }
   /* 视频一旦能出画，就淡入 —— 避免加载瞬间的"跳一下"。
      没加 has-poster 时（组件未接管）保持可见，避免万一脚本失效导致视频被永久藏住。 */
   .video-bg.has-poster:not(.is-playing) .video-bg__el { opacity: 0; }
@@ -98,9 +95,6 @@ const on = Boolean(VIDEO_BG.src);
     );
   }
   /* 兜底：万一切到浅色态（本设计只提供暗色，这里仅为防御） */
-  html[data-theme='light'] .video-bg::after {
-    background: rgba(255, 255, 255, var(--scrim-light, 0.55));
-  }
 </style>
 
 <script>

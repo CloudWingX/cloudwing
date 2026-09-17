@@ -500,32 +500,8 @@ body.has-video-bg {
    V17 — 夜晚模式（html[data-theme='dark']）+ 顶部切换开关
    ============================================================ */
 
-/* 切换开关（月 / 日） */
-.theme-toggle {
-  flex: none; width: 38px; height: 38px; border-radius: 50%;
-  border: var(--line-w) solid var(--line-2);
-  background: var(--glass-soft);
-  color: var(--ink-2);
-  display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 1.05rem; line-height: 1;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
-    transform 0.2s var(--ease), box-shadow 0.2s ease;
-}
-.theme-toggle:hover {
-  color: var(--accent-deep); border-color: var(--accent);
-  transform: translateY(-1px); box-shadow: 0 0 0 4px var(--accent-soft);
-}
-/* 图标：白日态显示“月亮”（点击去夜间），夜间态显示“太阳”（点击回白日） */
-.theme-toggle .ico-sun,
-.theme-toggle .ico-moon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.theme-toggle .ico-sun { display: none; }
-html[data-theme='dark'] .theme-toggle .ico-moon { display: none; }
-html[data-theme='dark'] .theme-toggle .ico-sun { display: inline-flex; }
-@media (pointer: coarse) { .theme-toggle:hover { transform: none; } }
+/* 主题开关已删除：站点只有一套暗色主题（见 global.css 的 :root）。
+   下面的 .theme-toggle 规则（月/日图标、hover 等）一并移除，避免留下死样式。 */
 
 /* ---------- 主题令牌 ----------
    全站只有一套暗色电影感主题（:root 里已定义）。这里**刻意重复同一组值**：
@@ -679,7 +655,6 @@ html[data-theme='dark'] .wk-card .cov,
 html[data-theme='dark'] .shot-card img {
   background: rgba(14, 14, 16, 0.45);
 }
-html[data-theme='dark'] .theme-toggle:hover { box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2); }
 html[data-theme='dark'] .state::before { box-shadow: none; }
 
 /* 导航栏文字加粗一点（中文标签更清晰） */

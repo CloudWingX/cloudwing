@@ -9,122 +9,18 @@ let ambienceOn = false;
 let progressEl = null;
 let lightboxState = null;
 
-/* ---------- 主题切换（仅 白日 / 夜间 两态，全局委托，切页刷新后仍生效） ---------- */
-let themeBound = false;
-let themeMediaBound = false;
-const THEME_KEY = 'cw-theme';      // 旧键：已解析的主题（兼容历史会话）
-const PREF_KEY = 'cw-theme-pref';  // 偏好：light | dark（旧值 auto 按系统解析，点按后固定为二态）
-
-function setCookie(key, val) {
-  try {
-    document.cookie = `${key}=${encodeURIComponent(val)}; path=/; max-age=31536000; SameSite=Lax`;
-  } catch (e) { /* ignore */ }
+/* ---------- 主题：单套暗色（已删除亮色主题与切换按钮） ----------
+   站点只有一套暗色电影感主题（见 global.css 的 :root 注释）：
+   浅色玻璃 + 白字在物理上无法同时成立，保留浅色分支只会留下一堆无法达标的样式。
+   这里只保证软导航后 <html data-theme> 仍是 dark（Astro 会用新文档的 <html> 覆写属性），
+   与 Base.astro 的首屏内联脚本保持一致。 */
+function lockDarkTheme() {
+  document.documentElement.dataset.theme = 'dark';
 }
-function getCookie(key) {
-  try {
-    const m = document.cookie.match(new RegExp('(?:^|; )' + key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
-    return m ? decodeURIComponent(m[1]) : null;
-  } catch (e) { return null; }
+if (!window.__cwDarkReplayBound) {
+  window.__cwDarkReplayBound = true;
+  document.addEventListener('astro:page-load', lockDarkTheme);
 }
-
-function storeGet(key) {
-  try { const v = localStorage.getItem(key); if (v) return v; } catch (e) { /* ignore */ }
-  try { const v = sessionStorage.getItem(key); if (v) return v; } catch (e) { /* ignore */ }
-  return getCookie(key);
-}
-function storeSet(key, val) {
-  try { localStorage.setItem(key, val); } catch (e) { /* ignore */ }
-  try { sessionStorage.setItem(key, val); } catch (e) { /* ignore */ }
-  setCookie(key, val);
-}
-
-// 主题默认值：站点开箱为**夜间**（用户没选过时）。
-// 与 Base.astro 首屏内联脚本必须保持一致，否则会出现"首屏暗、水合后跳成亮"的闪动。
-const THEME_DEFAULT = 'dark';
-
-// 偏好：仅 light/dark；旧 auto/旧键按系统解析一次（不进入存储循环）
-function readPref() {
-  const p = storeGet(PREF_KEY);
-  if (p === 'light' || p === 'dark') return p;
-  const old = storeGet(THEME_KEY);
-  if (old === 'light' || old === 'dark') { storeSet(PREF_KEY, old); return old; }
-  return null; // 无偏好 → 走 THEME_DEFAULT
-}
-
-// 无偏好时的落地主题：夜间默认（不再跟随系统）。仅刷新 dataset，不落盘 —— 用户点按后才固定二态。
-function applyDefault() {
-  const root = document.documentElement;
-  root.dataset.theme = THEME_DEFAULT;
-  root.dataset.themePref = THEME_DEFAULT;
-}
-
-function applyPref(mode) {
-  const root = document.documentElement;
-  // ★暗色电影感重构后：全站只有一套暗色主题★
-  // 主题开关仍然可点、仍会记住选择（dataset.themePref 保留 light/dark），
-  // 但**实际渲染始终是 dark** —— 浅色玻璃 + 白字在物理上无法同时成立，
-  // 保留一条"浅色渲染路径"只会留下一堆无法达标的样式分支（实测浅色路径有 70 处对比度不达标）。
-  root.dataset.theme = THEME_DEFAULT;
-  const pref = mode === 'light' ? 'light' : 'dark';
-  root.dataset.themePref = pref; // 二态：始终落盘 light/dark（供开关状态显示）
-  storeSet(PREF_KEY, pref);
-  storeSet(THEME_KEY, pref); // 保留旧键兼容
-}
-
-function syncThemeButtons() {
-  const root = document.documentElement;
-  const dark = root.dataset.theme === 'dark';
-  document.querySelectorAll('.theme-toggle').forEach((btn) => {
-    btn.setAttribute('aria-pressed', String(dark));
-    btn.title = '白日 / 夜间';
-    btn.setAttribute('aria-label', dark ? '当前为夜间模式，点击切换到白日模式' : '当前为白日模式，点击切换到夜间模式');
-  });
-}
-
-function initThemeToggle() {
-  if (!themeBound) {
-    themeBound = true;
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('.theme-toggle');
-      if (!btn) return;
-      // 单主题（暗色电影感）：渲染恒为 dark，开关只在"记住的偏好"之间切换。
-      // 注意要读**偏好**而不是"当前渲染的主题" —— 后者恒为 dark，读它会导致永远切不动。
-      const prefNow = document.documentElement.dataset.themePref === 'light' ? 'light' : 'dark';
-      applyPref(prefNow === 'dark' ? 'light' : 'dark');
-      syncThemeButtons();
-    });
-  }
-  if (!themeMediaBound) {
-    themeMediaBound = true;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    // 默认已是夜间、不再跟随系统；但用户从没选过时，系统切到夜间仍应保持夜间（无操作），
-    // 切到白日也**不跟着变**（默认即夜间）。只有存在显式偏好时才需要响应系统变化。
-    const onChange = () => {
-      const p = readPref();
-      if (p) applyPref(p);
-      else applyDefault();
-      syncThemeButtons();
-    };
-    if (mq.addEventListener) mq.addEventListener('change', onChange);
-    else if (mq.addListener) mq.addListener(onChange);
-  }
-  syncThemeButtons();
-}
-
-/* ---------- 主题全局重放（修复：ClientRouter 软切换后仅当前页生效） ----------
-   每次页内导航完成（astro:page-load）都按持久化偏好重新设置 <html data-theme>，
-   保证切到任意子页主题一致；只注册一次，避免模块多次执行造成重复监听。 */
-function bindThemeReplay() {
-  if (window.__cwThemeReplayBound) return;
-  window.__cwThemeReplayBound = true;
-  document.addEventListener('astro:page-load', () => {
-    const p = readPref();
-    if (p) applyPref(p);
-    else applyDefault();
-    syncThemeButtons();
-  });
-}
-bindThemeReplay();
 
 /* ---------- 首页大标题 3D 光标跟随（vanilla-tilt 思路） ---------- */
 let _tt = null;
@@ -206,7 +102,7 @@ function boot() {
     initAmbience,
     startElegantTrails, // 优雅星轨：浅色玻璃下克制的细轨迹
     startTitleTilt,     // 首页大标题 3D 光标跟随
-    initThemeToggle,    // 夜晚/白天切换（切页后仍可用）
+    lockDarkTheme,      // 主题：单套暗色（软导航后保持 data-theme=dark）
     typedEffects,       // 打字机（TextType 移植）
     startDriftWall,     // 影集页漂移墙背景
     tocSpy,             // 右侧栏「本页目录」滚动高亮（子页面三栏壳层）

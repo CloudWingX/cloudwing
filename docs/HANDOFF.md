@@ -441,6 +441,26 @@ items:
       模糊与边框、滚动阈值 80px 与 56→52 切换、当前页短横线、链接与 Logo 规格、
       移动端左右 16px、下拉面板）。另有 `scripts/verify-nav.mjs`（15 项，几何与可点击性）。
 
+27. **★亮色主题已彻底删除★**（2026-09-15，用户要求"删除亮色主题与切换主题按钮"）：
+    站点只有**一套暗色**。改动清单（改主题相关代码前先看这条）：
+    - `Header.astro`：删掉 `.theme-toggle` 按钮（日/月图标）与其样式；
+      `global.css` / `motion.css` 里的 `.theme-toggle*` 规则一并移除。
+    - `ui.js`：删除 `initThemeToggle` / `syncThemeButtons` / `applyPref` / `applyDefault` /
+      `readPref` / `storeGet` / `storeSet` / 主题常量与媒体查询监听；
+      新增极简的 `lockDarkTheme()`（只在软导航后把 `data-theme` 写回 `dark`，
+      因为 ClientRouter 会用新文档的 `<html>` 覆写属性）。
+    - `Base.astro` 首屏内联脚本简化为"直接写 dark + 同步 theme-color"，
+      不再读偏好、不再写 `themePref`。
+    - `about.astro`：工牌原本是"往下拉切换白日/夜间"的开关，随主题一并删除
+      （`triggerLights` / `onTap` / `.cw-lights-flash` 灯闪 / `.ly-hint` 提示 / `hintText`）。
+      **保留了拖拽的装饰手感**（`is-pulling` 跟手 + 松手回弹）。
+    - 全站 `html[data-theme='light']` 规则共删除 11 条（三个组件 + about + gallery）。
+    - `scripts/verify-theme.mjs` 已重写为**单主题不变量**验证（11 项）：
+      默认暗色 / 系统浅色仍暗色 / 历史 `cw-theme-pref=light` 无法切回浅色 /
+      页面无 `.theme-toggle` / 无日月光标 / theme-color 深色 / 软导航后仍暗色 / 首屏逐帧无浅色帧。
+    - **注意**：若以后真要加回浅色，不能只加个开关 —— 需要一整套独立配色，
+      并对 `prefers-color-scheme` 之外的静态审计重新跑对比度（浅色玻璃 + 白字无法同时成立）。
+
 ---
 
 ## 7. 验证与调试

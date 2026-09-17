@@ -67,30 +67,11 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
     <link rel="canonical" href={Astro.url.href} />
     <meta name="theme-color" content="#070b0f" />
     <script is:inline>
-      // 尽早应用主题，避免闪烁。
-      // ★暗色电影感重构后：全站只有一套暗色主题★
-      //   实际渲染恒为 dark；用户的选择仍记在 dataset.themePref / 存储里（供主题开关显示状态），
-      //   但不会再切到浅色 —— 浅色玻璃 + 白字在物理上无法同时成立。
+      // 主题：全站只有一套**暗色**（亮色主题与切换按钮已删除）。
+      // 这里把 data-theme 尽早写成 dark，避免首屏出现浅色闪烁；主题色 meta 同步为深色。
       (function () {
-        function g(k) {
-          try { var v = localStorage.getItem(k) || sessionStorage.getItem(k); if (v) return v; } catch (e) { /* ignore */ }
-          try {
-            var m = document.cookie.match(new RegExp('(?:^|; )' + k + '=([^;]*)'));
-            if (m && m[1]) return decodeURIComponent(m[1]);
-          } catch (e2) { /* ignore */ }
-          return null;
-        }
-        function pref() {
-          var p = g('cw-theme-pref');
-          if (p === 'light' || p === 'dark') return p;
-          var old = g('cw-theme'); // 旧版本：已解析主题当作偏好迁移
-          if (old === 'light' || old === 'dark') return old;
-          return null;
-        }
-        var mode = pref();
         document.documentElement.dataset.theme = 'dark';
-        document.documentElement.dataset.themePref = mode === 'light' ? 'light' : 'dark';
-        // 浏览器 UI（手机地址栏等）颜色：跟随实际渲染的暗色
+        // 浏览器 UI（手机地址栏等）颜色：跟随暗色
         var metas = document.querySelectorAll('meta[name="theme-color"]');
         for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', '#070b0f');
       })();
