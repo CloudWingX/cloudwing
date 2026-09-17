@@ -26,7 +26,16 @@ await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, device
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
 await s('Page.navigate', { url: BASE + '/' });
 await waitFor(`!!document.querySelector('.hero-eyebrow')`);
-await sleep(3200);
+// 等到"动画真的播完"再断言，而不是猜一个固定时长：
+// 逐字入场在慢网络/线上会晚一点（30+ 个字 × 50ms），3.2s 有时仍在动画中间。
+await waitFor(
+  `(()=>{const es=[...document.querySelectorAll('.hero-char,.hero-word')];
+    if(!es.length) return false;
+    return es.every(e=>{const c=getComputedStyle(e);
+      return parseFloat(c.opacity)>=0.99 && (c.transform==='none'||Math.abs(parseFloat((c.transform.match(/-?[\\d.]+/g)||[]).pop()))<1);});})()`,
+  20000,
+);
+await sleep(500);
 
 console.log('=== 结构 ===');
 const dom = await ev(`(()=>({
