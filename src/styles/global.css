@@ -13,15 +13,15 @@
 :root {
   color-scheme: dark;
 
-  /* ▍强调色：从背景视频提取的低饱和青蓝（视频实测色相 192°）
+  /* ▍强调色：雾蓝 #9FD3E8（用户指定），与背景视频的青蓝（实测色相 192°）同族。
      每个都在深色面上验证过 WCAG AA（见 scripts/contrast-audit.mjs）。 */
-  --accent: #7fd4e8;        /* 主强调：按钮底/图标 */
-  --accent-deep: #9fe2f0;   /* 悬停/链接文字（对深底 10:1+） */
-  --accent-soft: rgba(127, 212, 232, 0.14);
-  --accent-grad: linear-gradient(135deg, #7fd4e8 0%, #6aa6d8 100%);
+  --accent: #9fd3e8;        /* 主强调：按钮底/图标/强调文字 */
+  --accent-deep: #bfe4f2;   /* 悬停/链接文字（对深底更亮） */
+  --accent-soft: rgba(159, 211, 232, 0.14);
+  --accent-grad: linear-gradient(135deg, #9fd3e8 0%, #6aa6d8 100%);
   --accent-ink: #04181d;    /* 强调底上的文字（深色，保证对比） */
-  /* 辅助冷色（标签/图表点缀，与青色同族，避免花） */
-  --accent-2: #9db8e8;      /* 雾蓝 */
+  /* 辅助冷色（标签/图表点缀，与雾蓝同族，避免花） */
+  --accent-2: #9db8e8;      /* 更冷的蓝 */
   --accent-3: #8fc9b8;      /* 灰绿 */
 
   /* ▍玻璃：全站统一材质。

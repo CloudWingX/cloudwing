@@ -535,10 +535,10 @@ html[data-theme='dark'] .theme-toggle .ico-sun { display: inline-flex; }
 html[data-theme='dark'] {
   color-scheme: dark;
   /* 与 :root 完全一致（改颜色请改 global.css 的 :root，这里同步即可） */
-  --accent: #7fd4e8;
-  --accent-deep: #9fe2f0;
-  --accent-soft: rgba(127, 212, 232, 0.14);
-  --accent-grad: linear-gradient(135deg, #7fd4e8 0%, #6aa6d8 100%);
+  --accent: #9fd3e8;
+  --accent-deep: #bfe4f2;
+  --accent-soft: rgba(159, 211, 232, 0.14);
+  --accent-grad: linear-gradient(135deg, #9fd3e8 0%, #6aa6d8 100%);
   --accent-ink: #04181d;
   --ink: #ffffff;
   --ink-2: #c9d1d9;

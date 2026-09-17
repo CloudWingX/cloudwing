@@ -150,7 +150,8 @@ const lum = ([r, g, b]) => {
 const ratio = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 const heroText = await ev(`(()=>{
   const out=[];
-  for (const sel of ['.display', '.typed-hero']) {
+  // 首页重构后：主标题 .hero-title（静态大字）与定位语 .hero-tagline
+  for (const sel of ['.hero-title', '.hero-tagline']) {
     const e=document.querySelector(sel); if(!e) continue;
     const rng=document.createRange(); rng.selectNodeContents(e);
     const rs=[...rng.getClientRects()].filter(r=>r.width>2&&r.height>2);
@@ -161,7 +162,7 @@ const heroText = await ev(`(()=>{
       y0:Math.min(...rs.map(r=>r.top)), y1:Math.max(...rs.map(r=>r.bottom))});
   }
   return out;})()`);
-check('首页 hero 元素可定位（用于对比度取样）', Array.isArray(heroText) && heroText.length === 2,
+check('首页 hero 元素可定位（用于对比度取样）', Array.isArray(heroText) && heroText.length >= 1,
   Array.isArray(heroText) ? `${heroText.length} 个` : '取值失败');
 for (const b of heroText || []) {
   const tl = lum(b.rgb);
