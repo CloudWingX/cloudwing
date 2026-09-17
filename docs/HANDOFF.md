@@ -9,7 +9,7 @@
 > 相关文档：`CODEX.md`（仓库内简版硬规则）、`README.md`（面向访客的项目说明）。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-15（HEAD `eb14422`，已推送、线上已验证；Cloudflare 自动构建部署）。
+> 最后更新：2026-09-15（已推送、线上已验证；Cloudflare 自动构建部署）。
 > 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 **45/45** 通过（本地与线上均通过）。
 > 全套验证脚本与用法见 **§7.2**；本机调试浏览器起法见 **§7.1**。
 
@@ -660,7 +660,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 □ 首页：无侧栏、无 HTML 变化破坏
 ```
 
-### 7.4.1 本轮交接复核记录（2026-09-15，HEAD `bee24b2`）
+### 7.4.1 本轮交接复核记录（2026-09-15，交接时的 HEAD）
 交接前按本文件复核了一遍，结论：**站点、线上、文档三者一致，无需修复**。
 ```
 git log --oneline -1                     # 9b1e6d1；git rev-parse HEAD == git ls-remote origin main
