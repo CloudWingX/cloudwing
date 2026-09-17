@@ -599,6 +599,17 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
    **症状**：多处 `布局等待 1x s` + 元素查不到。**处理**：杀掉 9222 进程重启浏览器即可，
    不是站点问题。长时间验证时记得隔一阵重启一次。
 
+5. **★旧 profile 的缓存会让"仅线上"出现 `React error #424`★**（2026-09-15 交接前踩到）：
+   同一个调试浏览器 profile 长期访问 `cloudwing.pages.dev`、跨多次部署之后，
+   线上冒烟会间歇报 `React error #424`（水合不匹配）—— **本地永远复现不了**，
+   很容易误判成"站点有 bug"。**三步确认它是缓存假象而不是真 bug**：
+   - `Network.setCacheDisabled` + `Network.clearBrowserCache` 后重跑 → 异常归零；
+   - 拿**旧部署**（`https://<旧commit短哈希>.cloudwing.pages.dev`）跑同一路径 → 也干净；
+   - **换全新 `--user-data-dir` 起浏览器** → 当前线上连跑 6 轮 0 异常。
+   排除过程中我对 `PageParticlesBackground` 做过一次禁用二分，本地开关都 0 异常，
+   同样证明与它无关。**结论：线上一旦出现只有线上复现的水合异常，先换全新 profile 复核**，
+   别急着改代码。
+
 ### 7.2 验证脚本清单（改完对应模块就跑它）
 **全部脚本都在 `endfield-blog/scripts/`，统一用法 `node scripts/<名>.mjs [url] [light|dark]`。
 前置：预览 4321 已起 + 无头浏览器 9222 已起（§7.1）。退出码 0=全过 / 1=有失败 / 2=环境没起。**
