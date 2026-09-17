@@ -461,6 +461,26 @@ items:
     - **注意**：若以后真要加回浅色，不能只加个开关 —— 需要一整套独立配色，
       并对 `prefers-color-scheme` 之外的静态审计重新跑对比度（浅色玻璃 + 白字无法同时成立）。
 
+28. **品牌标志（Brand Identity）**（2026-09-15，用户提供品牌稿 preview.html）：
+    标志在 `components/BrandMark.astro`，纯矢量 path、**零字体依赖**（字标已转路径）。
+    - 造型：几何平底云 + 三根向上掠出的羽翼，共用一个藏在云内的根部 ——「云生翼」；
+      羽翼的斜向笔势同时呼应 `</>` 写法。
+    - 配色令牌（`global.css`）：`--brand-cloud`（云体/CLOUD，暗底用纸白 `#F4F7FA`）、
+      `--brand-wing`（羽翼/WING，雾蓝 `#9FD3E8`）、`--brand-ink`（深空墨 `#1A1A2E`，浅底用）、
+      `--brand-mute`（雾灰 `#7A8296`）。组件支持 `cloud` / `wing` 覆盖，方便浅底场景。
+    - 两种形态：`variant="horizontal"`（横版字标，355.06×58，导航栏用）、
+      `variant="icon"`（纯图标，64×64，页脚/404/favicon 用）。
+    - 用法：`<BrandMark variant="horizontal" height={30} />`。
+      **尺寸靠 height 反解宽高比**；移动端在 `Header.astro` 的 media query 里用
+      `:global(.brandmark) { height: 20px/18px }` 覆盖（viewBox 会等比缩放）。
+    - 已替换的位置：导航栏（横版字标 + 中文站名，≤1180px 隐藏站名）、
+      页脚（图标版 20px）、`404.astro`（图标版 22px）、
+      `public/favicon.svg`（浅底：深空墨云体）与 `public/favicon-dark.svg`（深底：纸白云体）。
+    - 旧组件 `HexMark.astro`（六边形）与其样式已删除 —— 全仓已无引用。
+    - 自检：`node scripts/verify-brand.mjs [url]`（10 项：导航/页脚是否用上新标志、
+      viewBox 是否为横版字标、云体/羽翼取值是否等于品牌稿色值、旧六边形是否清除、
+      标志尺寸是否在 24–40px、是否超出导航胶囊、无横向溢出）。
+
 ---
 
 ## 7. 验证与调试

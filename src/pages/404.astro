@@ -1,6 +1,6 @@
 ---
 import SidebarLayout from '../layouts/SidebarLayout.astro';
-import HexMark from '../components/HexMark.astro';
+import BrandMark from '../components/BrandMark.astro';
 import { SITE } from '../site';
 ---
 <SidebarLayout title="404 · 档案不存在" description="未找到该档案。" center>
@@ -14,7 +14,7 @@ import { SITE } from '../site';
         <a class="btn ghost" href="/works/"><span>浏览作品库</span></a>
       </div>
       <p style="margin-top:3rem;font-family:var(--font-mono);font-size:0.74rem;letter-spacing:0.14em">
-        <HexMark size={22} fill="var(--ink-3)" />&nbsp;{SITE.title} · 档案编号校验失败
+        <BrandMark variant="icon" height={22} />&nbsp;{SITE.title} · 档案编号校验失败
       </p>
     </div>
   </div>

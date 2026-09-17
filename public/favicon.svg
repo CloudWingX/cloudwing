@@ -1,9 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- CloudWing · 云翼 favicon —— 与首页左上角 HexMark logo 同款（双同心六边形 + 中心圆点）
-       浅色方案版：纯黑，透明底（白/浅底可见） -->
-  <g fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M32 6 L54 18 L54 46 L32 58 L10 46 L10 18 Z" stroke-width="3"/>
-    <path d="M32 16 L46 24 L46 40 L32 48 L18 40 L18 24 Z" stroke-width="1.4" opacity="0.6"/>
+  <!-- CloudWing 云翼 favicon —— 与 components/BrandMark.astro 的图标版同款（平底云 + 三根羽翼）。
+       浅色方案版：云体用品牌稿"深空墨" #1A1A2E，羽翼用雾蓝 #9FD3E8（浅底可见）。 -->
+  <g transform="translate(-0.94 2.65) scale(0.9915)">
+    <g fill="none" stroke="#9FD3E8" stroke-width="6.5" stroke-linecap="round">
+      <path d="M16.00 46.00L41.28 12.46"/>
+      <path d="M16.00 46.00L53.82 16.45"/>
+      <path d="M16.00 46.00L56.20 28.10"/>
+    </g>
+    <g fill="#1A1A2E">
+      <rect x="7" y="42" width="29" height="8" rx="4"/>
+      <circle cx="14" cy="42" r="7"/>
+      <circle cx="23" cy="38" r="9.5"/>
+      <circle cx="30" cy="42" r="6"/>
+    </g>
   </g>
-  <circle cx="32" cy="32" r="5" fill="#000000"/>
 </svg>

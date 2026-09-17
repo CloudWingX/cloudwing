@@ -24,6 +24,14 @@
   --accent-2: #9db8e8;      /* 更冷的蓝 */
   --accent-3: #8fc9b8;      /* 灰绿 */
 
+  /* ▍品牌标志配色（见 components/BrandMark.astro，来自品牌稿）
+     云体 / 字标 CLOUD 用 --brand-cloud，羽翼 / WING 用 --brand-wing（雾蓝）。
+     站点是暗色底，所以云体取品牌稿的"纸白"；浅色底版本用 --brand-ink（深空墨）。 */
+  --brand-cloud: #f4f7fa;
+  --brand-wing: #9fd3e8;
+  --brand-ink: #1a1a2e;
+  --brand-mute: #7a8296;
+
   /* ▍玻璃：全站统一材质。
      底色比视频更暗 → 白色文字永远有足够对比，且玻璃不会"糊住"画面。 */
   --glass: rgba(12, 16, 20, 0.42);
