@@ -87,13 +87,16 @@ await ev(`document.querySelector('[data-nav-burger]')?.click()`);
 await sleep(700);
 const panel = await ev(`(()=>{const d=document.querySelector('.drawer'); if(!d||d.hidden) return null;
   const c=getComputedStyle(d); const b=d.getBoundingClientRect();
-  return {背景:c.backgroundColor, 模糊:c.backdropFilter||c.webkitBackdropFilter, 圆角:c.borderTopLeftRadius,
+  // 注意：面板底色是**渐变**（background-image），只读 backgroundColor 会得到 rgba(0,0,0,0)
+  return {背景:c.backgroundColor, 背景图:(c.backgroundImage||'none').slice(0,70), 模糊:c.backdropFilter||c.webkitBackdropFilter, 圆角:c.borderTopLeftRadius,
     动画:c.animationName, 顶部:Math.round(b.top), 左:Math.round(b.left), 右:Math.round(b.right)};})()`);
 console.log('  ' + JSON.stringify(panel));
 check('面板从顶部下拉（在胶囊下方）', panel && panel.顶部 >= 70, String(panel && panel.顶部));
 check('面板圆角 20px', panel && panel.圆角 === '20px', String(panel && panel.圆角));
 check('面板模糊 24px', panel && /blur\(24px\)/.test(String(panel.模糊)), String(panel && panel.模糊));
-check('面板背景为深色玻璃（暗色电影感）', panel && /rgba\(9,\s*12,\s*16/.test(String(panel.背景)), String(panel && panel.背景));
+check('面板背景为深色玻璃（暗色电影感）',
+  /rgba\(9,\s*12,\s*16|#090c10/i.test(String(panel && panel.背景) + String(panel && panel.背景图)),
+  String(panel && panel.背景) + ' | ' + String(panel && panel.背景图));
 check('面板有淡入 + 下移动效', panel && panel.动画 !== 'none', String(panel && panel.动画));
 check('无 JS 异常', errs.length === 0, errs[0] || '');
 
