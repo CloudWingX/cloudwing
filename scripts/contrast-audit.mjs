@@ -157,8 +157,13 @@ const main = async () => {
       await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: THEME }] });
       // 注意这里是被注入到浏览器的源码字符串，必须把 THEME 用 JSON.stringify 内插进去
       const th = JSON.stringify(THEME);
+      // 可选：用 ACCENT 环境变量指定强调色预设（'mist'/'polar'/'aurora'/'ember'/'violet'），
+      // 用来核对"换了强调色与背景色调之后，正文是否仍然达标"。
+      const accentSeed = process.env.ACCENT
+        ? `try{localStorage.setItem('cw-accent',${JSON.stringify(process.env.ACCENT)});}catch(e){}`
+        : '';
       await send('Page.addScriptToEvaluateOnNewDocument', {
-        source: `try{localStorage.setItem('cw-theme-pref',${th});sessionStorage.setItem('cw-theme-pref',${th});document.cookie='cw-theme-pref='+${th}+';path=/';}catch(e){}`,
+        source: `try{localStorage.setItem('cw-theme-pref',${th});sessionStorage.setItem('cw-theme-pref',${th});document.cookie='cw-theme-pref='+${th}+';path=/';}catch(e){}${accentSeed}`,
       });
       await send('Page.navigate', { url: BASE + path });
       await sleep(2600);

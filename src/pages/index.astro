@@ -8,7 +8,7 @@
 // 说明：原来的 01/02/03 编号入口卡片已按要求删除 —— 首页直接展示内容，不再只做跳转目录。
 import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
-import { SITE } from '../site';
+import { SITE, ACCENTS, ACCENT_DEFAULT } from '../site';
 
 // —— ② 最新作品：取作品库最新 3 篇（与 /works/ 联动） ——
 const worksAll = await getCollection('works');
@@ -157,6 +157,26 @@ const codeSample = [
           <span class="code-filename">@components/VideoBackground</span>
         </div>
         <pre class="code-body"><code set:html={codeSample}></code></pre>
+
+        {/* 色卡：照参考站卡片底部的 Presets 一排按钮。
+            点一下同时换「强调色 + 整页色膜 + 代码语法配色」，中间色缓慢过渡。
+            由 scripts/hero-theme.js 接管（document 委托，软导航后仍有效）。 */}
+        <div class="code-footer" role="group" aria-label="强调色预设">
+          <div class="code-presets">
+            {ACCENTS.map((a) => (
+              <button
+                type="button"
+                class="code-preset"
+                data-accent-preset={a.key}
+                aria-pressed={a.key === ACCENT_DEFAULT ? 'true' : 'false'}
+                style={`--swatch:${a.base}`}
+              >
+                <span class="cp-dot" aria-hidden="true"></span>
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
 
@@ -249,6 +269,17 @@ const codeSample = [
     </section>
   </div>
 </Base>
+
+{/* 色卡数据以 JSON 内联给 scripts/hero-theme.js（避免把配色表再抄一份到 JS 里） */}
+<script type="application/json" data-accent-presets set:html={JSON.stringify(ACCENTS)} />
+
+<script>
+  // 色卡切换：强调色 + 整页色膜 + 代码高亮的补间，见 scripts/hero-theme.js
+  import { initHeroTheme } from '../scripts/hero-theme.js';
+  initHeroTheme();
+  // 软导航会重建 DOM（按钮是新的），但脚本不会重跑 —— 这里补一次首屏同步
+  document.addEventListener('astro:page-load', initHeroTheme);
+</script>
 
 <script>
   // Hero 的四个动画（ShinyText / BlurText / GradientText / 逐字入场）
@@ -499,18 +530,87 @@ const codeSample = [
   }
   .code-body code { font-family: inherit; }
 
-  /* ── 语法高亮：全部取站点令牌，不用参考的紫/粉/红 ──
-     色相分配：雾蓝=关键字与属性、灰绿=字符串、冷蓝=函数/变量、
-     亮雾蓝=标签/选择器、黄绿=数字、雾灰=注释。
-     ⚠️ 必须用 :global()：这段代码是用 set:html 注入的，元素上没有 Astro 的
-     作用域属性（data-astro-cid-*），普通作用域选择器匹配不到 → 高亮会失效。 */
+  /* ── 首页专属的"可换色"令牌 ──
+     写在首页而不是 global.css：只有首页有色卡，其它页没必要多背这几个变量。
+     :global(:root) 是必须的 —— 普通 :root 会被 Astro 作用域成 ...:where(...)，
+     那样 scripts/hero-theme.js 就没法通过 documentElement 改它了。
+     默认值全部由当前强调色（--accent）派生，所以默认态与改版前一致。 */
+  :global(:root) {
+    /* 色膜：默认浓度 0 = 完全没有颜色滤镜（默认态画面与之前一模一样） */
+    --tint-c: #9fd3e8;
+    --tint-a: 0;
+    /* 强调色的 RGB 分量：给 rgba(var(--accent-rgb), a) 用。
+       色卡切换时由 hero-theme.js 一并补间，所以半透明底也会跟着平滑变色。 */
+    --accent-rgb: 159, 211, 232;
+    /* 代码高亮（由强调色派生，切换色卡时补间这几个） */
+    --code-key: color-mix(in srgb, var(--accent) 82%, #ffffff);
+    --code-str: color-mix(in srgb, var(--accent) 58%, #7fd6a8);
+    --code-fn: color-mix(in srgb, var(--accent) 72%, #8fb4f0);
+    --code-comp: color-mix(in srgb, var(--accent) 42%, #ffffff);
+    --code-num: color-mix(in srgb, var(--accent) 62%, #e8d98a);
+    --code-dim: #9aa7b6;
+  }
+
+  /* ── 语法高亮：全部由强调色派生（--code-*），这样色卡切换时
+       只要补间这几个变量，代码段就会跟着一起变色（含中间色过渡）。
+       色相分工：关键字/属性=强调色本体、字符串=偏绿、函数/变量=偏冷、
+       标签/选择器=提亮、数字=偏暖黄、注释=中性灰。
+       ⚠️ 必须用 :global()：这段代码是用 set:html 注入的，元素上没有 Astro 的
+       作用域属性（data-astro-cid-*），普通作用域选择器匹配不到 → 高亮会失效。 */
   .code-body :global(.code-keyword),
-  .code-body :global(.code-prop) { color: #a3d6e9; }              /* 雾蓝系 */
-  .code-body :global(.code-string) { color: #96cdb9; }            /* 灰绿（--accent-3 同族） */
-  .code-body :global(.code-function) { color: #a9c0ea; }          /* 冷蓝（--accent-2） */
-  .code-body :global(.code-component) { color: #cfe7f2; font-weight: 500; }
-  .code-body :global(.code-number) { color: #d7e6a8; }
-  .code-body :global(.code-comment) { color: #9aa7b6; font-style: italic; }
+  .code-body :global(.code-prop) { color: var(--code-key); }
+  .code-body :global(.code-string) { color: var(--code-str); }
+  .code-body :global(.code-function) { color: var(--code-fn); }
+  .code-body :global(.code-component) { color: var(--code-comp); font-weight: 500; }
+  .code-body :global(.code-number) { color: var(--code-num); }
+  .code-body :global(.code-comment) { color: var(--code-dim); font-style: italic; }
+
+  /* ── 色卡（照参考站卡片底部的 Presets）── */
+  .code-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px 14px 26px;
+  }
+  .code-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .code-preset {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 9999px;
+    border: 1px solid var(--line-1);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 12px;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: color 0.25s var(--ease), border-color 0.25s var(--ease), background 0.25s var(--ease);
+  }
+  .code-preset:hover { color: rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.08); }
+  .code-preset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cp-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 9999px;
+    flex: none;
+    background: var(--swatch);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
+  }
+  /* 选中态：**圆点**用强调色、文字保持高对比（雾蓝底上再写雾蓝字只有 1:1，
+     contrast-audit 抓到了）。所以强调色只落在圆点与边框上，文字用纸白。
+     底色用 rgba(var(--accent-rgb), …) 而不是 color-mix(…, transparent)：
+     后者会被对比度审计当成"不透明的强调色"，算出假的 1.5:1。 */
+  .code-preset[aria-pressed='true'] {
+    color: var(--brand-cloud);
+    border-color: rgba(var(--accent-rgb), 0.55);
+    background: rgba(var(--accent-rgb), 0.16);
+  }
+  .code-preset[aria-pressed='true'] .cp-dot {
+    background: var(--accent);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset, 0 0 10px var(--accent);
+  }
   .stack-note {
     margin: 16px 0 0;
     font-size: 12px;

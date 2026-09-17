@@ -1,5 +1,67 @@
 // 站点全局信息 —— 所有页面统一从这里读取，改这里即可全站生效。
 
+/* ▍强调色预设（首页代码卡片下方那排色卡）
+   机制照参考站（reactbits.dev 的 Nebula/Aurora/Ember/Ice）：点一下同时改
+   ① 强调色（按钮/图标/高亮字）② 整页颜色滤镜（叠一层带混合模式的色膜，**不动背景视频**）
+   ③ 代码卡片的语法配色。
+   本站比参考多加了两点：① 颜色之间用中间色**缓慢过渡**（参考只换变量、不补间）；
+   ② 预设整体贴着背景视频的青蓝（实测 192°）来选，所以切换后画面不会"跳色"。
+   `base` 必须与 global.css 的 --accent 一致，这样默认态（雾蓝）等于"什么都没改"。 */
+export type AccentPreset = {
+  key: string;
+  label: string; // 色卡上的名字
+  base: string; // = global.css 的 --accent
+  deep: string; // = --accent-deep（更亮一档，用于链接/悬停）
+  soft: string; // = --accent-soft
+  rgb: string; // 强调色的 "r, g, b"（给 rgba() 用）
+  tint: string; // 色膜颜色
+  tintA: number; // 色膜浓度
+  hue: number; // 背景视频的色相旋转（deg）—— 让视频的色调与强调色同族
+  sat: number; // 背景视频的饱和度倍数
+};
+
+/* hue/sat 为什么需要：背景视频本身是稳定的青蓝（192°），
+   单靠叠色膜实测只能把画面推到 186~190°，永远"暖"不起来
+   （色膜再厚也会被视频的青色拉回去，还会把画面洗灰）。
+   所以这里对视频层加 filter: hue-rotate() —— 它改的是**颜色，不是背景本身**：
+   视频文件、透明度、遮罩、层级全都不动，只是整体转个色相。
+   这样"余烬"真的能变成暖调，而且转色是线性缩放，中间过渡很顺。 */
+export const ACCENTS: AccentPreset[] = [
+  {
+    key: 'mist',
+    label: '雾蓝',
+    base: '#9fd3e8', deep: '#bfe4f2', soft: 'rgba(159, 211, 232, 0.14)',
+    rgb: '159, 211, 232', tint: '#9fd3e8', tintA: 0, hue: 0, sat: 1,
+  },
+  {
+    key: 'polar',
+    label: '镜蓝',
+    base: '#8ec2f2', deep: '#b4d8fb', soft: 'rgba(142, 194, 242, 0.14)',
+    rgb: '142, 194, 242', tint: '#8ec2f2', tintA: 0.16, hue: 25, sat: 1.08,
+  },
+  {
+    key: 'aurora',
+    label: '极光',
+    base: '#86d6b4', deep: '#b0e8cd', soft: 'rgba(134, 214, 180, 0.14)',
+    rgb: '134, 214, 180', tint: '#86d6b4', tintA: 0.16, hue: -22, sat: 1.05,
+  },
+  {
+    key: 'ember',
+    label: '余烬',
+    base: '#e0c084', deep: '#f2dcb0', soft: 'rgba(224, 192, 132, 0.14)',
+    rgb: '224, 192, 132', tint: '#e0c084', tintA: 0.20, hue: -157, sat: 1.02,
+  },
+  {
+    key: 'violet',
+    label: '紫晶',
+    base: '#b9a8ec', deep: '#d6cbfa', soft: 'rgba(185, 168, 236, 0.14)',
+    rgb: '185, 168, 236', tint: '#b9a8ec', tintA: 0.16, hue: 78, sat: 1.05,
+  },
+];
+
+export const ACCENT_DEFAULT = ACCENTS[0].key;
+
+
 // 图片图床开关：'' = 走本地相对路径（图片随 dist 打包，由 Cloudflare Pages 自带 CDN 服务，最稳）；
 // 若要改用 GitHub + jsDelivr 图床（仓库 CloudWingX/cloudwing，需 push 且为公开后生效），填：
 //   'https://cdn.jsdelivr.net/gh/CloudWingX/cloudwing@main/public'

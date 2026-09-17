@@ -25,6 +25,11 @@ const check = (n, ok, d = '') => { results.push({ n, ok }); console.log(`  ${ok 
 const waitFor = async (x, ms = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ev(x)) return true; await sleep(400); } return false; };
 
 await s('Page.enable'); await s('Runtime.enable');
+// 开局先清掉"强调色预设"的存档：共用调试浏览器时，上一次跑脚本留下的记录会让
+// "默认态是零改动"这类断言整片误判（实测：profile 里残留 violet，默认态断言就挂了）。
+await s('Page.navigate', { url: BASE + '/' });
+await sleep(1200);
+await ev(`(()=>{try{localStorage.removeItem('cw-accent');}catch(e){} return true;})()`);
 
 /* 一次量齐：结构 + 关键盒子的几何与排版 */
 const snap = () => ev(`(()=>{
@@ -129,6 +134,51 @@ check('卡片最大宽 520（参考值）', d.card.w <= 520 && d.card.w >= 380, 
 check('卡片圆角 12px', d.card.radius === '12px', d.card.radius);
 check('卡片头有文件名', (await ev(`!!document.querySelector('.code-filename')`)) === true);
 check('卡片三色圆点', (await ev(`document.querySelectorAll('.code-dot').length`)) === 3);
+
+/* ── 强调色预设（照参考站卡片底部的 Presets，见 index.astro / scripts/hero-theme.js）── */
+const accentState = async () => JSON.parse(await ev(`(function(){
+  var rs=getComputedStyle(document.documentElement); var v=document.querySelector('.video-bg__el');
+  return JSON.stringify({
+    presets: document.querySelectorAll('[data-accent-preset]').length,
+    激活: (document.querySelector('.code-preset[aria-pressed="true"]')||{}).textContent,
+    激活数: document.querySelectorAll('.code-preset[aria-pressed="true"]').length,
+    accent: rs.getPropertyValue('--accent').trim(),
+    tintA: rs.getPropertyValue('--tint-a').trim(),
+    hue: rs.getPropertyValue('--vid-hue').trim(),
+    filter: v?getComputedStyle(v).filter:null,
+    代码色: getComputedStyle(document.querySelector('.code-keyword')).color,
+    溢出: document.documentElement.scrollWidth-document.documentElement.clientWidth
+  });})()`));
+
+const a0 = await accentState();
+check('卡片底部有色卡（5 个预设）', a0.presets === 5, String(a0.presets));
+check('同时只有一个预设处于选中态', a0.激活数 === 1, `${a0.激活数} 个 / 当前「${(a0.激活 || '').trim()}」`);
+check('默认态是"零改动"（色膜 0、无滤镜）',
+  parseFloat(a0.tintA) === 0 && /hue-rotate\(0deg\)/.test(String(a0.filter)) && /saturate\(1\)/.test(String(a0.filter)),
+  `tintA=${a0.tintA} filter=${a0.filter}`);
+
+// 点「余烬」：应看到强调色与代码高亮都变，且**中途经过中间色**（不是直接跳）
+await ev(`document.querySelector('[data-accent-preset="ember"]').click()`);
+const mid = [];
+for (let i = 0; i < 6; i++) {
+  await sleep(70);
+  mid.push(await ev(`(function(){var rs=getComputedStyle(document.documentElement);
+    return rs.getPropertyValue('--accent').trim();})()`));
+}
+await sleep(1400);
+const a1 = await accentState();
+const uniq = [...new Set(mid)];
+check('切换过程中经过中间色（≥3 个不同取值的过渡帧）', uniq.length >= 3, uniq.join(' → '));
+check('切到「余烬」后强调色确实变了', a1.accent !== a0.accent, `${a0.accent} → ${a1.accent}`);
+check('代码高亮跟着一起变', a1.代码色 !== a0.代码色, `${a0.代码色} → ${a1.代码色}`);
+check('背景视频被旋转色相（换色但不是换背景）', parseFloat(a1.hue) !== 0, `${a0.hue} → ${a1.hue}`);
+check('色膜浓度在过渡后落到该预设值', parseFloat(a1.tintA) > 0, a1.tintA);
+check('切换后选中态跟随', (a1.激活 || '').trim() === '余烬', (a1.激活 || '').trim());
+check('切换后无横向溢出', a1.溢出 === 0, String(a1.溢出));
+
+// 复位，避免影响后面的断点断言
+await ev(`document.querySelector('[data-accent-preset="mist"]').click()`);
+await sleep(1200);
 
 check('旧 Hero 结构已清干净（eyebrow/inner/cta/ht-*/stroke/typed）',
   !d.legacy.eyebrow && !d.legacy.inner && !d.legacy.cta && !d.legacy.htline && !d.legacy.accent && !d.legacy.stroke && !d.legacy.typed,

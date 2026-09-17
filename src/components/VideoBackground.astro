@@ -40,10 +40,12 @@ const on = Boolean(VIDEO_BG.src);
         disablepictureinpicture
         tabindex="-1"
       ></video>
+      {/* 强调色预设的色膜：给整个画面（含视频）换色调，**不替换背景**。
+          颜色/浓度由 --tint-c / --tint-a 控制，默认 0 = 不着色。 */}
+      <span class="tint-layer" aria-hidden="true"></span>
     </div>
   )
 }
-
 <style>
   .video-bg {
     position: fixed;
@@ -70,6 +72,14 @@ const on = Boolean(VIDEO_BG.src);
     height: 100%;
     object-fit: cover; /* 任意画幅都铺满视口，不留黑边 */
     opacity: var(--vid-opacity-dark, 0.5);
+    /* 强调色预设对背景视频做"色相旋转"（改颜色，不改背景本身）：
+       视频文件/透明度/遮罩/层级都不动，只是整体转色相，
+       这样"余烬"之类的暖色预设才能让画面真的变暖，且与强调色同族。 */
+    filter: hue-rotate(var(--vid-hue, 0deg)) saturate(var(--vid-sat, 1));
+    transition: filter 0.2s linear; /* 实际过渡由脚本补间变量完成，这里防首帧跳变 */
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .video-bg__el { transition: none; }
   }
   /* 视频一旦能出画，就淡入 —— 避免加载瞬间的"跳一下"。
      没加 has-poster 时（组件未接管）保持可见，避免万一脚本失效导致视频被永久藏住。 */
@@ -95,6 +105,25 @@ const on = Boolean(VIDEO_BG.src);
     );
   }
   /* 兜底：万一切到浅色态（本设计只提供暗色，这里仅为防御） */
+  /* ── 强调色预设的"整页颜色滤镜" ──
+     一层纯色 + 混合模式，给整个画面（含背景视频）换色调，
+     **视频本身不动**（不改 src/opacity/遮罩，符合"不要更换背景"）。
+     颜色与浓度由 --tint-c / --tint-a 驱动，首页的色卡按钮会给这两个变量补间，
+     过渡时就会经过中间色。--tint-a 默认 0 = 完全不着色（默认态与之前一模一样）。
+     放在 .video-bg 之后、与视频同层：视觉效果是"画面整体偏色"，不是盖一层灰。 */
+  .tint-layer {
+    position: fixed;
+    inset: 0;
+    z-index: -3; /* 视频(-4) 之上、光晕(-2)/粒子(-1) 之下 */
+    pointer-events: none;
+    background: var(--tint-c, #9fd3e8);
+    mix-blend-mode: color;
+    opacity: var(--tint-a, 0);
+    transition: opacity 0.2s linear; /* 首帧不闪；补间由脚本负责 */
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tint-layer { transition: none; }
+  }
 </style>
 
 <script>
