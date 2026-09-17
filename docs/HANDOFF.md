@@ -287,16 +287,12 @@ items:
        同时第二行"延迟挂载"的占位要 `min-height: 1em`，否则挂载瞬间会把下方内容顶下去。
     4. **`delay` 形参声明了但组件内部没用**（2026-09-15 接两行时发现）：
        时间线固定 `paused: true` + `play(0)`，传 `delay` 不会有任何效果。
-       要"两行依次出现"，只能在**宿主层**让后一行延迟挂载（`HomeStrokeTitle.jsx` 的做法：
-       `setTimeout` 后才渲染 `<StrokeText>`，挂载即开始画）。
-       首页现在是**两行都走 StrokeText**（`lines={['HELLO THIS IS', lastWord]}`，
-       第二行延后 0.9s），各自带 `.line1` / `.stroke` 类名，所以两套视差、3D 倾斜照旧。
-    首页大标题的动效分层（**改这里前先读**）：外层 `<h1 class="display display-tilt">` 是
-    3D 光标跟随的宿主（ui.js 的 `startTitleTilt` 下发 `--bkx/--bky/--frx/--fry`）；
-    `.line1` 与 `.stroke` 各自吃一套视差变量做前后分层；`<StrokeText />` 只负责"画字"，
-    **不碰 transform** —— 三者互不干扰。
-    自检：~~`node scripts/verify-stroke.mjs`~~ —— **该脚本与 HomeStrokeTitle 已删除**
-    （首页改版后大标题不再用描边动画，见 §25 §30）。此条仅保留"动效分层"这条经验。
+       要"两行依次出现"，只能在**宿主层**让后一行延迟挂载（`setTimeout` 后才渲染）。
+       **注意：首页大标题现在已不再使用 `<StrokeText />`**（§25 改版 → §30 重做 Hero），
+       本条的"动效分层"经验仍适用于其他多层动效叠加的场景。
+    首页大标题的动效分层（**改这里前先读**）：外层 `<h1>` 是 3D 光标跟随的宿主
+    （ui.js 的 `startTitleTilt` 下发 `--bkx/--bky/--frx/--fry`）；
+    各行动效层只负责"画字/入场"，**不碰 transform** —— 与宿主互不干扰。
 
 19. **★`client:visible` + 软导航会抛 `React error #424`（水合不匹配）★**（2026-09-15 定位）
     **症状**：软导航几圈后，每个 `client:visible` 实例抛一次
@@ -640,14 +636,41 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 
 ### 7.4 手动断言清单（脚本没覆盖到的也照这个查）
 ```
-□ 各页面：横向溢出 = 0
+□ 各页面：横向溢出 = 0（注意：故意停在视口外的浮层会被算进 scrollWidth，见 §7.3）
 □ 三栏页：两栏 top 逐帧相等（不同步帧 = 0）、等高、无"钉在导航栏下方"的帧
 □ 软导航一圈（首页↔作品库↔详情↔画廊↔关于↔互动）后：交互仍可用、无 JS 异常
-□ 搜索悬浮窗：顶栏/侧栏/抽屉/⌘K 四种触发都能开，Esc 与关闭按钮都能关，换页后仍可用
+□ 搜索悬浮窗：顶栏 / 侧栏 / 移动端菜单 / ⌘K 四种触发都能开，Esc 与关闭按钮都能关，换页后仍可用
+□ 导航三态：贴顶通栏 → 滚动收成胶囊（下沉 16px）→ 回顶恢复
+□ 移动端（≤768px）：汉堡可开合、菜单贴在导航下方、滚动后不被胶囊压住
+□ 首页 Hero：四个动画都播完且终态可见（慢网络下逐字入场要等一会儿）
+□ 背景视频：在播、滚动后仍在播、切页不重建（`readyState` 不归零）
 □ Console 里无异常（尤其移动指针时——粒子转发曾无限递归）
 □ 手机视口（414/1024）：侧栏 display:none、单列、标题居中
 □ 首页：无侧栏、无 HTML 变化破坏
 ```
+
+### 7.4.1 本轮交接复核记录（2026-09-15，HEAD `9b1e6d1`）
+交接前按本文件复核了一遍，结论：**站点、线上、文档三者一致，无需修复**。
+```
+git log --oneline -1                     # 9b1e6d1；git rev-parse HEAD == git ls-remote origin main
+git status --short                       # 干净
+npm run build                            # 退出码 0
+node scripts/smoke.mjs                   # 45/45
+node scripts/verify-hero.mjs             # 49/49      （线上同）
+node scripts/verify-nav-shrink.mjs       # 37/37      （线上同）
+node scripts/verify-home.mjs             # 25/25
+node scripts/verify-nav.mjs              # 15/15
+node scripts/verify-brand.mjs            # 10/10
+node scripts/verify-theme.mjs            # 11/11
+node scripts/verify-redesign.mjs         # 14/14
+node scripts/verify-search.mjs           # 17/17
+node scripts/verify-videobg.mjs          # 15/15
+node scripts/verify-videobg-global.mjs   # 25/25
+node scripts/contrast-audit.mjs <url> dark   # 0 处不达标
+node scripts/mobile-shots.mjs            # 15/15 无横向溢出
+node scripts/diag-errors.mjs             # 7 页全 0 异常
+```
+另外核对了文档承诺的 **21 个脚本全部存在**；正文与工作区副本逐字节一致、无 `U+FFFD`。
 
 ### 7.5 部署确认（别用 chunk 哈希！）
 ```powershell
@@ -680,51 +703,32 @@ CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真�
 
 ## 9. 主题、字体、令牌
 
-- 主题：`html[data-theme=light|dark]`，偏好三通道持久化 `cw-theme-pref`（localStorage→sessionStorage→Cookie），
-  `Base.astro` 头部内联脚本**先于渲染**应用，避免闪烁；切换由 `ui.js` 的 `initThemeToggle()` 委托处理。
-- **默认主题 = 夜间（dark）**（2026-09-15 改，用户指定）：没有存过偏好时一律渲染暗色，**不跟随系统**。
-  规则很简单：**只有显式存过 `light` 才是白日，其余（无偏好 / 历史 `auto`）全部归夜间。**
-  ⚠️ 默认值写在**两处**，改一处必须同时改另一处，否则会出现"首屏暗、水合后跳成亮"的闪动：
-  - `Base.astro` 首屏内联脚本（`resolved = mode === 'light' ? 'light' : 'dark'`）
-  - `ui.js` 的 `THEME_DEFAULT` + `applyDefault()`
-  用户点过开关后按其选择走（`applyPref` 落盘），系统偏好变化不再影响已选用户。
-  另外内联脚本会按**实际解析出的主题**改写 `<meta name="theme-color">` —— 默认夜间时，
-  系统是白日的手机访客不该拿到浅色地址栏。自检：`node scripts/verify-theme.mjs [url]`。
-- 配色：黑白灰 + 玻璃（`--accent` 浅色近黑、深色近白；`--accent-grad` 复用做横幅/按钮），
-  令牌集中在 `global.css` 的 `:root`，深色覆盖在 `motion.css` 的 `html[data-theme='dark']`。**不要引入新配色**。
-- **边框（2026-09-15 加粗，别调回去）**：三档颜色 + 三档粗细，全站统一走令牌，不要写死 1px：
-  | 令牌 | 浅色 | 深色 | 对比度 | 用途 |
-  |---|---|---|---|---|
-  | `--line-1` | `rgba(12,12,14,.30)` | `rgba(255,255,255,.26)` | ≈2.0:1 / 2.25:1 | 行分隔、区块分隔（保持低调） |
-  | `--line-2` | `rgba(12,12,14,.50)` | `rgba(255,255,255,.44)` | ≈3.5:1 / 4.6:1 | 卡片、胶囊、控件的实边框 |
-  | `--line-glass` | `rgba(255,255,255,.72)` | `rgba(255,255,255,.36)` | 玻璃面内白描边 | 玻璃卡外框、顶栏、按钮 |
-  | `--line-w` | `2px` | — | — | 按钮 / 标签 / 顶栏 / 侧栏卡 / 目录 |
-  | `--line-w-card` | `2px` | — | — | 内容卡（作品卡 / plate / feat / step / door-row） |
-  | `--line-w-pill` | `2px` | — | — | 小胶囊（标签 / 联系方式 / 日历格 / 统计格） |
-  两个坑（2026-09-15 都踩过）：
-  1. **不要用 `1.5px`**：Blink 会把 1.5px 向下取整渲染成 **1px**（实测 devicePixelRatio 1 与 3 都是 1px），
-     等于加粗没生效。要加粗就写 `2px`。
-  2. **Astro 页面/组件里的 `<style>` 是作用域样式，优先级高于 global.css / motion.css**：
-     `Header.astro`（顶栏 `.pill`/`.theme-toggle`/`.burger`）等 6 个文件里写死的
-     `1px solid var(--line-2)` 会把全局加粗**局部盖掉**。这类写死值已全部换成 `var(--line-w)`；
-     以后加粗不合预期，先查页面/组件里的作用域样式（`grep -r "1px solid" src/`）。
-     自检脚本：`node scripts/border-check.mjs [url] [light|dark]` 直接打印各元素**实际生效**的
-     边框宽度/颜色；`node scripts/card-separation.mjs [url] [light|dark]` 量"卡面 vs 页面底色"分离度。
-  3. **`--line-glass` 在两种主题下必须是相反的颜色**（2026-09-15 修）：它原来是硬编码的
-     `rgba(255,255,255,.72)`（白线）——在深色主题下正确，但**浅色主题下等于没有轮廓**，
-     作品卡"没有边框、卡片不明显"就是这么来的（侧栏卡用的是 `--line-2` 深灰线，所以它一直看得见）。
-     现在：**浅色基值 = `var(--line-2)`（深灰线）**，深色令牌块里覆盖成 `rgba(255,255,255,.4)`。
-     凡是"浅色下某个面没有边界"的问题，先确认它用的是 `--line-glass` 还是 `--line-2`。
-  4. **内容卡的面用 `--glass-card`**（比 `--glass` 更实一档）：通过
-     `.wk-card, .plate, .feat, .step, .door-row, .shot-card { --glass: var(--glass-card) }`
-     重定义变量来生效（这些规则的 `background: var(--glass)` 会跟着变）。
-     侧栏卡 `.sidecard` 不在其中，保持原玻璃质感。实测卡面 vs 底色 1.29:1（浅）/1.25:1（深）。
-  原值（`--line-1` 1.32:1、`--line-2` 1.84:1）低于非文字 UI 的 3:1 可见性门槛，元素边界糊在一起很费眼。
-- 字体：**西文 Outfit 走 Google Fonts**（`Base.astro` 里 preconnect + `css2?family=Outfit:wght@400..900`；国内可能连不上，
-  断网/受限时回退系统字体）；中文走系统字体（PingFang SC / 微软雅黑…）；代码块用 `--font-code`。
-  MiSans 那条 jsDelivr 外链已删除（仓库 404、字体从未生效）。详见 §13「做过但被取消的优化」。
-- 动效：统一在 `prefers-reduced-motion` 下关闭（`.sli`/`[data-ent]`/`page-enter`/粒子/WX 脉冲等）。
-
+- **主题：只有一套暗色。**（2026-09-15 删除亮色主题与切换按钮，见 §27）
+  `Base.astro` 首屏内联脚本**先于渲染**把 `<html data-theme="dark">` 写死，避免闪烁；
+  `ui.js` 的 `lockDarkTheme()` 在每次 `astro:page-load` 后写回（ClientRouter 会用新文档的
+  `<html>` 覆写属性）。**没有开关、没有 `cw-theme-pref`、没有 `html[data-theme='light']` 规则。**
+  自检：`node scripts/verify-theme.mjs [url]`（单主题不变量，11 项）。
+  > 若以后真要加回浅色：**不能只加个开关** —— 需要一整套独立配色，并重新跑全站对比度审计
+  > （浅色玻璃 + 白字在物理上无法同时成立）。
+- **配色**：暗色电影感 + 玻璃拟态，令牌集中在 `global.css` 的 `:root`（即暗色），
+  `motion.css` 的 `html[data-theme='dark']` 是**同一组值的镜像**（保持既有选择器仍有效）。
+  强调色是**雾蓝** `--accent: #9FD3E8`（取自背景视频的 192° 青蓝，见 §23）。
+  文字白色/浅灰（`--ink` / `--ink-2` / `--ink-3`），**不要引入新色相**。
+- **玻璃材质**（全站统一走令牌，别在组件里写死数值）：
+  `--glass-blur: blur(20px) saturate(1.2)`（导航另有 `--nav-blur-scrolled`）、
+  `--line-2: rgba(255,255,255,.2)`（细边框）、`--line-hover`（悬停提亮）、
+  `--r-s/m/l: 12/18/24px`、`--glass*: rgba 深色底`、`--glass-panel`（浮层，近不透明）。
+  移动端（≤640px）在 `global.css` 里把 `--glass-blur` 降到 `blur(12px) saturate(1.1)` —— 一处生效。
+- **边框宽度：现在是 `1px`**（暗色电影感要"薄边"）。2026-09-15 早些时候曾统一加粗到 `2px`，
+  后来随视觉重构改薄。**唯一要记住的坑**：Blink 会把 `1.5px` 向下取整渲染成 **1px**
+  （实测 devicePixelRatio 1 与 3 都是 1px），所以要么写 `1px` 要么写 `2px`，别写 1.5px。
+- **Astro 页面/组件里的 `<style>` 是作用域样式，优先级高于 global.css / motion.css**：
+  组件里写死的 `1px solid …` 会把全局令牌**局部盖掉**（曾因此 15 处加粗无效）。
+  加粗/换色不合预期时，先查页面与组件里的作用域样式（`grep -r "1px solid" src/`）。
+  自检脚本：`node scripts/border-check.mjs [url]` 打印各元素**实际生效**的边框宽度/颜色；
+  `node scripts/card-separation.mjs [url]` 量"卡面 vs 页面底色"分离度。
+- **字体：Inter + 系统中文回退**（2026-09-15 从 Outfit 换成 Inter；Google Fonts 只取 300–500 三档，
+  因为全站 `font-weight` 已压到 500 以内）。字体栈定义在 `:root` 的 `--font-body` / `--font-display`。
 ### 9.1 手机端（2026-09-15 优化，改窄屏前先读）
 - **三栏侧栏在 <1200px 整体隐藏**（`.shell-left/.shell-right { display:none }`），
   手机端只有单列正文 + 顶栏汉堡抽屉。也就是说手机端**没有**个人信息卡/天气/统计/更新日历/最近更新。
