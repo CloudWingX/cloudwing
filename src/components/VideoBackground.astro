@@ -26,7 +26,7 @@ const on = Boolean(VIDEO_BG.src);
       class="video-bg"
       transition:persist="video-bg"
       aria-hidden="true"
-      style={`--vid-opacity-dark:${VIDEO_BG.opacityDark};--vid-opacity-light:${VIDEO_BG.opacityLight};--vid-scrim-dark:${VIDEO_BG.scrimDark};--vid-scrim-light:${VIDEO_BG.scrimLight};`}
+      style={`--vid-opacity-dark:${VIDEO_BG.opacityDark};--vid-opacity-light:${VIDEO_BG.opacityLight};--scrim-top:${VIDEO_BG.scrimTop};--scrim-mid:${VIDEO_BG.scrimMid};--scrim-bottom:${VIDEO_BG.scrimBottom};--scrim-light:${VIDEO_BG.scrimLight};`}
     >
       <video
         class="video-bg__el"
@@ -48,12 +48,19 @@ const on = Boolean(VIDEO_BG.src);
   .video-bg {
     position: fixed;
     inset: 0;
-    /* -4：压在页面底色之上、原有光晕(-2)/粒子(-1) 之下。
-       之前放在 -5（最底）时会被 body 的渐变糊住、几乎看不出是视频。 */
+    /* -4：压在页面底色之上、原有光晕(-2)/粒子(-1) 之下 */
     z-index: -4;
     pointer-events: none;
     overflow: hidden;
+    /* 降级底：视频没 load 出来之前 / 加载失败时，这里就是"深色渐变静态图"，
+       页面从第一帧起就有电影感底色，不会闪白。 */
+    background:
+      url('/media/bg-poster.jpg') center / cover no-repeat,
+      radial-gradient(120% 90% at 50% -10%, #0e1a22 0%, transparent 62%),
+      linear-gradient(180deg, #070d12 0%, #03060a 100%);
   }
+  /* 视频加载失败：藏掉 <video>，只留上面的渐变/静帧兜底 */
+  .video-bg.is-failed .video-bg__el { visibility: hidden; }
   /* 视频本身**半透明**：让它像一层"会动的纹理"叠在页面底色下面。
      这样页面底色仍是主调，浅色主题的深色文字 / 深色主题的浅色文字
      都继续成立 —— 不需要为了放视频去改任何文字颜色。
@@ -62,48 +69,82 @@ const on = Boolean(VIDEO_BG.src);
     width: 100%;
     height: 100%;
     object-fit: cover; /* 任意画幅都铺满视口，不留黑边 */
-    opacity: var(--vid-opacity-dark, 0.42);
+    opacity: var(--vid-opacity-dark, 0.5);
   }
   html[data-theme='light'] .video-bg__el {
     opacity: var(--vid-opacity-light, 0.3);
   }
+  /* 视频一旦能出画，就淡入 —— 避免加载瞬间的"跳一下"。
+     没加 has-poster 时（组件未接管）保持可见，避免万一脚本失效导致视频被永久藏住。 */
+  .video-bg.has-poster:not(.is-playing) .video-bg__el { opacity: 0; }
+  .video-bg__el { transition: opacity 0.6s var(--ease, ease); }
   /* 视频之上的遮罩（压高光，保证正文对比度）。层次：视频 → 本层 → 页面底色之上的一切。
      浅色主题用**白色**薄膜（把整体抬亮，深色文字才压得住）；
      深色主题用**黑色**薄膜（压住素材高光，避免出现刺眼的白块）。
      两层都只是"薄膜"，视频依然可见、依然在动。 */
-  /* 遮罩：同一个层里的伪元素，直接盖在视频之上（不给它单独 z-index，
-     否则会和 body::before(-3) 抢同一层，顺序变得不可预期）。 */
+  /* 遮罩：**上浅下深的渐变**，中心适当留亮。
+     这样白色文字在顶部（导航栏）与底部（页脚/长文）都有足够对比，
+     中间仍能看清画面动态 —— 比"整块均匀压暗"更有电影感，也更省视频亮度。
+     同一个层里的伪元素直接盖在视频之上（不给单独 z-index，避免和 body::before 抢层）。 */
   .video-bg::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, var(--vid-scrim-dark, 0.45));
+    background: linear-gradient(
+      180deg,
+      rgba(4, 7, 10, var(--scrim-top, 0.35)) 0%,
+      rgba(4, 7, 10, var(--scrim-mid, 0.42)) 45%,
+      rgba(4, 7, 10, var(--scrim-bottom, 0.72)) 100%
+    );
   }
+  /* 兜底：万一切到浅色态（本设计只提供暗色，这里仅为防御） */
   html[data-theme='light'] .video-bg::after {
-    background: rgba(255, 255, 255, var(--vid-scrim-light, 0.55));
+    background: rgba(255, 255, 255, var(--scrim-light, 0.55));
   }
 </style>
 
 <script>
   // 背景视频的健壮性处理（幂等标记挂在元素上：软导航是同一个节点，不会重复绑定）。
-  // 用纯 JS 写，避免在 Astro 的 <script> 里引入类型断言带来的编译风险。
+  // 状态类都加在 .video-bg 上：
+  //   has-poster  组件已接管 → 未出画前藏住 <video>，露出深色渐变/静帧兜底（不闪白）
+  //   is-playing  能出画了 → 淡入
+  //   is-failed   加载/解码失败 → 藏掉 <video>，只留兜底底图（降级）
+  //   is-paused   用户手动暂停 → 保持首帧，页面照常阅读
   function initVideoBg() {
     var v = document.querySelector('.video-bg__el');
-    if (!v || v.__cwWired) return;
+    var wrap = document.querySelector('.video-bg');
+    if (!v || !wrap || v.__cwWired) return;
     v.__cwWired = true;
+    wrap.classList.add('has-poster'); // 由脚本接管淡入（脚本没跑时视频保持可见，不会永久隐藏）
 
-    // 尊重「减少动态效果」：只显示首帧，不循环播放
+    var playing = function () { wrap.classList.add('is-playing'); wrap.classList.remove('is-failed'); };
+
+    // 减少动态：只显示首帧，不播放
     var rm = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var userPaused = false;
+
     var apply = function () {
-      if (rm.matches) {
+      if (rm.matches || userPaused) {
         v.pause();
-        v.autoplay = false;
-      } else if (v.paused) {
-        // 自动播放可能被省电模式拦截；失败就保持首帧，不影响页面
-        var p = v.play();
-        if (p && typeof p.catch === 'function') p.catch(function () {});
+        if (rm.matches) v.autoplay = false;
+        playing(); // 暂停也要显示画面（首帧）
+        return;
       }
+      var p = v.play();
+      if (p && typeof p.catch === 'function') {
+        p.then(playing).catch(function () { playing(); }); // 被拦也显示首帧
+      } else playing();
     };
+
+    // 能出画了就显示
+    v.addEventListener('loadeddata', playing);
+    v.addEventListener('canplay', playing);
+    if (v.readyState >= 2) playing();
+    // 失败降级：藏掉视频，页面用深色渐变 + 静帧兜底
+    v.addEventListener('error', function () { wrap.classList.add('is-failed'); });
+    // 兜底：若 8 秒后仍没出画，也亮出画面（避免一直空白）
+    setTimeout(playing, 8000);
+
     apply();
     if (rm.addEventListener) rm.addEventListener('change', apply);
 
@@ -112,6 +153,14 @@ const on = Boolean(VIDEO_BG.src);
       if (document.hidden) v.pause();
       else apply();
     });
+
+    // 供导航栏的「暂停动态」按钮调用（可访问性要求：提供暂停入口）
+    window.__cwVideoToggle = function () {
+      userPaused = !userPaused;
+      apply();
+      return userPaused;
+    };
+    window.__cwVideoPaused = function () { return userPaused || rm.matches; };
   }
   initVideoBg();
   document.addEventListener('astro:page-load', initVideoBg);

@@ -368,6 +368,36 @@ items:
       （25 项：逐页硬刷新 + 软导航一圈，校验视频存在/在播/层级/透明度、旧背景仍在、
       以及软导航时视频节点**未被重建**）。
 
+24. **★暗色电影感 + 玻璃拟态重构★**（2026-09-15，用户要求；改样式前必读）：
+    - **全站只有一套暗色主题**。`:root` 就是暗色；`html[data-theme='dark']` 重复同一组值。
+      **主题开关不再切换浅色**：渲染恒为 `dark`，用户选择只记在
+      `dataset.themePref` + localStorage（供开关显示）。原因：浅色玻璃 + 白字在物理上
+      无法同时成立 —— 强行保留浅色路径实测有 **70 处对比度不达标**，全是"白字白底"。
+      改动点：`Base.astro` 的头部脚本恒写 `dark`；`ui.js` 的 `applyPref()` 恒写 `dark`。
+    - **玻璃材质统一走令牌**，不要在组件里写死数值：
+      `--glass-blur: blur(20px) saturate(1.2)`、`--line-2: rgba(255,255,255,.2)`、
+      `--r-s/m/l: 12/18/24px`、`--glass*`（rgba 深色底）。
+      移动端（≤640px）在 `global.css` 里把 `--glass-blur` 降到 `blur(12px) saturate(1.1)`
+      —— **一处生效**，不必逐个组件改；交互控件同时抬到 44px 触控高度。
+    - **强调色取自背景视频**：实测视频色相稳定在 **192°（青蓝）**，故按用户规则取
+      "科技抽象"档的冷色：`--accent: #7fd4e8` / `--accent-deep: #9fe2f0`，
+      另有 `--accent-2`（雾蓝）`--accent-3`（灰绿）备用。**换视频素材要重取色相。**
+    - 排版：字体改为 **Inter / Helvetica Neue**（Google Fonts 只取 300–500 三档）；
+      **全站 font-weight 已全部压到 500 以内**（原 40 处 600–900）。
+      主标题只保留**一行**（`lines={[\`HELLO THIS IS ${lastWord}\`]}`），字号 `--display-size` 48–72px。
+    - 交互：hover 统一为 `scale(1.02)` + 边框提亮（`--line-hover`），**不用位移/弹跳**；
+      首页堆叠卡片缓动由 `elastic` 改为 `smooth`、`delay` 提到 5.6s。
+    - 导航栏：默认 `--glass-nav`（近乎透明，露出视频），离开顶部 24px 后由
+      `html[data-scrolled='1']` 换成 `--glass-nav-solid`（半透明暗色）。逻辑在 `ui.js` 的 `autoHideHeader`。
+    - **可访问性**：导航栏有「暂停背景动态」按钮（`[data-motion-toggle]`，WCAG 2.2.2），
+      由 `ui.js` 的 `motionToggle()` 接管，调 `window.__cwVideoToggle()`；
+      同时 `prefers-reduced-motion` 会让视频只显示首帧、并在 `global.css` 里收敛所有 CSS 动效。
+      视频加载失败 → 藏掉 `<video>`，用 `public/media/bg-poster.jpg` + 深色渐变兜底。
+    - 自检：`node scripts/verify-redesign.mjs`（13 项：单主题、玻璃令牌取值、暂停按钮、
+      导航栏滚动过渡）。
+    - **已知未改**：作品封面 SVG（`public/covers/*.svg`）当初是按浅色底设计的，
+      在暗色站上偏亮；属于内容资产，需要时可重画。
+
 ---
 
 ## 7. 验证与调试

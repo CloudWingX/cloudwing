@@ -25,16 +25,18 @@ export const MUSIC: { title: string; artist?: string; src: string }[] = [];
 //   scrim: 视频之上的遮罩浓度 0~1，调大=文字更清楚、视频更淡
 export const VIDEO_BG = {
   src: '/media/bg-loop.mp4',
-  poster: '',
+  // 视频加载失败 / 减少动态时显示的静态兜底图（留空则用下面的 --bg 深色渐变）。
+  // 建议放一张从视频里截的静帧（同目录，jpg/webp 都行）。
+  poster: '/media/bg-poster.jpg',
   // 视频层浓度 0~1（越小越淡）
-  opacityDark: 0.42,
+  opacityDark: 0.5,
   opacityLight: 0.3,
-  // 视频之上的遮罩：用来压住素材里的**高光区**。
-  // 只用透明度是不够的 —— 素材亮部（约 0.95 亮度）即使按 0.3 叠加，
-  // 合成后仍有 ~0.66 亮度，浅色主题的深色正文压不住（实测 hero 副标题只有 ~3.6:1）。
-  // 所以浅色主题在视频上再盖一层白色薄膜，把整体抬到"浅底"该有的亮度。
-  scrimDark: 0.45,
-  scrimLight: 0.55,
+  // 视频之上的**渐变遮罩**浓度：顶部较浅、底部较深、中心适当留亮。
+  // 这样白色文字在上下两端都有足够对比，中间仍能看清画面。
+  scrimTop: 0.35,
+  scrimMid: 0.42,
+  scrimBottom: 0.72,
+  scrimLight: 0.55, // 兜底（万一切到浅色态）
 };
 
 export const SITE = {

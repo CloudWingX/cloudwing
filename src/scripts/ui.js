@@ -60,12 +60,15 @@ function applyDefault() {
 
 function applyPref(mode) {
   const root = document.documentElement;
-  // 只可能是显式的 light / dark（调用方已过滤无偏好情况），不再有"跟随系统"分支
-  const resolved = mode === 'light' ? 'light' : 'dark';
-  root.dataset.theme = resolved;
-  root.dataset.themePref = resolved; // 二态：始终落盘 light/dark
-  storeSet(PREF_KEY, resolved);
-  storeSet(THEME_KEY, resolved); // 保留旧键兼容
+  // ★暗色电影感重构后：全站只有一套暗色主题★
+  // 主题开关仍然可点、仍会记住选择（dataset.themePref 保留 light/dark），
+  // 但**实际渲染始终是 dark** —— 浅色玻璃 + 白字在物理上无法同时成立，
+  // 保留一条"浅色渲染路径"只会留下一堆无法达标的样式分支（实测浅色路径有 70 处对比度不达标）。
+  root.dataset.theme = THEME_DEFAULT;
+  const pref = mode === 'light' ? 'light' : 'dark';
+  root.dataset.themePref = pref; // 二态：始终落盘 light/dark（供开关状态显示）
+  storeSet(PREF_KEY, pref);
+  storeSet(THEME_KEY, pref); // 保留旧键兼容
 }
 
 function syncThemeButtons() {
@@ -84,9 +87,10 @@ function initThemeToggle() {
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('.theme-toggle');
       if (!btn) return;
-      // 只在 白日 / 夜间 之间切换（去掉“跟随系统”）
-      const darkNow = document.documentElement.dataset.theme === 'dark';
-      applyPref(darkNow ? 'light' : 'dark');
+      // 单主题（暗色电影感）：渲染恒为 dark，开关只在"记住的偏好"之间切换。
+      // 注意要读**偏好**而不是"当前渲染的主题" —— 后者恒为 dark，读它会导致永远切不动。
+      const prefNow = document.documentElement.dataset.themePref === 'light' ? 'light' : 'dark';
+      applyPref(prefNow === 'dark' ? 'light' : 'dark');
       syncThemeButtons();
     });
   }
@@ -213,6 +217,7 @@ function boot() {
     weatherWidget,      // 左侧栏天气小帖（uapis.cn，浏览器端拉取 + 30 分钟缓存）
     musicPlayer,        // 左侧栏音乐播放器（歌曲见 site.ts 的 MUSIC）
     searchModal,        // 全站搜索悬浮窗（Pagefind，首次打开才加载）
+    motionToggle,       // 背景动态开关（可访问性：WCAG 2.2.2 暂停入口）
   ].forEach((fn) => {
     try {
       fn();
@@ -1310,14 +1315,25 @@ function autoHideHeader() {
   let last = window.scrollY;
   let ticking = false;
 
+  // 导航栏材质：顶部近乎透明（露出视频），一离开顶部就换成半透明暗色。
+  // 只切一个 html 属性，具体颜色在 Header.astro 里（[data-scrolled='1']）。
+  const SCROLL_MATERIAL_AT = 24;
+  const setMaterial = (y) => {
+    const want = y > SCROLL_MATERIAL_AT ? '1' : '0';
+    const root = document.documentElement;
+    if (root.dataset.scrolled !== want) root.dataset.scrolled = want;
+  };
+
   const onScroll = () => {
     const y = window.scrollY;
+    setMaterial(y);
     if (Math.abs(y - last) < DELTA) return;
     if (y <= THRESHOLD) setHidden(false);
     else if (y > last) setHidden(true);
     else setHidden(false);
     last = y;
   };
+  setMaterial(window.scrollY);
 
   window.addEventListener(
     'scroll',
@@ -1334,6 +1350,7 @@ function autoHideHeader() {
   window.__cwHeaderReset = () => {
     window.clearTimeout(window.__cwSideDelay);
     last = window.scrollY;
+    setMaterial(last);
     // 进新页面先按「导航栏在场」布局并显示它；若新页停在深处，随后的滚动事件会再收起
     document.documentElement.dataset.hdSide = 'nav';
     setHidden(false);
@@ -2089,6 +2106,32 @@ function searchModal() {
       if (cur && cur.open) close(); else open();
     }
   });
+}
+
+/* ---------- 背景动态开关（可访问性） ----------
+   WCAG 2.2.2：自动播放且超过 5 秒的动态内容必须能暂停。
+   背景视频是纯装饰但会长时间循环，故提供显式暂停入口。
+   状态放进单例 + 委托监听，软导航后照常可用。 */
+function motionToggle() {
+  const st = window.__cwMotion || (window.__cwMotion = { wired: false });
+  if (st.wired) return;
+  st.wired = true;
+  const sync = () => {
+    const on = typeof window.__cwVideoPaused === 'function' ? window.__cwVideoPaused() : false;
+    document.querySelectorAll('[data-motion-toggle]').forEach((b) => {
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.setAttribute('aria-label', on ? '播放背景动态' : '暂停背景动态');
+    });
+  };
+  document.addEventListener('click', (ev) => {
+    const t = ev.target instanceof Element ? ev.target.closest('[data-motion-toggle]') : null;
+    if (!t) return;
+    ev.preventDefault();
+    if (typeof window.__cwVideoToggle === 'function') window.__cwVideoToggle();
+    sync();
+  });
+  document.addEventListener('astro:page-load', sync);
+  sync();
 }
 
 // 首次加载与每次导航后都执行（函数内部有守卫，可安全重复调用）

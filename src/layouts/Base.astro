@@ -41,13 +41,14 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
     <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
     <!-- RSS 订阅（作品档案更新自动发现） -->
     <link rel="alternate" type="application/rss+xml" title={`${SITE.title} · 作品档案`} href="/rss.xml" />
-    <!-- v3 字体：Latin→Outfit（Google），中文走系统字体（PingFang SC / 微软雅黑 等）
-         这里原本还引一行第三方中文 webfont「MiSans」（jsDelivr 上的一个 GitHub 仓库）：
-         该仓库已 404，jsDelivr 上不论 @latest 还是 @main 都取不到内容，字体从未生效过，
-         却是一个阻塞渲染的跨域请求 —— 移除后中文排版与之前完全一致，首屏少等一个请求。 -->
+    <!-- 字体：Latin→Inter（Google），中文走系统字体（PingFang SC / 微软雅黑 等）。
+         只取 300–500 三档字重 —— 暗色电影感的排版约定是"字重不超过 500"，
+         多载 600–900 只会白白增加体积（页面里已无 >500 的用法）。
+         这里曾引过第三方中文 webfont「MiSans」，该仓库已 404、字体从未生效过，
+         却是一个阻塞渲染的跨域请求 —— 不再引回。 -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400..900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..500&display=swap" rel="stylesheet" />
     <meta name="generator" content={Astro.generator} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={`${title} — ${SITE.latin}`} />
@@ -64,12 +65,12 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageAbs} />
     <link rel="canonical" href={Astro.url.href} />
-    <meta name="theme-color" content="#e9ebee" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0c0c0e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#070b0f" />
     <script is:inline>
-      // 尽早应用主题：白日/夜间 二态，避免闪烁。
-      // ★默认夜间★：没有存过偏好（或存的是历史值 auto）时一律用 dark —— 站点开箱即暗色。
-      //   用户点过主题开关后会把 light/dark 落盘，之后一律尊重用户选择。
+      // 尽早应用主题，避免闪烁。
+      // ★暗色电影感重构后：全站只有一套暗色主题★
+      //   实际渲染恒为 dark；用户的选择仍记在 dataset.themePref / 存储里（供主题开关显示状态），
+      //   但不会再切到浅色 —— 浅色玻璃 + 白字在物理上无法同时成立。
       (function () {
         function g(k) {
           try { var v = localStorage.getItem(k) || sessionStorage.getItem(k); if (v) return v; } catch (e) { /* ignore */ }
@@ -84,19 +85,14 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
           if (p === 'light' || p === 'dark') return p;
           var old = g('cw-theme'); // 旧版本：已解析主题当作偏好迁移
           if (old === 'light' || old === 'dark') return old;
-          return null; // 无偏好 → 走默认（夜间）
+          return null;
         }
         var mode = pref();
-        // 默认夜间：只有用户显式选过 light 才是白日；旧值 auto 也一并归到夜间
-        var resolved = mode === 'light' ? 'light' : 'dark';
-        document.documentElement.dataset.theme = resolved;
-        document.documentElement.dataset.themePref = resolved;
-        // 浏览器 UI（手机地址栏等）的颜色：按**实际解析出的主题**给，
-        // 不能只靠 prefers-color-scheme —— 默认夜间时，系统是白日的访客会拿到浅色地址栏配深色页面。
-        // 取值与上面两个 <meta name="theme-color"> 保持一致（暗 #0c0c0e / 浅 #e9ebee）。
-        var tc = resolved === 'dark' ? '#0c0c0e' : '#e9ebee';
+        document.documentElement.dataset.theme = 'dark';
+        document.documentElement.dataset.themePref = mode === 'light' ? 'light' : 'dark';
+        // 浏览器 UI（手机地址栏等）颜色：跟随实际渲染的暗色
         var metas = document.querySelectorAll('meta[name="theme-color"]');
-        for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', tc);
+        for (var i = 0; i < metas.length; i++) metas[i].setAttribute('content', '#070b0f');
       })();
       // 尽早打上 js 标记，让「入场/显现」动效只在 JS 可用时接管（无 JS 则直接显示）
       document.documentElement.classList.add('js');

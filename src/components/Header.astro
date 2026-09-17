@@ -114,6 +114,23 @@ const pad = (n: number) => String(n).padStart(2, '0');
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.1"/><path d="M12 2.8v2.3M12 18.9v2.3M2.8 12h2.3M18.9 12h2.3M5.5 5.5l1.6 1.6M16.9 16.9l1.6 1.6M18.5 5.5l-1.6 1.6M7.1 16.9l-1.6 1.6"/></svg>
         </span>
       </button>
+      {/* 可访问性：给"动态背景"一个显式的暂停入口（WCAG 2.2.2 暂停/停止/隐藏）。
+          默认仅在 hover/focus 时淡入，不干扰画面；由 VideoBackground 的脚本接管。 */}
+      <button
+        type="button"
+        class="motion-toggle"
+        data-motion-toggle
+        aria-label="暂停背景动态"
+        aria-pressed="false"
+        title="暂停 / 播放背景动态"
+      >
+        <svg class="mt-pause" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <path d="M9 5v14M15 5v14" />
+        </svg>
+        <svg class="mt-play" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
+          <path d="M7 4.8 19 12 7 19.2Z" />
+        </svg>
+      </button>
       <button type="button" class="burger" data-nav-burger aria-label="打开菜单" aria-expanded="false">
         <span class="b-line"></span>
         <span class="b-line"></span>
@@ -195,11 +212,48 @@ const pad = (n: number) => String(n).padStart(2, '0');
     background: var(--glass-nav);
     /* 顺序与 .nav-sub 一致（-webkit- 在前）：构建时的 CSS 压缩会合并这两个前缀，
        顺序不同可能导致合并后把标准属性丢掉（实测过一次，结果计算值是 none）。 */
-    -webkit-backdrop-filter: blur(22px) saturate(1.5);
-    backdrop-filter: blur(22px) saturate(1.5);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 18px rgba(0, 0, 0, 0.14);
     pointer-events: none;
+    /* 滚动时从"几乎透明"过渡到"半透明暗色"（见下面的 [data-scrolled='1']） */
+    transition: background 0.3s var(--ease), border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
   }
+  /* 离开页面顶部后：导航栏加深，保证压得住后面的内容 */
+  html[data-scrolled='1'] .site-header .hd-glass {
+    background: var(--glass-nav-solid);
+    border-bottom-color: var(--line-hover);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.32);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hd-glass { transition: none; }
+  }
+
+  /* 背景动态开关（可访问性）：与主题开关同尺寸；默认低调，不抢画面 */
+  .motion-toggle {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: var(--line-w) solid var(--line-2);
+    background: transparent;
+    color: var(--ink-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  }
+  .motion-toggle:hover,
+  .motion-toggle:focus-visible {
+    color: var(--ink);
+    border-color: var(--line-hover);
+    background: var(--accent-soft);
+  }
+  .motion-toggle .mt-play { display: none; }
+  .motion-toggle[aria-pressed='true'] { color: var(--accent-deep); border-color: var(--accent); }
+  .motion-toggle[aria-pressed='true'] .mt-pause { display: none; }
+  .motion-toggle[aria-pressed='true'] .mt-play { display: inline-flex; }
   /* 内容列：限宽 + 左右留白，与 .wrap 同一套（--w-max / --gutter），
      所以品牌、导航项、右侧按钮的位置和页面内容对齐。 */
   .hd-in {
@@ -224,7 +278,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .brand .bname {
     font-family: var(--font-display);
     font-size: 0.98rem;
-    font-weight: 800;
+    font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     line-height: 1.05;
@@ -319,8 +373,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
     border: var(--line-w) solid var(--line-2);
     border-radius: 14px;
     background: var(--glass-panel);
-    -webkit-backdrop-filter: blur(24px) saturate(1.6);
-    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     box-shadow: var(--shadow-lg);
     opacity: 0;
     visibility: hidden;
@@ -355,7 +409,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
   }
   .nav-sub a.is-all {
     color: var(--accent-deep);
-    font-weight: 600;
+    font-weight: 500;
   }
   .nav-sub .ns-count {
     font-family: var(--font-mono);
@@ -450,8 +504,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
     /* 与顶栏/二级菜单同一套玻璃：更实的底 + 边框内高斯模糊
        （太透会让底下的页面内容透进来） */
     background: var(--glass-panel);
-    -webkit-backdrop-filter: blur(24px) saturate(1.5);
-    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     box-shadow: var(--shadow-lg);
     animation: nav-in 0.22s var(--ease);
   }

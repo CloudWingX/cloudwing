@@ -90,11 +90,12 @@ const geom = () => ev(`(()=>{
 console.log('=== 几何与配色 ===');
 const g0 = await geom();
 console.log('  ' + JSON.stringify(g0, null, 1));
-check('整个大标题两行都是 StrokeText', g0.行数 === 2, `行数=${g0.行数}，文本=${JSON.stringify(g0.行文本)}`);
-check('两行都渲染出了 SVG 字形', g0.host && g0.host.h > 0, `第二行高=${g0.host && g0.host.h}`);
-check('两行高度一致（不出现错位）', g0.行高 && g0.行高.length === 2 && Math.abs(g0.行高[0] - g0.行高[1]) <= 4, `行高=${JSON.stringify(g0.行高)}`);
-check('第一行文案正确', (g0.行文本 || [])[0] === 'HELLO THIS IS', String((g0.行文本 || [])[0]));
-check('第二行文案正确', (g0.行文本 || [])[1] === 'CloudWing', String((g0.行文本 || [])[1]));
+// 暗色电影感重构：主标题只保留**一行**核心信息（用户要求"只保留一行核心信息"），
+// 故断言从"两行 + 级联"改为"一行 + 单行描边动画"。
+check('主标题是一行 StrokeText', g0.行数 === 1, `行数=${g0.行数}，文本=${JSON.stringify(g0.行文本)}`);
+check('渲染出了 SVG 字形', g0.host && g0.host.h > 0, `高度=${g0.host && g0.host.h}`);
+check('行高在 48–72px 区间（用户指定字号）', g0.行高 && g0.行高.length === 1 && g0.行高[0] >= 44 && g0.行高[0] <= 80, `行高=${JSON.stringify(g0.行高)}`);
+check('文案正确（一行说完）', /^HELLO THIS IS /.test(String((g0.行文本 || [])[0])), String((g0.行文本 || [])[0]));
 check('描边色来自令牌（非官方紫）', !!g0.strokeColor && !/A78BFA|167,\s*139,\s*250/i.test(g0.strokeColor), String(g0.strokeColor));
 check('填充色已设置', !!g0.fillColor, String(g0.fillColor));
 
@@ -112,9 +113,7 @@ const log = await ev(`(()=>{const L=window.__strokeLog||[];
           第一行动画首帧:first(0), 第二行挂载首帧:first(1, false),
           wipe最大:Math.max(...wipe)};})()`);
 console.log('  ' + JSON.stringify(log));
-check('第一行有描边动画', log && log.第一行不同值数 > 1, `${log && log.第一行不同值数} 个不同值`);
-check('第二行也有描边动画（整个标题都生效）', log && log.第二行不同值数 > 1, `${log && log.第二行不同值数} 个不同值`);
-check('第二行是级联（比第一行晚开始）', log && log.第二行挂载首帧 > log.第一行动画首帧, `第一行首帧=${log && log.第一行动画首帧}，第二行首帧=${log && log.第二行挂载首帧}`);
+check('主标题有描边动画', log && log.第一行不同值数 > 1, `${log && log.第一行不同值数} 个不同值`);
 check('填充走 wipe（rect 宽度增长到全宽）', log && log.wipe最大 > 0, `max=${log && log.wipe最大}`);
 
 console.log('\n=== 与既有动效共存 ===');

@@ -47,7 +47,9 @@ const AUDIT_FN = `(() => {
       if (bg && bg.a > 0.001) canvas = bg.c;
     }
     if (canvas[0] === 255 && canvas[1] === 255 && canvas[2] === 255) {
-      canvas = document.documentElement.dataset.theme === 'dark' ? [12, 12, 14] : [255, 255, 255];
+      // 用 __AUDIT_THEME__（由宿主按"站点实际渲染的主题"注入），
+      // 而不是现场读 dataset —— 避免与强行覆盖的期望值不一致。
+      canvas = __AUDIT_THEME__ === 'dark' ? [7, 11, 15] : [255, 255, 255];
     }
     layers.push({ c: canvas, a: 1 });
     let out = canvas;
@@ -63,6 +65,10 @@ const AUDIT_FN = `(() => {
     // 只看直接含文字的节点
     const txt = Array.from(el.childNodes).filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join('');
     if (!txt) return;
+    // 跳过 SVG 文字：text/tspan 的颜色来自 fill/stroke 属性（甚至由 GSAP 逐帧改
+    // stroke-dashoffset），color 属性对它们没有意义 —— 按 color 算会得到假 1:1。
+    // 描边标题的对比度另有专门验证（verify-videobg.mjs 对 .display 取样真实像素）。
+    if (el.namespaceURI === 'http://www.w3.org/2000/svg') return;
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) return;
     const r = el.getBoundingClientRect();
@@ -143,13 +149,22 @@ const main = async () => {
       });
       await send('Page.navigate', { url: BASE + path });
       await sleep(2600);
-      // 兜底：主题不符就直接置位并等重排
-      const t = await send('Runtime.evaluate', { expression: `document.documentElement.dataset.theme`, returnByValue: true });
-      if (t.result.result.value !== THEME) {
-        await send('Runtime.evaluate', { expression: `document.documentElement.dataset.theme=${th};document.documentElement.dataset.themePref=${th};` });
-        await sleep(700);
+      // 注意：站点现在是**单套暗色主题**（暗色电影感重构），主题开关不再切换浅色。
+      // 站点自己解析出的 data-theme 就是"真实可达"的主题；这里读出来用作实际评估主题，
+      // 不再强行覆盖成 light —— 强行覆盖只会测到一条页面上永远不会出现的渲染路径，
+      // 产生一堆假失败（实测：强置 light 会得到 70 处"白字白底"）。
+      const t = await send('Runtime.evaluate', {
+        expression: `JSON.stringify({theme:document.documentElement.dataset.theme,pref:document.documentElement.dataset.themePref})`,
+        returnByValue: true,
+      });
+      const rendered = JSON.parse(t.result.result.value || '{}');
+      if (rendered.theme && rendered.theme !== THEME) {
+        console.log(`  ⚠ 站点解析为 ${rendered.theme}（请求 ${THEME}）——按 ${rendered.theme} 评估；单主题站点属预期`);
       }
-      const r = await send('Runtime.evaluate', { expression: AUDIT_FN, returnByValue: true });
+      const r = await send('Runtime.evaluate', {
+        expression: `var __AUDIT_THEME__=${JSON.stringify(rendered.theme || THEME)};\n${AUDIT_FN}`,
+        returnByValue: true,
+      });
       if (r.result.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description || 'eval error');
       return r.result.result.value;
     });

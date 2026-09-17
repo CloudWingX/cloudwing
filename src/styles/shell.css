@@ -138,8 +138,8 @@
   border: var(--line-w) solid var(--line-2);
   border-radius: var(--r-l);
   background: var(--glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-sm);
   padding: 0.85rem 0.9rem 0.95rem;
 }
@@ -150,7 +150,7 @@
   margin: 0 0 0.7rem;
   font-family: var(--font-mono);
   font-size: 0.64rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -181,7 +181,7 @@
   list-style: none;
   font-family: var(--font-display);
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--ink);
   transition: background 0.16s var(--ease);
@@ -269,7 +269,7 @@
 .st-list a[aria-current='page'] {
   background: var(--accent-soft);
   color: var(--accent-deep);
-  font-weight: 700;
+  font-weight: 500;
   box-shadow: inset 2px 0 0 var(--accent);
 }
 .st-list a[aria-current='page'] .st-no {
@@ -301,7 +301,7 @@
   color: var(--accent-deep);
   border-color: var(--accent);
   background: var(--accent-soft);
-  font-weight: 600;
+  font-weight: 500;
 }
 .toc-list li.d3 a {
   padding-left: 1.15rem;
@@ -400,7 +400,7 @@
   transition: transform 0.18s var(--ease), box-shadow 0.18s ease;
 }
 .pf-avatar:hover {
-  transform: translateY(-2px);
+  transform: translateY(0) scale(1.02);
   box-shadow: var(--shadow-lg);
 }
 .pf-avatar img {
@@ -420,7 +420,7 @@
   margin: 0 0 0.28rem;
   font-family: var(--font-display);
   font-size: 1.02rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink);
@@ -432,7 +432,7 @@
 .pf-name span {
   font-family: var(--font-body);
   font-size: 0.76rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: none;
   color: var(--ink-3);
@@ -488,7 +488,7 @@
   display: inline-flex;
   align-items: flex-start;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 500;
   color: var(--ink);
   line-height: 1;
 }
@@ -510,7 +510,7 @@
 }
 .wx-city {
   font-size: 0.86rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -548,7 +548,7 @@
 }
 .wx-aqi b {
   color: var(--accent-deep);
-  font-weight: 700;
+  font-weight: 500;
 }
 .wx-days {
   list-style: none;
@@ -661,7 +661,7 @@
 .sw-stats .v {
   font-family: var(--font-mono);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--accent-deep);
   font-variant-numeric: tabular-nums;
 }
@@ -684,7 +684,7 @@
 .sw-month {
   margin: -0.35rem 0 0.55rem;
   font-size: 0.76rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink-2);
 }
 .sw-cal {
@@ -725,7 +725,7 @@
   cursor: pointer;
   background: var(--accent-soft);
   color: var(--accent-deep);
-  font-weight: 700;
+  font-weight: 500;
   transition: background 0.16s var(--ease), color 0.16s var(--ease), box-shadow 0.16s var(--ease);
 }
 .sw-cal .cell.has:hover {
@@ -869,7 +869,7 @@
 }
 .sw-cal-list .ci-title {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 500;
   text-decoration: none;
 }
 .sw-cal-list a.ci-title:hover {
@@ -921,8 +921,8 @@
   border: var(--line-w) solid var(--line-2);
   border-radius: var(--r-l);
   background: var(--glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-sm);
 }
 .art-toc > summary {
@@ -933,7 +933,7 @@
   gap: 0.5rem;
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-3);
@@ -980,7 +980,7 @@
 .mu-title {
   margin: 0;
   font-size: 0.84rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--ink);
   line-height: 1.35;
   /* 长曲名截断，不把卡片撑高 */

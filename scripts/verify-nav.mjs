@@ -53,7 +53,8 @@ console.log('  ' + JSON.stringify(bar));
 // 边框用底边一条实线做界定（四边描边只在悬浮胶囊上成立）。
 check('导航栏通栏（玻璃层铺满视口宽）', Math.abs(bar.栏宽 - bar.视口宽) <= 2, `栏宽=${bar.栏宽} 视口宽=${bar.视口宽}`);
 const bottomW = parseFloat(String(bar.下边框));
-check('导航栏有可见的分隔边框（底边）', bottomW >= 1.5, bar.下边框);
+// 暗色电影感重构后：边框统一为 1px rgba(255,255,255,.2)（细边框，靠亮度而非粗细建立轮廓）
+check('导航栏有可见的分隔边框（底边）', bottomW >= 1, bar.下边框);
 check('分隔边框不是透明', !/rgba\([^)]*,\s*0\)/.test(String(bar.下边框)), bar.下边框);
 check('导航栏边框内有高斯模糊', /blur\(\s*\d+/.test(String(bar.模糊)) && parseFloat(String(bar.模糊).match(/blur\((\d+)/)[1]) >= 12, String(bar.模糊));
 check('内容列仍限宽（与页面内容对齐）', bar.内容列宽 !== null && bar.内容列宽 <= bar.视口宽, `内容列=${bar.内容列宽}`);
@@ -73,7 +74,7 @@ const sub = await ev(`(()=>{const el=document.querySelector('.nav-sub'); const c
 console.log('  ' + JSON.stringify(sub));
 const subW = parseFloat(String(sub.边框));
 check('二级菜单已展开', sub.可见 === true && sub.子项数 > 0, `${sub.子项数} 项`);
-check('二级菜单有可见边框', subW >= 1.5, sub.边框);
+check('二级菜单有可见边框', subW >= 1, sub.边框);
 check('二级菜单边框内有高斯模糊', /blur\(\s*\d+/.test(String(sub.模糊)) && parseFloat(String(sub.模糊).match(/blur\((\d+)/)[1]) >= 12, String(sub.模糊));
 // 背景必须足够实：太透会让底下的卡片文字透进来（历史症状）
 const alpha = String(sub.背景).match(/rgba?\([^)]*?,\s*(0?\.\d+)\)/g) || [];

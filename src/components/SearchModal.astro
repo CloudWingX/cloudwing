@@ -43,7 +43,7 @@
     overflow: visible;
   }
   .search-modal::backdrop {
-    /* 遮罩要够实：单靠 backdrop-filter 在某些渲染环境下不生效，会露出后面的页面 */
+    /* 这是"给页面压暗的膜"，不是玻璃片 —— 用它自己的轻模糊，别套玻璃令牌 */
     background: rgba(0, 0, 0, 0.72);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -64,8 +64,8 @@
     /* 比 --glass-strong 更实一档：搜索框要有足够的对比，背后页面的文字不能透进来
        （纯玻璃面板会让正文透出、读数打架） */
     background: var(--glass-panel);
-    backdrop-filter: blur(24px) saturate(1.4);
-    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     box-shadow: var(--shadow-lg);
     overflow: hidden;
   }
@@ -151,8 +151,8 @@
   .sm-body :global(.pagefind-ui__form) { position: sticky; top: 0; z-index: 2; background: transparent; }
   .sm-body :global(.pagefind-ui__search-input) {
     background: var(--glass);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     color: var(--ink);
     font-family: var(--font-body);
     box-shadow: var(--shadow-sm);
@@ -172,7 +172,7 @@
   .sm-body :global(.pagefind-ui__results) { padding: 0; margin: 0; list-style: none; }
   .sm-body :global(.pagefind-ui__result) { border-top: 1px solid var(--line-1); padding: 1rem 0; }
   .sm-body :global(.pagefind-ui__result-title),
-  .sm-body :global(.pagefind-ui__result-link) { color: var(--ink); font-weight: 700; }
+  .sm-body :global(.pagefind-ui__result-link) { color: var(--ink); font-weight: 500; }
   .sm-body :global(.pagefind-ui__result-link:hover) { color: var(--accent-deep); }
   .sm-body :global(.pagefind-ui__result-excerpt) { color: var(--ink-2); }
   .sm-body :global(mark) { background: var(--accent-soft); color: var(--accent-deep); padding: 0 0.12em; border-radius: 4px; }

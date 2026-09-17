@@ -51,7 +51,7 @@ function Line({ text, delay = 0, className, lineKey }) {
       trigger="mount"
       fillMode="wipe"
       fontSize={BASE.fontSize}
-      fontWeight={800}
+      fontWeight={500}
       // 与大标题的 letter-spacing: -0.015em 对齐（按内部基准字号换算）
       letterSpacing={BASE.fontSize * -0.015}
     />

@@ -77,7 +77,7 @@ await send('Page.navigate', { url: BASE + '/works/' });
 const t1 = await waitTheme();
 check('默认主题为 dark', t1 === 'dark', String(t1));
 const tc = await ev(`[...document.querySelectorAll('meta[name=theme-color]')].map(m=>m.content).join(',')`);
-check('浏览器 UI 颜色跟随实际主题（暗）', String(tc).includes('#0c0c0e'), String(tc));
+check('浏览器 UI 颜色跟随实际主题（暗）', String(tc).includes('#070b0f'), String(tc));
 const prefStored = await ev(`(()=>{try{return String(localStorage.getItem('cw-theme-pref'))}catch(e){return 'err'}})()`);
 check('默认不写入偏好（保持"跟随系统以外"的干净状态）', prefStored === 'null', String(prefStored));
 
@@ -87,26 +87,32 @@ await clearPref();
 await send('Page.navigate', { url: BASE + '/works/' });
 check('系统深色时也是 dark', (await waitTheme()) === 'dark');
 
-console.log('\n=== 3) 用户显式选过「浅色」：系统深色也必须保持浅色 ===');
+// ★暗色电影感重构后：全站只有一套暗色主题★
+// 浅色路径已不可达（浅色玻璃 + 白字在物理上无法同时成立），
+// 所以"用户选过 light"的期望从"渲染为 light"改为"仍渲染 dark，但偏好被记住"。
+console.log('\n=== 3) 用户显式选过「浅色」：站点仍渲染暗色（单主题），但偏好被记住 ===');
 await ev(`(()=>{try{localStorage.setItem('cw-theme-pref','light')}catch(e){}})()`);
 await osScheme('dark');
 await send('Page.navigate', { url: BASE + '/works/' });
 const t3 = await waitTheme();
-check('尊重用户的 light 选择', t3 === 'light', String(t3));
+check('单主题：即使选过 light 仍渲染 dark', t3 === 'dark', String(t3));
+check('偏好被记住（dataset.themePref = light）',
+  (await ev(`document.documentElement.dataset.themePref`)) === 'light',
+  await ev(`document.documentElement.dataset.themePref`));
 
-console.log('\n=== 4) 点主题开关：切换并落盘 ===');
+console.log('\n=== 4) 点主题开关：仍渲染暗色，偏好二态切换并落盘 ===');
 await ev(`document.querySelector('.theme-toggle').click()`);
 await sleep(600);
-check('点击后切到 dark', (await themeNow()) === 'dark');
+check('点击后仍为 dark（单主题）', (await themeNow()) === 'dark');
 check('偏好已落盘为 dark', (await ev(`localStorage.getItem('cw-theme-pref')`)) === 'dark');
 await ev(`document.querySelector('.theme-toggle').click()`);
 await sleep(600);
-check('再点回 light', (await themeNow()) === 'light');
-check('偏好已落盘为 light', (await ev(`localStorage.getItem('cw-theme-pref')`)) === 'light');
+check('再点后偏好回到 light', (await ev(`localStorage.getItem('cw-theme-pref')`)) === 'light');
+check('观感仍是 dark', (await themeNow()) === 'dark');
 
-console.log('\n=== 5) 用户选过 light 后，软导航到别的页面仍是 light ===');
+console.log('\n=== 5) 软导航到别的页面：仍恒为 dark ===');
 await ev(`[...document.querySelectorAll('a')].find(a=>a.getAttribute('href')==='/gallery/')?.click()`);
-check('软导航后仍为 light', (await waitTheme()) === 'light');
+check('软导航后仍为 dark', (await waitTheme()) === 'dark');
 
 console.log('\n=== 6) 首屏是否闪过浅色（默认夜间、用户没选过）===');
 await clearPref();

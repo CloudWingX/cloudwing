@@ -29,10 +29,10 @@ const latestWorks = (await getCollection('works'))
     <header class="hero" id="top">
       <div class="wrap">
         <h1 class="display display-tilt" data-ent style="--ad:.12s">
-          {/* 整个大标题都走 ReactBits <StrokeText />：两行各自"画一遍再填满"，
-              第二行延后 0.9s 形成级联。外层 h1 仍是 3D 倾斜宿主，
-              两行各自吃一套视差变量（.line1 / .stroke），互不干扰。 */}
-          <HomeStrokeTitle client:load lines={['HELLO THIS IS', lastWord]} />
+          {/* 主标题只保留**一行核心信息**（用户要求）：
+              "HELLO THIS IS CLOUDWING" 一行说完，字号由 --display-size 控制在 48–72px。
+              仍走 ReactBits <StrokeText />（先描边画出再填满），外层 h1 是 3D 倾斜宿主。 */}
+          <HomeStrokeTitle client:load lines={[`HELLO THIS IS ${lastWord}`]} />
         </h1>
         <TextType
           className="typed-hero"
@@ -118,21 +118,23 @@ const latestWorks = (await getCollection('works'))
   .home .display .stroke {
     filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18));
   }
-  /* —— ReactBits <StrokeText /> 适配（首页大标题第二行）——
+  /* —— ReactBits <StrokeText /> 适配（首页主标题）——
      官方组件量测/描边都在"内部坐标"里做，视觉大小由外部 font-size 决定：
-     这里让根节点继承大标题字号，并把 SVG 高度从官方写死的 fontSize*1.3 改成 1em，
-     这样宽高与相邻的 .line1 同量级、且随 clamp() 一起响应式缩放。
+     这里让根节点继承主标题字号，并把 SVG 高度从官方写死的 fontSize*1.3 改成 1em，
+     这样宽高与 .display 同量级、且随 clamp() 一起响应式缩放。
      竖直方向有 pad（strokeWidth 与 fontSize*0.1 取大者）造成的余量，
-     用 .stroke-line 根节点的负外边距收回，避免两行之间被撑开。 */
+     用负外边距收回，避免把首屏撑高。
+     主标题现在只有一行（用户要求"只保留一行核心信息"），故不再需要"两行之间"的负边距。 */
   :global(.home .display .stroke-line) {
     display: block;
-    /* 大标题字号：这里与 .display 的 clamp 保持一致（改字号两处一起改）。
-       比原来放大一档：2.5rem/8.6vw/6rem → 3rem/10vw/7.5rem。 */
+    /* 字号与 .display 共用 --display-size（48–72px，见 global.css 的 :root） */
     font-size: var(--display-size);
-    /* 占位（第二行延迟挂载时）也要占住高度：否则挂载瞬间会把下方内容顶下去，
-       表现为"加载出来前错位"。1em 与 SVG 高度一致。 */
+    /* 占位也要占住高度：否则挂载瞬间会把下方内容顶下去（"加载出来前错位"） */
     min-height: 1em;
-    margin: -0.08em 0 -0.02em;
+    margin: -0.06em 0 -0.02em;
+    /* 暗色电影感：标题不抢画面，靠留白与字号建立层级，不靠粗字重 */
+    font-weight: 500;
+    letter-spacing: -0.02em;
   }
   :global(.home .display .stroke-line .stroke-text__svg) {
     height: 1em;
@@ -238,7 +240,7 @@ const latestWorks = (await getCollection('works'))
     min-height: auto;
   }
   .about-teaser .at-txt { margin: 0; color: var(--ink-2); font-size: 1rem; line-height: 1.9; }
-  .about-teaser .at-txt b { color: var(--ink); font-weight: 700; }
+  .about-teaser .at-txt b { color: var(--ink); font-weight: 500; }
   .at-link {
     display: inline-flex;
     align-items: center;
@@ -254,7 +256,7 @@ const latestWorks = (await getCollection('works'))
     transition: transform 0.16s var(--ease), box-shadow 0.16s ease, background 0.16s ease;
   }
   .at-link span { transition: transform 0.16s var(--ease); }
-  .at-link:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .at-link:hover { transform: translateY(0) scale(1.02); box-shadow: var(--shadow-sm); }
   .at-link:hover span { transform: translateX(3px); }
 
   /* —— 01 板块：标题居上，卡片堆在内容列内与正文并排。

@@ -106,10 +106,10 @@ export default function HomeWorksCardSwap({ items = [] }) {
             height={cardH}
             cardDistance={distX}
             verticalDistance={distY}
-            delay={4200}
+            delay={5600}
             pauseOnHover
-            skewAmount={6}
-            easing="elastic"
+            skewAmount={4}
+            easing="smooth"
           >
           {items.map((it) => (
             <Card key={it.no}>
