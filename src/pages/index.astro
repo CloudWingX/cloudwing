@@ -69,12 +69,35 @@ const topTools = [...toolCount.entries()]
   .map(([t]) => t);
 const stackTop = topTools.length ? topTools : ['Java', 'Spring Boot', 'MySQL', 'Git'];
 
-// 展示卡片下半部分：最近几条真实更新（喂给 code-card，避免用空行凑高）
-const recentItems = changelog
-  .flatMap((c) => (c.data.items ?? []).map((it) => ({ date: c.data.date, ...it })))
-  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  .slice(0, 6)
-  .map((it) => `${it.kind} · ${it.title}`);
+/* 展示卡片里的代码段（照参考的 code-card 形态）。
+   取的是一段**真实关键代码**：本站背景视频层是怎么用"雾蓝强调色 + 玻璃材质"这套
+   设计令牌落地的 —— 与左侧文案同一主题，纯展示用、不参与运行。
+   高亮类名沿用参考（code-keyword / code-string / …），颜色换成站点令牌。 */
+const codeSample = [
+  '<span class="code-comment">{/* 背景视频层 · 设计令牌 → 画面 */}</span>',
+  '<span class="code-keyword">const</span> <span class="code-function">VIDEO_BG</span> = {',
+  '  <span class="code-prop">src</span>: <span class="code-string">\'/media/bg-loop.mp4\'</span>,',
+  '  <span class="code-prop">opacity</span>: <span class="code-number">0.50</span>, <span class="code-comment">// 视频只当纹理</span>',
+  '  <span class="code-prop">scrim</span>: <span class="code-string">\'0.35 → 0.58 → 0.82\'</span>, <span class="code-comment">// 渐变遮罩</span>',
+  '};',
+  '',
+  '<span class="code-keyword">export default function</span> <span class="code-function">VideoBackground</span>() {',
+  '  <span class="code-keyword">return</span> (',
+  '    &lt;<span class="code-component">div</span> <span class="code-prop">class</span>=<span class="code-string">"video-bg"</span> <span class="code-prop">aria-hidden</span>=<span class="code-string">"true"</span>&gt;',
+  '      &lt;<span class="code-component">video</span> <span class="code-prop">src</span>={<span class="code-function">VIDEO_BG</span>.<span class="code-prop">src</span>} <span class="code-prop">muted loop playsinline</span> /&gt;',
+  '    &lt;/<span class="code-component">div</span>&gt;',
+  '  );',
+  '}',
+  '',
+  '<span class="code-comment">/* 玻璃材质：强调色只做点缀，底子是深色玻璃 */</span>',
+  '<span class="code-component">.video-bg</span> {',
+  '  <span class="code-prop">position</span>: <span class="code-keyword">fixed</span>; <span class="code-prop">inset</span>: <span class="code-number">0</span>;',
+  '  <span class="code-prop">z-index</span>: <span class="code-number">-4</span>;',
+  '  <span class="code-prop">backdrop-filter</span>: <span class="code-function">var</span>(<span class="code-prop">--glass-blur</span>);',
+  '  <span class="code-prop">border-radius</span>: <span class="code-function">var</span>(<span class="code-prop">--r-l</span>);',
+  '  <span class="code-prop">color</span>: <span class="code-function">var</span>(<span class="code-prop">--accent</span>);',
+  '}',
+].join('\n');
 ---
 
 <Base
@@ -124,29 +147,17 @@ const recentItems = changelog
         </div>
       </div>
 
-      <!-- 右栏展示卡片（参考的 code-card 几何：max-width 520 / radius 12 / 玻璃） -->
+      <!-- 右栏展示卡片（参考的 code-card 几何：max-width 520 / radius 12 / 玻璃）。
+           内容是一段**关键连续代码**：展示本站设计令牌（雾蓝强调色 + 玻璃材质）
+           实际是怎么落到背景视频层上的 —— 配色全部取站点令牌，不用参考的紫粉红。 -->
       <div class="code-card">
         <div class="code-header">
           <span class="code-dot red"></span>
           <span class="code-dot yellow"></span>
           <span class="code-dot green"></span>
-          <span class="code-filename">stack.md</span>
+          <span class="code-filename">@components/VideoBackground</span>
         </div>
-        <div class="code-body">
-          <span class="cl cl-dim"># cloudwing / stack</span>
-          <span class="cl"><span class="sl-key">##</span> <span class="sl-val">工具与技术栈</span></span>
-          {stackTop.map((t) => (
-            <span class="cl"><span class="sl-key">-</span> <span class="sl-val">{t}</span></span>
-          ))}
-          <span class="cl"><span class="sl-key">##</span> <span class="sl-val">站点</span></span>
-          <span class="cl"><span class="sl-key">-</span> <span class="sl-val">作品档案 {worksCount} 篇</span></span>
-          <span class="cl"><span class="sl-key">-</span> <span class="sl-val">影像收藏 {shotsCount} 张</span></span>
-          <span class="cl"><span class="sl-key">-</span> <span class="sl-val">更新记录 {changelog.length} 天</span></span>
-          <span class="cl"><span class="sl-key">##</span> <span class="sl-val">最近更新</span></span>
-          {recentItems.map((it) => (
-            <span class="cl"><span class="sl-key">-</span> <span class="sl-val">{it}</span></span>
-          ))}
-        </div>
+        <pre class="code-body"><code set:html={codeSample}></code></pre>
       </div>
     </section>
 
@@ -468,17 +479,34 @@ const recentItems = changelog
     font-family: 'SF Mono', Monaco, Consolas, monospace;
   }
   .code-body {
-    padding: 20px;
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    margin: 0;
+    padding: 20px 22px 22px 26px; /* 左侧多留一点：等宽字形起始位偏左，20px 时首列会被切 */
+    font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
     font-size: 13px;
     /* 22.1/13 = 1.7，与参考的代码卡片行距一致 */
     line-height: 1.7;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--brand-cloud); /* 代码正文：品牌纸白 */
+    white-space: pre; /* 保留缩进与单行不折行（照参考） */
+    overflow-x: auto;
+    tab-size: 2;
+    /* ⚠️ 必须显式左对齐：hero 在移动端是 text-align:center，会被继承过来，
+       代码段落一旦居中，"缩进"在视觉上就消失了（像没缩进一样）。 */
+    text-align: left;
   }
-  .cl { display: block; white-space: pre; }
-  .sl-key { color: color-mix(in srgb, var(--accent) 70%, transparent); }
-  .sl-val { color: #e8edf2; }
-  .cl-dim { color: rgba(255, 255, 255, 0.45); }
+  .code-body code { font-family: inherit; }
+
+  /* ── 语法高亮：全部取站点令牌，不用参考的紫/粉/红 ──
+     色相分配：雾蓝=关键字与属性、灰绿=字符串、冷蓝=函数/变量、
+     亮雾蓝=标签/选择器、黄绿=数字、雾灰=注释。
+     ⚠️ 必须用 :global()：这段代码是用 set:html 注入的，元素上没有 Astro 的
+     作用域属性（data-astro-cid-*），普通作用域选择器匹配不到 → 高亮会失效。 */
+  .code-body :global(.code-keyword),
+  .code-body :global(.code-prop) { color: #a3d6e9; }              /* 雾蓝系 */
+  .code-body :global(.code-string) { color: #96cdb9; }            /* 灰绿（--accent-3 同族） */
+  .code-body :global(.code-function) { color: #a9c0ea; }          /* 冷蓝（--accent-2） */
+  .code-body :global(.code-component) { color: #cfe7f2; font-weight: 500; }
+  .code-body :global(.code-number) { color: #d7e6a8; }
+  .code-body :global(.code-comment) { color: #9aa7b6; font-style: italic; }
   .stack-note {
     margin: 16px 0 0;
     font-size: 12px;

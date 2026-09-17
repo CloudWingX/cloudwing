@@ -638,9 +638,17 @@ items:
       ⚠️ 这条是**可访问性上的取舍**（少了可见入口），要加回来只需在 `.nav-actions` 里放
       一个 `data-search-open` 按钮 —— 但那会与"照参考"冲突，先说一声。
     - **首页 Hero 结构**：`.hero-content`（badge → 两行标题 → 副标题 → 两个统计 → 技术标签）
-      + 右侧展示卡片（参考的 code-card 位，内容用站点真实技术栈 + 最近更新填充）。
-      内容全部来自集合：作品数 / 截图数 / changelog / 作品 tools 汇总。
-      旧的 `hero-eyebrow` / `hero-inner` / `hero-cta` / `.ht-line` / `.sli` 式入场动画与
+      + 右侧展示卡片（参考的 code-card 位）。
+      **卡片内容是一段关键连续代码**（`index.astro` 的 `codeSample`）：展示本站
+      "雾蓝强调色 + 玻璃材质"这套设计令牌怎么落到背景视频层上，纯展示、不参与运行。
+      高亮类名沿用参考（`code-keyword` / `code-string` / `code-function` / `code-component` /
+      `code-prop` / `code-number` / `code-comment`），**颜色换成站点令牌**（雾蓝/灰绿/冷蓝），
+      每个 token 在卡片底色上都 ≥7.6:1。
+      ⚠️ 两个改这段时必踩的点：① 高亮 span 是 `set:html` 注入的，**没有 Astro 作用域属性**，
+      CSS 必须写 `.code-body :global(.code-keyword)`，否则高亮整个失效；
+      ② `.code-body` 必须显式 `text-align: left` —— hero 在移动端是 `center`，会被继承，
+      代码一居中"缩进"在视觉上就没了（看起来像没缩进）。
+      旧的 `hero-eyebrow` / `hero-inner` / `hero-cta` / `.ht-line` 式入场动画与
       `scripts/hero-anim.js` **已不再参与首页**（Hero 现在是静态版式）。
     - **★改版过程中真实修掉的一批问题★**（都值得记住）：
       1. **`Page.addStyleTag` 在本机 Edge（153 / 协议 1.3）不存在**，调用返回
