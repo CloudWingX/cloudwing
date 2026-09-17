@@ -50,19 +50,24 @@ const aboutPreview = [
   bodyClass="home-route"
 >
   <div class="home">
-    <!-- ═══ ① Hero ═══ -->
+    <!-- ═══ ① Hero ═══
+         结构：Eyebrow 玻璃胶囊 → 两行主标题 → 副标题 → CTA 按钮组
+         动画见 scripts/hero-anim.js（ShinyText / BlurText / GradientText / 逐字入场），
+         由 IntersectionObserver 触发，prefers-reduced-motion 下直接显示终态。 -->
     <header class="hero" id="top">
-      <div class="wrap">
-        <h1 class="hero-title">
+      <div class="hero-inner">
+        <p class="hero-eyebrow" data-hero-shiny>
+          <span class="he-shine" data-shiny-sheen aria-hidden="true"></span>
+          <span class="he-text">CLOUDWING · PERSONAL BLOG</span>
+        </p>
+
+        <h1 class="hero-title" data-hero-blur>
           <span class="ht-line">code <span class="ht-dim">on</span> <span class="ht-accent">clouds</span>,</span>
           <span class="ht-line">life <span class="ht-dim">on</span> <span class="ht-accent">wings</span>.</span>
         </h1>
-        <p class="hero-tagline">Java 后端 &amp; 质量保障方向</p>
-        <ul class="hero-pills" aria-label="技术方向">
-          <li>Java</li>
-          <li>质量保障</li>
-          <li>前端开发</li>
-        </ul>
+
+        <p class="hero-sub" data-hero-split>云上写代码，翼下记生活。记录前端、设计与日常思考。</p>
+
         <div class="hero-cta">
           <a class="cta cta-primary" href="/works/">查看作品</a>
           <a class="cta cta-ghost" href="/about/">关于我</a>
@@ -160,6 +165,11 @@ const aboutPreview = [
   </div>
 </Base>
 
+<script>
+  // Hero 的四个动画（ShinyText / BlurText / GradientText / 逐字入场）
+  import '../scripts/hero-anim.js';
+</script>
+
 <style>
   /* 首页路由：整页沉浸背景由全站视频/粒子层承担 —— 隐藏页脚与进度条 */
   :global(body.home-route .site-footer) { display: none; }
@@ -194,86 +204,205 @@ const aboutPreview = [
   }
   .sec-more:hover { border-bottom-color: var(--accent); }
 
-  /* ── ① Hero ── */
+  /* ══════════════════════════════════════════════════════════════
+     ① Hero —— 严格按规格实现
+     布局 / 尺寸 / 间距 / 断点 / 动画参数逐条对应；
+     **颜色映射到暗色令牌**（规格给的 #1a1a2e / #555 / 白色玻璃是浅色版，
+     压在暗色视频背景上不可读 —— 见 HANDOFF 第 25 条的取舍记录）。
+     ══════════════════════════════════════════════════════════════ */
   .hero {
     position: relative;
-    min-height: calc(100vh - 76px);
+    /* 规格：min-height 100vh、flex 垂直居中 */
+    min-height: 100vh;
     display: flex;
     align-items: center;
+    /* 规格：padding clamp(120px, 18vh, 200px) clamp(24px, 5vw, 64px) */
+    padding: clamp(120px, 18vh, 200px) clamp(24px, 5vw, 64px);
     overflow: hidden;
+    /* 规格字体栈（中文回退到系统黑体） */
+    font-family: Inter, system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   }
-  .hero .wrap { position: relative; z-index: 2; }
-  /* 主标题：全小写、无描边动画（用户要求去掉），雾蓝强调 clouds/wings */
-  .hero-title {
-    margin: 0 0 1.1rem;
-    /* 48–72px（用户规范）。窄屏用 48px 起，靠 clamp 下限保证不缩到规范以下；
-       "code on clouds," 在 390px 宽下约 350px，48px 仍能一行放下。 */
-    font-size: clamp(3rem, 6.6vw, 4.5rem);
-    line-height: 1.06;
-    font-weight: 500;
-    letter-spacing: -0.03em;
-    text-transform: none;
-    text-shadow: 0 2px 24px rgba(0, 0, 0, 0.4);
-  }
-  .ht-line { display: block; }
-  .ht-accent { color: var(--accent); }
-  /* "on" 半透明（用户规范） */
-  .ht-dim { color: color-mix(in srgb, var(--ink) 45%, transparent); }
-  .hero-tagline {
-    margin: 0 0 1.3rem;
-    font-size: clamp(1rem, 2.1vw, 1.15rem);
-    color: var(--ink-2);
-    letter-spacing: 0.02em;
-  }
-  .hero-pills {
+  /* 规格：max-width 1200px、margin 0 auto、flex column、align-items flex-start、text-align left */
+  .hero-inner {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    list-style: none;
-    margin: 0 0 2rem;
-    padding: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
   }
-  /* 玻璃小胶囊：玻璃效果只用在导航/按钮/悬浮标签（用户规范） */
-  .hero-pills li {
-    padding: 0.34rem 0.85rem;
+
+  /* ── 1. Eyebrow 玻璃胶囊 ──
+     规格：13px / 500 / 1.2 / 0.16em / 大写；胶囊 padding 8px 14px、圆角 999px、
+     背景 rgba(255,255,255,.6)、边框 1px rgba(255,255,255,.8)、blur(16px)；margin-bottom 24px */
+  .hero-eyebrow {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    margin: 0 0 24px;
     border-radius: 999px;
-    border: var(--line-w) solid var(--line-2);
-    background: var(--glass);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-    font-size: 0.78rem;
-    letter-spacing: 0.1em;
-    color: var(--ink-2);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    /* 浅色版是 rgba(255,255,255,.6)；暗色底改用深玻璃，白字才压得住 */
+    background: rgba(9, 12, 16, 0.55);
+    -webkit-backdrop-filter: blur(16px) saturate(1.3);
+    backdrop-filter: blur(16px) saturate(1.3);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    /* 浅色版 rgba(26,26,46,.6) → 暗色版：品牌纸白 60% */
+    color: color-mix(in srgb, var(--brand-cloud) 68%, transparent);
+    white-space: nowrap;
   }
-  .hero-cta { display: flex; flex-wrap: wrap; gap: 0.7rem; }
+  /* ShinyText 微光：一条斜向高光每 4s 扫过（只动 transform/opacity） */
+  .he-shine {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      color-mix(in srgb, var(--accent) 55%, transparent) 50%,
+      transparent 100%
+    );
+    transform: translateX(-120%) skewX(-16deg);
+    will-change: transform, opacity;
+  }
+
+  /* ── 2. 主标题（两行）──
+     规格：clamp(52px,9.5vw,148px) / 500 / 1.02 / -0.055em；margin-bottom 28px；
+     每行 block + nowrap（移动端除外） */
+  .hero-title {
+    margin: 0 0 28px;
+    font-size: clamp(52px, 9.5vw, 148px);
+    font-weight: 500;
+    line-height: 1.02;
+    letter-spacing: -0.055em;
+    /* 浅色版 #1a1a2e → 暗色版：纯白（对比度最高） */
+    color: #ffffff;
+    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.35);
+  }
+  .ht-line {
+    display: block;
+    white-space: nowrap; /* 移动端在下面的断点里放开 */
+  }
+  /* clouds / wings：GradientText 流动渐变（雾蓝 → 浅雾蓝 → 雾蓝，200% 循环移动）
+     规格要求字重 600（其余 500）；用 background-clip:text 实现渐变文字 */
+  .ht-accent {
+    font-weight: 600;
+    background-image: linear-gradient(90deg, #9fd3e8, #c4e8f5, #9fd3e8);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    animation: hero-grad 4s linear infinite;
+  }
+  @keyframes hero-grad {
+    from { background-position: 0% 50%; }
+    to { background-position: 200% 50%; }
+  }
+  /* "on" 字重 300 + 半透明（规格 rgba(26,26,46,.4) → 暗色版白 42%） */
+  .ht-dim {
+    font-weight: 300;
+    color: color-mix(in srgb, #ffffff 42%, transparent);
+  }
+
+  /* ── 3. 副标题 ──
+     规格：clamp(16px,1.8vw,20px) / 400 / 1.7；max-width 42ch；margin-bottom 40px */
+  .hero-sub {
+    margin: 0 0 40px;
+    max-width: 42ch;
+    font-size: clamp(16px, 1.8vw, 20px);
+    font-weight: 400;
+    line-height: 1.7;
+    /* 浅色版 #555 → 暗色版：浅灰 */
+    color: #c9d1d9;
+    text-shadow: 0 1px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  /* ── 4. CTA 按钮组 ──
+     规格：flex row / gap 12px / wrap；按钮 min-height 48px、padding 0 24px、
+     圆角 999px、字号 15px、字重 500；hover 背景加深 + scale(1.02) + 0.25s ease */
+  .hero-cta { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; }
   .cta {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.45rem;
-    padding: 0.72rem 1.5rem;
+    min-height: 48px;
+    padding: 0 24px;
     border-radius: 999px;
-    font-size: 0.9rem;
-    letter-spacing: 0.04em;
-    text-decoration: none;
-    border: var(--line-w) solid var(--line-2);
-    transition: border-color 0.2s var(--ease), background 0.2s var(--ease),
-      color 0.2s var(--ease), transform 0.2s var(--ease);
-  }
-  .cta:hover { transform: scale(1.02); border-color: var(--line-hover); }
-  .cta-primary {
-    background: var(--accent);
-    color: var(--accent-ink);
-    border-color: transparent;
+    font-family: inherit;
+    font-size: 15px;
     font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    backdrop-filter: blur(18px) saturate(1.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease, color 0.25s ease;
   }
-  .cta-primary:hover { background: var(--accent-deep); }
+  .cta:hover { transform: scale(1.02); border-color: rgba(255, 255, 255, 0.95); }
+  /* 主按钮：浅色版 bg rgba(255,255,255,.72) → 暗色版 0.18（更高一档的玻璃） */
+  .cta-primary {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+  }
+  .cta-primary:hover { background: rgba(255, 255, 255, 0.3); }
+  /* 次按钮：浅色版 bg rgba(255,255,255,.4) → 暗色版 0.08 */
   .cta-ghost {
-    background: var(--glass);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-    color: var(--ink);
+    background: rgba(255, 255, 255, 0.08);
+    color: #e8edf2;
   }
-  .cta-ghost:hover { color: var(--accent-deep); }
+  .cta-ghost:hover { background: rgba(255, 255, 255, 0.2); }
+
+  /* ── 断点（照规格逐档）── */
+  /* 768–1199：主标题 clamp(44px, 9vw, 96px)、左右 padding 40px */
+  @media (max-width: 1199px) {
+    .hero { padding-left: 40px; padding-right: 40px; }
+    .hero-title {
+      font-size: clamp(44px, 9vw, 96px);
+      /* 中间档字号下，-0.055em 会让两行 nowrap 轻微溢出（实测 1000px 视口 1px），
+         收到 -0.045em */
+      letter-spacing: -0.045em;
+    }
+  }
+  /* 480–767：主标题 clamp(36px, 10vw, 64px)、左右 padding 24px、行高 1.08、字距 -0.04em */
+  @media (max-width: 767px) {
+    .hero { padding-left: 24px; padding-right: 24px; }
+    .hero-title {
+      font-size: clamp(36px, 10vw, 64px);
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+    }
+  }
+  /* <480：主标题 clamp(30px, 11vw, 44px)、左右 padding 20px、副标题 30ch、按钮等宽 */
+  @media (max-width: 479px) {
+    .hero { padding-left: 20px; padding-right: 20px; }
+    .hero-title { font-size: clamp(30px, 11vw, 44px); }
+    .hero-title .ht-line { white-space: normal; } /* 极窄屏允许换行，避免横向溢出 */
+    .hero-sub { max-width: 30ch; }
+    .hero-cta { width: 100%; }
+    .hero-cta .cta { flex: 1 1 auto; width: 100%; }
+  }
+  /* 减少动态：关掉渐变流动，动画由 hero-anim.js 直接落到终态 */
+  @media (prefers-reduced-motion: reduce) {
+    .ht-accent { animation: none; }
+    .cta, .cta:hover { transition: none; transform: none; }
+  }
 
   /* ── ② 最新作品 ── */
   .work-cards {

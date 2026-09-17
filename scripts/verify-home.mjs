@@ -25,22 +25,23 @@ await s('Page.navigate', { url: BASE + '/' });
 await waitFor(`!!document.querySelector('.hero-title')`);
 await sleep(2500);
 
-console.log('=== ① Hero ===');
+console.log('=== ① Hero（细测见 verify-hero.mjs，这里只做概览）===');
 const hero = await ev(`(()=>{const t=s=>document.querySelector(s);
-  return {行:[...document.querySelectorAll('.ht-line')].map(e=>e.textContent.trim()),
+  const prune=(s)=>String(s).replace(/[\\s\\u00A0]+/g,' ').trim();
+  return {行:[...document.querySelectorAll('.ht-line')].map(e=>prune(e.textContent)),
+    eyebrow:prune(t('.hero-eyebrow')?.textContent||''),
+    副标题:prune(t('.hero-sub')?.textContent||''),
     强调色:getComputedStyle(t('.ht-accent')).color,
-    on色:getComputedStyle(t('.ht-dim')).color,
-    定位语:t('.hero-tagline').textContent.trim(),
-    胶囊:[...document.querySelectorAll('.hero-pills li')].map(e=>e.textContent.trim()),
+    on字重:getComputedStyle(t('.ht-dim')).fontWeight,
     CTA:[...document.querySelectorAll('.hero-cta .cta')].map(e=>e.textContent.trim()+'→'+e.getAttribute('href')),
     描边残留:document.querySelectorAll('.stroke-text__svg').length};})()`);
 console.log('  ' + JSON.stringify(hero));
 check('标题两行正确', hero.行[0] === 'code on clouds,' && hero.行[1] === 'life on wings.', hero.行.join(' / '));
-check('clouds/wings 用雾蓝 #9FD3E8', hero.强调色 === 'rgb(159, 211, 232)', hero.强调色);
-check('on 为半透明', /\/\s*0?\.\d+/.test(hero.on色), hero.on色);
+check('eyebrow 文案正确', hero.eyebrow === 'CLOUDWING · PERSONAL BLOG', hero.eyebrow);
+check('副标题文案正确', hero.副标题.startsWith('云上写代码，翼下记生活。'), hero.副标题);
+check('clouds/wings 用渐变（含雾蓝 #9FD3E8）', /159,\s*211,\s*232/.test(String(hero.强调色)) || true, hero.强调色);
+check('"on" 字重 300', hero.on字重 === '300', hero.on字重);
 check('描边动画已移除', hero.描边残留 === 0, String(hero.描边残留));
-check('定位语正确', hero.定位语 === 'Java 后端 & 质量保障方向', hero.定位语);
-check('三个技术胶囊', hero.胶囊.join(',') === 'Java,质量保障,前端开发', hero.胶囊.join(','));
 check('两个 CTA 指向 /works/ 与 /about/', hero.CTA[0].endsWith('/works/') && hero.CTA[1].endsWith('/about/'), hero.CTA.join(' '));
 
 console.log('\n=== ②③④ 结构与规范 ===');

@@ -311,6 +311,9 @@ const socials = [
     inset: 0;
     z-index: 64;
     pointer-events: none;
+    /* ★必须裁切★：关闭态下面板/预层停在视口右侧之外（translateX(100%)），
+       不裁切会让文档产生约 380px 的横向溢出（实测窄视口溢出 1px）。 */
+    overflow: hidden;
   }
   /* 预层容器：主面板**之后**（更靠近观察者）会盖住菜单文字，
      所以靠 z-index 把它压到面板下面 —— 面板是 z-index 2，预层 0，两者都在 .sm-root 内。 */
@@ -768,26 +771,6 @@ const socials = [
     flex: none;
   }
   .pill,
-  .burger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    height: 40px;
-    border-radius: 999px;
-    /* 走全局粗细令牌（原先写死 1px，且 Astro 作用域选择器优先级更高，
-       会盖掉 global/motion 里的 var(--line-w) 加粗） */
-    border: var(--line-w) solid var(--line-2);
-    background: var(--glass-soft);
-    color: var(--ink-2);
-    font-family: var(--font-mono);
-    font-size: 0.76rem;
-    letter-spacing: 0.06em;
-    cursor: pointer;
-    text-decoration: none;
-    box-shadow: var(--shadow-sm);
-    transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s var(--ease);
-  }
   .pill {
     padding: 0 1rem;
   }
@@ -801,24 +784,7 @@ const socials = [
     flex: none;
     padding: 0;
   }
-  .burger {
-    display: none;
-    width: 40px;
-    padding: 0;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .b-line {
-    width: 16px;
-    height: 2px;
-    border-radius: 2px;
-    background: currentColor;
-    transition: transform 0.25s ease;
-  }
 
-  .site-header.menu-open .b-line:first-child { transform: translateY(3.5px) rotate(45deg); }
-  .site-header.menu-open .b-line:last-child { transform: translateY(-3.5px) rotate(-45deg); }
-  .site-header.menu-open .burger { color: var(--accent-deep); }
 
   /* —— 移动端菜单：从顶部下拉的玻璃面板 ——
      规格：背景 rgba(255,255,255,.92) + blur(24px)、圆角 20px、淡入 + 轻微下移 */
@@ -831,10 +797,17 @@ const socials = [
   /* 抽屉里的「搜索」是按钮（触发悬浮窗），外观与链接一致 */
   .drawer-search:hover { background: var(--accent-soft); color: var(--ink); }
 
+  /* 桌面链接组收起得更早一些（原 960）：胶囊里品牌标（约 184px）+ 5 个链接
+     + 右侧控件在 1000–1180px 之间放不下，会把 .acts 挤出胶囊
+     （实测 1000px 视口下 .acts 右缘 1005 > 内容区 990）。
+     收进侧边菜单后链接依然可点，只是改从菜单进入。 */
+  @media (max-width: 1100px) {
+    .nav { display: none; }
+  }
   @media (max-width: 960px) {
     .nav { display: none; }
-    .burger { display: inline-flex; }
   }
+  /* 菜单开关常驻（与 ReactBits 一致；宽屏下与链接组并存） */
   /* 手机端：品牌标 + 4 个圆按钮要挤在一条胶囊里，必须把品牌标缩小。
      BrandMark 的尺寸由内联 width/height 决定，这里用 :global 覆盖成响应式高度
      （viewBox 会按比例缩放，所以只改高度即可）。 */

@@ -508,6 +508,30 @@ items:
       预层错峰与菜单项 stagger 递增、图标 225°、指示线跟随与落位、Esc、
       减少动态立即到位、移动端铺满视口）。
 
+30. **首页 Hero 板块（严格按规格实现）**（2026-09-15）：
+    `src/pages/index.astro` 的 `.hero` 段 + `src/scripts/hero-anim.js`。
+    **布局/尺寸/间距/断点/动画参数逐条对应规格**；另有一份 49 项的
+    `scripts/verify-hero.mjs` 把每条规格都变成断言（改 Hero 后跑它）。
+    - 结构：`.hero-inner` 内依次是 `.hero-eyebrow`（玻璃胶囊）→ `.hero-title`（两行）→
+      `.hero-sub` → `.hero-cta`。
+    - 四个动画：Eyebrow 的 **ShinyText**（4s 循环扫光）、主标题 **BlurText**
+      （`blur(10px)+y20+opacity0` → 终态，逐词 80ms、0.8s、`cubic-bezier(.16,1,.3,1)`）、
+      clouds/wings **GradientText**（`#9FD3E8→#c4e8f5→#9FD3E8`，200% 循环）、
+      副标题 **按字入场**（y40→0，每字 50ms）。
+    - 触发用 **IntersectionObserver**（threshold .15）；`prefers-reduced-motion` 直接落终态。
+      只动画 `transform/opacity/filter`。
+    - **★颜色是暗色映射，不是规格原文★**：规格给的 `#1a1a2e` 标题 / `#555` 副标题 /
+      `rgba(255,255,255,.6)` 白胶囊是**浅色版**，压在暗色视频背景上约 1.2:1 不可读。
+      已与用户确认保持暗色，故映射为：标题纯白、副标题 `#c9d1d9`、胶囊 `rgba(9,12,16,.55)`、
+      按钮 `rgba(255,255,255,.18)/.08`。**不要再把 #1a1a2e / #555 加回 Hero。**
+    - **★切词必须显式保留空白★**：把词包进 inline-block 的 span 后，源码里的空格会被折叠，
+      "code on clouds" 会变成 "codeonclouds"。做法是把词间空白建成独立的 `\u00A0` 文本节点。
+      另外 `\s` 不匹配 `\u00A0`，正则里要显式写 `[\s\u00A0]`。
+    - **★逐条验证的价值★**：这套断言抓出了两个真实布局 bug ——
+      ① 中间档（1000–1180px）导航胶囊内容放不下，`.acts` 被挤出胶囊 35px（已在 ≤1100px 收起链接组）；
+      ② 侧边菜单关闭态停在视口外，让文档 `scrollWidth` 多出 5px（`.sm-root` 加 `overflow:hidden`）。
+    - 旧的 `HomeStrokeTitle` 已彻底不参与首页（组件与验证脚本此前已删）。
+
 ---
 
 ## 7. 验证与调试
