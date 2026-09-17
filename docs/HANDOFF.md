@@ -9,16 +9,41 @@
 > 相关文档：`CODEX.md`（仓库内简版硬规则）、`README.md`（面向访客的项目说明）。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-15（HEAD `d81147b`，已推送、线上已验证；Cloudflare 自动构建部署）。
-> 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 48/48 通过（本地与线上均通过）。
+> 最后更新：2026-09-15（HEAD `eb14422`，已推送、线上已验证；Cloudflare 自动构建部署）。
+> 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 **45/45** 通过（本地与线上均通过）。
+> 全套验证脚本与用法见 **§7.2**；本机调试浏览器起法见 **§7.1**。
 
 ---
 
 ## 0. 一句话现状
 
-个人作品档案站「云翼 / CloudWing」，**Astro 7 静态站 + React 岛 + 磨砂玻璃 UI**，源码在 `endfield-blog/`，
+个人作品档案站「云翼 / CloudWing」，**Astro 7 静态站 + React 岛 + 暗色电影感玻璃 UI**，源码在 `endfield-blog/`，
 线上 <https://cloudwing.pages.dev>，仓库 <https://github.com/CloudWingX/cloudwing>（公开），
-推 `main` 即由 Cloudflare Pages 自动构建部署。站点内容、样式、交互当前都处于**可用且已验证**的状态。
+推 `main` 即由 Cloudflare Pages 自动构建部署。**站点处于可用且已验证的状态**：
+11 个验证脚本全绿、可读性 0 处不达标、7 个页面 0 JS 异常、手机端 0 横向溢出。
+
+### 0.1 上一轮（2026-09-15）做了什么 —— 交接摘要
+
+> 全部已提交、已推送、线上已验证。详细条目编号见 §6 / §23–§31。
+
+| 主题 | 结果 | 关键位置 |
+|---|---|---|
+| **整站视觉重构**：暗色电影感 + 玻璃拟态 | 视频成为画面主角，UI 全部改为悬浮玻璃片；令牌集中在 `:root` | §24 |
+| **亮色主题彻底删除** | 渲染恒为暗色；主题开关、`#1a1a2e`/`#555` 浅色分支全清 | §27 |
+| **全站背景视频** | 15.5MB mp4 自托管（不走外链）＋ 上浅下深渐变遮罩 ＋ poster 降级；`transition:persist` 防软导航重建 | §23 |
+| **导航形态**：贴顶通栏 → 滚动收成胶囊 ＋ 移动端汉堡 | `padding-top 0→16`、`1280→1120`、`64→52`、圆角 `0→999px` | §31 |
+| **新品牌标志** | "云生翼"纯矢量标志（横版字标 + 图标），导航/页脚/404/favicon 全换 | §28 |
+| **首页 Hero 重做** | eyebrow 玻璃胶囊 ＋ 两行标题 BlurText ＋ 逐字副标题 ＋ GradientText；**49 项规格断言** | §30 |
+| **首页改版**：入口目录 → 内容橱窗 | 四层结构（Hero / 最新作品 / 精选影像 / 关于预览），删掉 01/02/03 编号卡 | §25 |
+| **搜索改成悬浮窗** | `<dialog>` ＋ Pagefind 首次打开才加载；删掉 `/search/` 页面 | §20 |
+| **作品库补 4 篇档案** | W-003…W-006，order 3–6 | — |
+
+**这一轮反复出现的两条主线**（下次改视觉时先看）：
+1. **用户给的配色规格常是浅色版**，与站点的暗色方向冲突（`#1a1a2e`/`#555`/白色玻璃）。
+   已确认多次：**保持暗色**，只取规格里的雾蓝 `#9FD3E8` 作强调色。
+   布局/尺寸/动画参数照规格实现，颜色做暗色映射 —— 别默默把浅色加回来。
+2. **本机调试浏览器会累积标签页**，跑几十次验证后会大面积假失败（见 §7.1 第 4 条）。
+   冒烟"失败"时先重启 9222 再下结论。
 
 ---
 
@@ -69,27 +94,33 @@ endfield-blog/
 │   ├─ SidebarLayout.astro   # 薄封装：<Base sidebar>，子页面用它
 │   └─ WorkLayout.astro      # 作品详情：标题/元信息表/封面/正文目录/上下篇/giscus
 ├─ src/components/
-│   ├─ Header.astro          # 顶部导航：品牌、导航项+分类二级菜单、主题开关、搜索、汉堡抽屉
+│   ├─ Header.astro          # 顶部导航：品牌标 / 链接组 / 指示线 / 搜索 / 动效暂停 / 汉堡（见 §26 §31）
+│   ├─ BrandMark.astro       # ★品牌标志（横版字标 + 纯图标，见 §28）—— 改 logo 只改这里
+│   ├─ VideoBackground.astro # ★全站背景视频 + 渐变遮罩 + poster 降级（见 §23）
+│   ├─ SearchModal.astro     # 全站搜索悬浮窗（Pagefind，首次打开才加载 JS/CSS，见 §20）
 │   ├─ SidebarNav.astro      # 左栏：个人信息卡 + 天气卡 + 导航树（作品库/分类/站点/画廊）
 │   ├─ SidebarWidgets.astro  # 右栏：站点统计 / 更新日历 / 最近更新 / 今日一言
 │   ├─ SidebarStatValue.jsx  # 宿主：统计数字的计数动画（包 ReactBits/CountUp，见 §6.15）
-│   ├─ HomeStrokeTitle.jsx   # 宿主：首页大标题描边动画（包 ReactBits/StrokeText，见 §6.18）
 │   ├─ MusicPlayer.astro     # 左栏底部音乐播放器（歌曲在 site.ts 的 MUSIC，见 §6.17）
 │   ├─ WeatherCard.astro     # 天气卡骨架（数据由 ui.js 在浏览器端填）
 │   ├─ GiscusComments.astro  # 留言板/评论区（主题跟随、防重复注入）
-│   ├─ WorkCard.astro 等     # 作品卡、HexMark、页脚、打字机等小件
+│   ├─ WorkCard.astro 等     # 作品卡、页脚、打字机等小件
 │   ├─ ReactBits/            # React Bits 官方组件原码（见 §5 铁律三）
-│   ├─ SearchModal.astro     # 全站搜索悬浮窗（Pagefind，首次打开才加载 JS/CSS，见 §6.20）
-│   └─ *.jsx                 # 宿主层：Particles 背景、Lanyard、ProximityText、CardSwap…
+│   └─ *.jsx                 # 宿主层：Particles 背景、Lanyard、ProximityText…
+│                            #   ⚠️ HomeStrokeTitle / HomeWorksCardSwap / HomeGalleryAccordion
+│                            #      已删除（首页改版后不再使用，见 §25 §30）
 ├─ src/pages/                # 首页 / 作品库 / 作品详情 / 画廊 / 关于 / 互动 / 404 / rss.xml
 │                            #   ★搜索已不再是一个页面★，改成悬浮窗（SearchModal.astro）
-├─ src/scripts/ui.js         # ★全站交互中枢：1547 行，所有动效与交互都在这（见 §6 各条）
-├─ src/styles/global.css     # 设计令牌 + 基础版式（浅色为默认，深色在 motion.css 覆盖）
-├─ src/styles/motion.css     # 动效与深色主题令牌
-├─ src/styles/shell.css      # 三栏壳层 + 侧栏各卡片样式（909 行）
+├─ src/scripts/ui.js         # ★全站交互中枢（约 2000 行）：所有动效与交互都在这（见 §6 各条）
+├─ src/scripts/hero-anim.js  # 首页 Hero 四个动画（ShinyText/BlurText/GradientText/逐字，见 §30）
+├─ src/scripts/nav-mobile.js # 导航：汉堡菜单 + 顶部两条指示线（见 §31）
+├─ src/styles/global.css     # 设计令牌 + 基础版式（★:root 即暗色，见 §24）
+├─ src/styles/motion.css     # 动效令牌 + html[data-theme='dark'] 同步块
+├─ src/styles/shell.css      # 三栏壳层 + 侧栏各卡片样式
 ├─ src/content/{works,shots,changelog}/   # 内容
-├─ public/                   # covers / lanyard / og / shots / favicon*.svg / robots.txt（**没有** _headers、没有自托管字体）
-└─ scripts/                  # smoke.mjs（★冒烟测试，见 §7.3）、gen-og.mjs（分享图）、seed-changelog.mjs（更新记录落盘）
+├─ public/                   # covers / lanyard / og / shots / media(背景视频) / favicon*.svg / robots.txt
+│                            #   （**没有** _headers、没有自托管字体）
+└─ scripts/                  # 见 §7.2 的全套验证脚本；gen-og.mjs（分享图）；seed-changelog.mjs
 ```
 
 **唯一的"大脑"是 `src/scripts/ui.js`**：软导航后所有功能都靠它重新接管，改交互基本都在这。
@@ -264,8 +295,8 @@ items:
     3D 光标跟随的宿主（ui.js 的 `startTitleTilt` 下发 `--bkx/--bky/--frx/--fry`）；
     `.line1` 与 `.stroke` 各自吃一套视差变量做前后分层；`<StrokeText />` 只负责"画字"，
     **不碰 transform** —— 三者互不干扰。
-    自检：`node scripts/verify-stroke.mjs [url]`（两行是否都渲染、几何是否齐、
-    两行描边/填充动画是否都在跑、第二行是否确实晚于第一行）。
+    自检：~~`node scripts/verify-stroke.mjs`~~ —— **该脚本与 HomeStrokeTitle 已删除**
+    （首页改版后大标题不再用描边动画，见 §25 §30）。此条仅保留"动效分层"这条经验。
 
 19. **★`client:visible` + 软导航会抛 `React error #424`（水合不匹配）★**（2026-09-15 定位）
     **症状**：软导航几圈后，每个 `client:visible` 实例抛一次
@@ -400,10 +431,9 @@ items:
 
 25. **首页 = 内容橱窗**（2026-09-15，用户要求从"入口目录"改成"内容橱窗"）：
     `src/pages/index.astro` 已整体重写为四层结构，**不再有 01/02/03 编号入口卡片**。
-    - ① Hero：静态主标题 `code on clouds, life on wings.`（全小写；`clouds/wings` 用
-      `--accent` 雾蓝、`on` 用 `color-mix(--ink 45%)` 半透明）、定位语、三个技术胶囊、两个 CTA。
-      **标题的描边动画已按要求移除** —— 随之删除了 `HomeStrokeTitle.jsx` 与
-      `scripts/verify-stroke.mjs`（组件不存在了，验证脚本同步删除）。
+    > ⚠️ **Hero（第 ① 层）后来被 §30 又重做了一版**（加了 eyebrow 胶囊、两行标题、
+    > BlurText/ShinyText/逐字入场）。下面关于 ① 的描述是**旧版**，②③④ 仍然准确。
+    - ① Hero：~~静态主标题 + 定位语 + 技术胶囊 + 两个 CTA~~ → 见 §30。
     - ② 最新作品：3 张卡片（封面 / 编号 / 标题 / 一句话说明 / 标签），读 `works` 集合最新 3 篇。
     - ③ 精选影像：6 张网格，读 `shots` 集合最新 6 张；悬停放大 + 元信息淡入，**手机上元信息常显**
       （触屏没有 hover）。
@@ -420,26 +450,15 @@ items:
     - 自检：`node scripts/verify-home.mjs [url]`（25 项：四层结构、雾蓝强调、描边已移除、
       图片策略、防 CLS 容器、alt、区块间距、SEO、移动端单列）。
 
-26. **导航栏 = 顶部悬浮玻璃胶囊**（2026-09-15，用户要求"高级、轻盈、通透"）：
-    不再是全宽实色条。**改动集中在 `Header.astro` 顶部的「导航胶囊令牌」块** ——
+26. **导航栏形态演进（第一版）** —— **已被 §31 取代**，此处仅保留仍成立的结论：
+    导航的**配色与尺寸全部集中在 `Header.astro` 顶部的 `--nav-*` 令牌块**，
     结构/尺寸/交互与配色解耦，换配色只改那一块。
-    - 尺寸：宽 `min(1200px, calc(100% - 40px))`、距顶 16px、高 56px（滚动后 52px）、圆角 999px；
-      **移动端 ≤640px 宽改为 `calc(100% - 32px)`**（规格要求左右各 16px，比桌面的 20px 窄）。
-    - 滚动行为：`ui.js` 的 `SCROLL_MATERIAL_AT = 80`，超过就切 `html[data-scrolled='1']`
-      → 高度 52px + 玻璃加深 + 阴影加重。**用属性/class 切换，不硬切 position。**
-    - 链接：14px / 500 / `padding 8px 14px` / 圆角 10px；hover 换背景+文字色；
-      **当前页用底部 2px 雾蓝短横线（`::after`），不整块高亮**。
-      Logo：15px / 600 / `letter-spacing: -0.01em`。
-    - 移动端菜单：从顶部下拉的玻璃面板（圆角 20px、blur(24px)、`nav-in` 淡入+下移）。
-      **面板底色必须接近不透明**（`--nav-drawer-bg` 用 0.99/0.97 渐变）：它盖在正文之上，
-      半透明会让下方正文透上来（实测 0.92 时像重影）。
-    - ★踩过的坑★：`--nav-blur` 刻意与全站 `--glass-blur` **分开**
-      （导航是规格指定的 `blur(20px) saturate(1.4)`，全站玻璃是 `saturate(1.2)`）。
-      导航胶囊底色也从最初照规格的"近乎全透"提到 `rgba(9,12,16,.55)` —— 太透时
-      导航文字压在视频/正文上读不清（暗色站点上白色文字需要更实的底）。
-    - 自检：`node scripts/verify-nav-capsule.mjs [url]`（22 项：胶囊尺寸/居中/距顶/圆角、
-      模糊与边框、滚动阈值 80px 与 56→52 切换、当前页短横线、链接与 Logo 规格、
-      移动端左右 16px、下拉面板）。另有 `scripts/verify-nav.mjs`（15 项，几何与可点击性）。
+    - 当前尺寸与滚动形态见 §31（贴着顶部通栏 → 滚动收成胶囊），
+      §31 之前的"常驻 1200×56 悬浮胶囊"已不再是现状。
+    - 仍成立的两条经验：
+      1. **移动端菜单面板底色必须接近不透明**：它盖在正文之上，半透明会让下方正文透上来
+         （实测 0.92 时像重影）。用 `--nav-drawer-bg` 或 `rgba(10,10,15,.95)` 一档。
+      2. 暗色站点上白色导航文字需要**更实的底**：胶囊底色太透（<0.5）时文字压在视频上读不清。
 
 27. **★亮色主题已彻底删除★**（2026-09-15，用户要求"删除亮色主题与切换主题按钮"）：
     站点只有**一套暗色**。改动清单（改主题相关代码前先看这条）：
@@ -481,32 +500,19 @@ items:
       viewBox 是否为横版字标、云体/羽翼取值是否等于品牌稿色值、旧六边形是否清除、
       标志尺寸是否在 24–40px、是否超出导航胶囊、无横向溢出）。
 
-29. **ReactBits 风格导航（StaggeredMenu + 指示线）**（2026-09-15，用户要求复刻 reactbits.dev）：
-    动画在 `src/scripts/nav-staggered.js`（vanilla JS + GSAP，与本项目其余交互一致）。
-    **参数照 ReactBits 原实现**（源码取自 `DavidHDev/react-bits` 的
-    `src/content/Components/StaggeredMenu/`，经 jsDelivr 拉取）：
-    - 预层滑入 `xPercent 100→0`，**每层延迟 0.07s**，`duration 0.5 / power4.out`
-    - 菜单项入场 `yPercent 140→0 + rotate 10→0 + opacity 0→1`，`duration 1`，
-      **stagger each 0.1 from 'start'**，`power4.out`
-    - 社交链接最后淡入：`delay 0.35`、`duration 0.6 / power2.out`、stagger 0.08
-    - 图标整体 `rotate 0→225`（加号→叉号），`duration 0.8 / power4.out`
-    - 关闭：面板 `xPercent→100 / 0.5 / power3.in`；菜单项 `yPercent→-140, rotate→-10, 0.32 / power3.in`
-    - 只动画 `transform` 与 `opacity`；`prefers-reduced-motion` 下直接切终态（无时间线）
-    - **★两个必须记住的坑★**：
-      1. **面板与预层必须放在 `</header>` 之外**。`.site-header` 带 `will-change: transform`，
-         会让它成为 fixed/absolute 后代的**包含块** —— 面板会按 header 的高度（约 72px）定位，
-         手机上面板被压成一条（实测 height 131px 而不是 844px）。
-      2. **`--sm-panel-*` 令牌必须定义在 `:root`**（`Header.astro` 里用 `:global(:root)`）。
-         面板已在 header 之外，定义在 `.site-header` 上的自定义属性它继承不到：
-         `--sm-panel-w` 会退化成 auto、`--sm-panel-bg` 会变成透明。
-      3. 预层在 DOM 里位于面板**之后**，必须靠 z-index 压到面板下面（面板 2 / 预层 0–1），
-         否则会盖住菜单文字。
-    - 顶部两条指示线（`nav-ind--hover` / `nav-ind--active`）：一条跟鼠标在菜单项间滑动、
-      一条停在当前路由下方，都用 `power4.out` 平滑移动；激活线在 `astro:page-load` 后重定位。
-    - 旧的汉堡抽屉已删除（标记 + CSS + 脚本），由侧边菜单取代。
-    - 自检：`node scripts/verify-nav-rb.mjs [url]`（27 项：结构、关闭态位移、**逐帧**验证
-      预层错峰与菜单项 stagger 递增、图标 225°、指示线跟随与落位、Esc、
-      减少动态立即到位、移动端铺满视口）。
+29. ~~ReactBits 风格侧边菜单（StaggeredMenu）~~ —— **已废弃，被 §31 取代**（2026-09-15 当天）
+    这套实现（`nav-staggered.js`、`.sm-*` 样式、`verify-nav-rb.mjs`）**已全部删除**，
+    导航现在由 §31 的"滚动收缩 + 移动端汉堡"承担。留着这一条只为两点参考价值：
+    - **ReactBits 的原参数**（若以后要复刻别的 reactbits 组件，这套节奏可直接借用）：
+      预层 `xPercent 100→0` 每层延迟 0.07s / `0.5s power4.out`；菜单项
+      `yPercent 140→0 + rotate 10→0 + opacity 0→1`，`duration 1`，
+      **stagger each 0.1 from 'start'**，`power4.out`；图标 `rotate 0→225`、`0.8s power4.out`；
+      关闭用 `power3.in`。
+    - **一个仍然成立的通用坑**：`.site-header` 带 `will-change: transform`，会让它成为
+      fixed/absolute 后代的**包含块** —— 任何"挂在导航上的浮层/面板"若放在 `</header>` 内，
+      会按 header 的高度（约 64–72px）定位而不是视口。要么放到 `</header>` 之外，
+      要么别给它 fixed 定位。同理，浮层用到的自定义属性若定义在 `.site-header` 上，
+      它（在 header 之外时）**继承不到**，会退化成 `auto` 或透明 —— 必须定义在 `:root`。
 
 30. **首页 Hero 板块（严格按规格实现）**（2026-09-15）：
     `src/pages/index.astro` 的 `.hero` 段 + `src/scripts/hero-anim.js`。
@@ -593,67 +599,44 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
    `cw-theme-pref` 之类的存储会让"默认值"类断言整片误判；清完要**回读确认**。
 4. **调试浏览器要定期重启**：每个验证脚本都会 `json/new` 开新标签页（多数不关），
    跑几十次后实测累积到 **55 个标签页 / 74 个 Edge 进程**，于是所有页面布局等待
-   飙到 18s、断言开始大面积假失败（冒烟从 48/48 掉到 45/47）。
+   飙到 18s、断言开始大面积假失败（当时冒烟从 48/48 掉到 45/47；现在冒烟总数是 45）。
    **症状**：多处 `布局等待 1x s` + 元素查不到。**处理**：杀掉 9222 进程重启浏览器即可，
    不是站点问题。长时间验证时记得隔一阵重启一次。
 
-### 7.2 视觉/像素取证（vision 工具可能被限流或关闭，本仓库一律用本地手段）
+### 7.2 验证脚本清单（改完对应模块就跑它）
+**全部脚本都在 `endfield-blog/scripts/`，统一用法 `node scripts/<名>.mjs [url] [light|dark]`。
+前置：预览 4321 已起 + 无头浏览器 9222 已起（§7.1）。退出码 0=全过 / 1=有失败 / 2=环境没起。**
+
+| 脚本 | 覆盖什么 | 当前基线 |
+|---|---|---|
+| `smoke.mjs` | ★总入口：各页横向溢出/控制台异常/侧栏存在与等高、长页两栏逐帧同步、"不钉在导航栏下"、软导航往返后的分类筛选与日历交互、手机端侧栏隐藏 | **45/45** |
+| `verify-hero.mjs` | 首页 Hero：四层结构、逐条尺寸/间距、四档断点、逐帧 stagger、减少动态 | **49/49** |
+| `verify-home.mjs` | 首页四层结构、图片策略、防 CLS 容器、alt、区块间距、SEO、移动端单列 | **25/25** |
+| `verify-nav-shrink.mjs` | 导航三态（贴顶通栏/滚动胶囊/回顶）+ 形态过渡 + 移动端汉堡菜单 | **37/37** |
+| `verify-nav.mjs` | 导航几何、链接可达性、指示线 | **15/15** |
+| `verify-brand.mjs` | 品牌标志（viewBox、云体/羽翼色值、旧六边形已清、不超胶囊） | **10/10** |
+| `verify-theme.mjs` | 单主题不变量：默认暗色/系统浅色仍暗色/历史偏好切不回浅色/无开关/首屏逐帧无浅色帧 | **11/11** |
+| `verify-redesign.mjs` | 暗色电影感：玻璃令牌取值、暂停背景动态按钮、导航滚动过渡 | **14/14** |
+| `verify-search.mjs` | 搜索悬浮窗：懒加载、开关、出结果、快捷键、软导航后仍可用 | **17/17** |
+| `verify-videobg.mjs` | 背景视频：播放/层级/透明度/遮罩/hero 文字在视频上的**实际像素**对比度 | **15/15** |
+| `verify-videobg-global.mjs` | 全站背景一致性：逐页硬刷新 + 软导航一圈，视频未被重建、旧背景仍在 | **25/25** |
+| `contrast-audit.mjs` | WCAG 对比度审计（逐节点"前景 vs 实际合成背景"） | 暗色 **0 处不达标** |
+| `mobile-shots.mjs` | 三机型视口 × 5 页截图 + 横向溢出统计 | **15/15 无溢出** |
+| `diag-errors.mjs` | 逐页 JS 异常计数 | 7 页全 **0** |
+| `border-check.mjs` / `card-separation.mjs` | 实际生效的边框宽度/颜色；卡面与页面底色分离度 | — |
+| `imgstats.mjs` / `imgpix.mjs` | 截图亮度分位数、过曝占比、四角采点 | — |
+| `shots-theme.mjs` / `shot-*.mjs` | 强制某主题/某状态截图（无头浏览器默认 dark，必须显式 setEmulatedMedia） | — |
+
+> `contrast-audit.mjs` 的第二个参数现在**不再调用站点切主题**（站点只有暗色，见 §27）：
+> 它读站点实际渲染的主题来评估；传 `light` 会打印一条"站点解析为 dark，按 dark 评估"的提示。
+> 另外它会**跳过 SVG 文字**（`<text>/<tspan>` 的颜色来自 `fill/stroke`，按 `color` 算会得到假 1:1）。
+
+### 7.3 视觉/像素取证（vision 工具可能被限流或关闭，本仓库一律用本地手段）
 - 截某区域做**密度图**（把 PNG 裁一块降采样成 ASCII）→ 看清布局与元素占位；
 - `sharp` 统计（本机 `endfield-blog/node_modules/sharp` 可用）：算均值/标准差、做像素差分、算贴图保真（PSNR）；
-- 几何断言优于肉眼：直接量矩形、比较是否重叠、`scrollWidth - clientWidth` 判横向溢出。
-- **已脚本化的三个取证工具**（2026-09 加，改版式/配色时直接用）：
-  - `node scripts/contrast-audit.mjs [url] [light|dark]` — 主题**可读性审计**：每个可见文字节点算
-    「前景 vs 实际合成背景」的 WCAG 对比度，列出不达标项（含渐变裁切文字近似）。
-    **两种主题都要跑**（第二参数切换，默认 light）。退出码 0=无问题 / 1=有不达标 / 2=环境没起。
-    当前基线：**亮色与暗色都 0 处不达标**。
-  - `node scripts/shots-theme.mjs [url] [outDir]` — 用 CDP 强制 light/dark 各截一遍
-    （无头浏览器 `prefers-color-scheme` 默认 dark，必须显式 `Emulation.setEmulatedMedia`，
-    否则你会以为自己在看浅色其实在审深色）。
-  - `node scripts/imgstats.mjs <png...>` / `node scripts/imgpix.mjs <png...>` — 亮度分位数、
-    过曝占比、四角采点。亮色主题优化前基线：`/works/` 均值 0.914、**62.4% 像素亮度 ≥0.94**。
-
-### 7.3 冒烟测试（已写成脚本，改完必跑）
-`endfield-blog/scripts/smoke.mjs` 会跑 48 项断言：各页面横向溢出/控制台异常/侧栏存在性与等高、
-长页面两栏逐帧同步与"不钉在导航栏下"、软导航往返后的分类筛选与更新日历交互、手机视口侧栏隐藏。
-```powershell
-# 前置：预览 4321 已起 + 无头浏览器 9222 已起（§7.1）
-node scripts/smoke.mjs                        # 测本地
-node scripts/smoke.mjs https://cloudwing.pages.dev   # 测线上
-# 退出码 0=全过 / 1=有失败项 / 2=环境没起
-```
-最近一次结果：**48/48 通过**（本地，HEAD `d81147b` 之后；线上同版本亦通过 47/48，唯一失败项是脚本自身的竞态，见下）。
-
-### 7.3.1 接管复核记录（2026-09-15，HEAD `b4358c1`）
-新会话接手时按本文件 §7 复核了一遍环境与线上，结论：**站点与线上均处于可用状态，无需修复**。
-```powershell
-git -C endfield-blog log --oneline -1     # b4358c1，工作区干净
-git rev-parse HEAD; git rev-parse origin/main   # 两者相同（已推送、无未推提交）
-npm run build                             # 退出码 0（astro build + pagefind，9 页/793 词）
-node scripts/smoke.mjs                    # 48/48 通过，退出码 0
-```
-- 前置：预览 `http://127.0.0.1:4321`（旧常驻实例，重建 dist 后自动反映新产物）与无头 Edge `:9222` 都已在跑；
-- 线上对比：抓 `https://cloudwing.pages.dev/works/` 与本地 `dist/works/index.html` 逐字符比对，
-  **除三处构建指纹外完全相同**——`generator` 版本号（本地 astro 7.3.1 vs 构建机 7.3.2，`npm outdated`
-  显示本地落后一个 patch）与 `astro-island uid`（每次构建随机）。**内容层面线上 = 本地，部署没落下**；
-- 约束复核：`IMG_CDN=''`、`WEATHER_CITY=''`、`react`/`react-dom` 精确锁 19.2.8、`package-lock.json`
-  确在 `.gitignore`、仓库级 git 代理 `127.0.0.1:33210` 在线可用——`git fetch` 一次成功；
-- 待决项：§10 的「侧栏分类分组」经用户确认**暂时保留不改**。
-
-### 7.3.2 跑线上时冒烟脚本的竞态（2026-09-15 修）
-`smoke.mjs` 原来全靠**固定 sleep**，本地够用，跑线上会误报（**站点没问题**）。已改成轮询等待：
-1. **手机视口段**用 `.shell > .main-content` 取中栏宽 —— 单列布局下它不是 `.shell` 的直接子元素，
-   竞态时 `querySelector` 返回 `null` 后 `getBoundingClientRect()` 抛 `TypeError`，
-   整个脚本以"冒烟测试自身出错"失败。已放宽选择器 + 空值容错，并补了一条
-   **「手机端单列（中栏可见）」** 断言（断言数 47 → 48）。
-2. **`/account/` 冷启动很慢**：该页内嵌 giscus 第三方 iframe，实测线上 6s 后仍可能是
-   `readyState=loading`、三栏壳层还没渲染 → 侧栏高度测成 0，误报"子页面有侧栏"失败。
-   已改为 `waitForLayout()` 轮询（最多 40s，超时会打印 ⚠️ 提示）。
-3. **`/404.html` 有等高中间态**：`sideSticky()` 补等高前会先出现 `左 661 / 右 841`，
-   约 1s 后才补齐到 `841/841`。不等它就会误报"两栏不等高"。已加 `waitForEqualSidebars()`。
-4. **软导航分类筛选**同样要轮询到"隐藏项 >0 且回显条出现"，固定等待会读到中间态。
-
-> 判读方式：若某条断言只偶尔挂、且加了 ⚠️ 超时提示，先怀疑等待不足，重跑一次再判断，
-> **不要据此改样式**。修完后本地与线上均连续 `48/48 通过`。
+- **几何断言优于肉眼**：直接量矩形、比较是否重叠、`scrollWidth - clientWidth` 判横向溢出。
+  注意 `scrollWidth` 会把"故意停在视口外的浮层"也算进去 —— 要么给它的父层加 `overflow:hidden`，
+  要么断言时排除它（本项目两次踩到：侧边菜单面板、以及导航在 1000px 档内容超宽）。
 
 ### 7.4 手动断言清单（脚本没覆盖到的也照这个查）
 ```
@@ -767,9 +750,12 @@ CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真�
 
 | 项 | 说明 |
 |---|---|
-| 左侧栏「分类」分组 vs 导航二级菜单 | 现在**同一份分类出现两处**（我做过两次询问，未回复）。要删侧栏那组说一声 |
-| 作品详情页 summary | 上一轮"删除子页面简介"时**保留了它**（我理解为作品自身摘要而非页面简介）。要删也说一声 |
-| 404 页说明文字 | 同上，保留了「你要找的档案不存在…」 |
+| 作品封面 SVG 偏亮 | `public/covers/*.svg` 当初按**浅色底**设计，在现在的暗色站上偏亮。属内容资产，需要时可重画一批暗色版 |
+| 背景视频体积 | `public/media/bg-loop.mp4` 约 15.5 MB，每位访客都会下载。嫌重可以：换更短片段 / 压到 8MB 内 / 手机上不加载（见 §23 的 `VIDEO_BG` 令牌） |
+| 背景视频主色调 | 素材稳定在 **192° 青蓝**，与站点雾蓝强调色同族。**换素材要重取色相**（`--accent` 系） |
+| 工牌交互 | 原来"下拉/点击工牌开关灯"随亮色主题一起删了，现在只剩拖拽的装饰手感（§27）。要不要加别的反馈？ |
+| 左栏「分类」分组 vs 导航二级菜单 | 现在**同一份分类出现两处**（问过两次未回复）。要删侧栏那组说一声 |
+| 作品详情页 summary / 404 说明文字 | 早先"删除子页面简介"时保留了，要删说一声 |
 | 个人信息卡横幅图 | `SidebarNav.astro` 顶部常量 `PROFILE_BANNER = ''`，留空＝主题渐变；填站内图片路径即换成图片 |
 | 天气城市 | `src/site.ts` 的 `WEATHER_CITY = ''`＝按访客 IP 自动定位（推荐，不暴露你的位置）；填城市名则固定（等于公开城市） |
 | 画廊原图 | 40 张原始 PNG 备份已随工作区清理删除，仓库里的 webp 是唯一副本（详见 §11） |
@@ -813,6 +799,8 @@ CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真�
   保真 PSNR 29.6dB（肉眼无差）；转码脚本思路：解析 GLB 的 JSON/BIN chunk → sharp 重编码 → 顺序重排 bufferView；
 - **截图缩略图**：40 张 1600×900 webp 生成 640/1280 两档（640 平均 15KB、1280 平均 42KB），
   列表卡用缩略图、灯箱仍用原图（首页 667KB → 约 250KB）；
-- **岛屿降级**：`client:load` → `client:idle`/`client:visible`，粒子背景在减动效/省流下不挂 WebGL；
+- **岛屿降级**：`client:load` → `client:idle`/`client:visible`
+  —— ⚠️ **`client:visible` 会与软导航冲突并抛 `React error #424`**（§6.19），
+  常驻小岛要用 `client:idle`，别用 `visible`；
 - 参考判据与实测手法见 §7（CDP 冷缓存量传输量、sharp 算保真）。
 > 用户当时明确要求"终止任务、取消这次优化"，所以这些**不要擅自重做**，要问过再动。
