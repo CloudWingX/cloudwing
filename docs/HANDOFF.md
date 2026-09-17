@@ -660,7 +660,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 □ 首页：无侧栏、无 HTML 变化破坏
 ```
 
-### 7.4.1 本轮交接复核记录（2026-09-15，HEAD `9b1e6d1`）
+### 7.4.1 本轮交接复核记录（2026-09-15，HEAD `bee24b2`）
 交接前按本文件复核了一遍，结论：**站点、线上、文档三者一致，无需修复**。
 ```
 git log --oneline -1                     # 9b1e6d1；git rev-parse HEAD == git ls-remote origin main
