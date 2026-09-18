@@ -26,7 +26,7 @@ const on = Boolean(VIDEO_BG.src);
       class="video-bg"
       transition:persist="video-bg"
       aria-hidden="true"
-      style={`--vid-opacity-dark:${VIDEO_BG.opacityDark};--vid-opacity-light:${VIDEO_BG.opacityLight};--scrim-top:${VIDEO_BG.scrimTop};--scrim-mid:${VIDEO_BG.scrimMid};--scrim-bottom:${VIDEO_BG.scrimBottom};--scrim-light:${VIDEO_BG.scrimLight};`}
+      style={`--vid-opacity-dark:${VIDEO_BG.opacityDark};--vid-opacity-light:${VIDEO_BG.opacityLight};--vid-dim:${VIDEO_BG.dim};`}
     >
       <video
         class="video-bg__el"
@@ -54,12 +54,17 @@ const on = Boolean(VIDEO_BG.src);
     z-index: -4;
     pointer-events: none;
     overflow: hidden;
-    /* 降级底：视频没 load 出来之前 / 加载失败时，这里就是"深色渐变静态图"，
-       页面从第一帧起就有电影感底色，不会闪白。 */
-    background:
-      url('/media/bg-poster.jpg') center / cover no-repeat,
-      radial-gradient(120% 90% at 50% -10%, #0e1a22 0%, transparent 62%),
-      linear-gradient(180deg, #070d12 0%, #03060a 100%);
+    /* 降级底：视频没 load 出来之前 / 加载失败时显示的静态底色。
+       ★2026-09-18 三轮修正（关键）★：这里原来还叠了一张 `bg-poster.jpg` 静帧 +
+       一层偏亮的 radial 渐变。它们**在 video 之下**，而 video 是半透明的 ——
+       于是"兜底底图"会透过 video 一起参与合成，把画面洗成一块高亮青色：
+       实测标题正后方 rgb(115,174,195)，白字对比只有 2.45（需 3 / 副标题 4.5）。
+       这也解释了为什么"调 video 的 opacity 反而更亮"（越低越露出亮底图）。
+       现在只留**纯粹的深色底**（与页面 --bg-deep 同族），video 叠在它上面：
+       实测同样位置 rgb(7,27,36)、对比 17+，而且再也不用靠遮罩层压高光。
+       ⚠️ 不要再把 poster / 亮渐变加回这一层；要"兜底好看"应该另开一层放在 video 之上
+       （但那就又变成"盖在内容上的薄膜"了，用户已经明确不要）。 */
+    background: #05080c;
   }
   /* 视频加载失败：藏掉 <video>，只留上面的渐变/静帧兜底 */
   .video-bg.is-failed .video-bg__el { visibility: hidden; }
@@ -71,11 +76,11 @@ const on = Boolean(VIDEO_BG.src);
     width: 100%;
     height: 100%;
     object-fit: cover; /* 任意画幅都铺满视口，不留黑边 */
-    opacity: var(--vid-opacity-dark, 0.5);
+    opacity: var(--vid-opacity-dark, 0.45);
     /* 强调色预设对背景视频做"色相旋转"（改颜色，不改背景本身）：
        视频文件/透明度/遮罩/层级都不动，只是整体转色相，
        这样"余烬"之类的暖色预设才能让画面真的变暖，且与强调色同族。 */
-    filter: hue-rotate(var(--vid-hue, 0deg)) saturate(var(--vid-sat, 1));
+    filter: hue-rotate(var(--vid-hue, 0deg)) saturate(var(--vid-sat, 1)) brightness(var(--vid-dim, 1));
     transition: filter 0.2s linear; /* 实际过渡由脚本补间变量完成，这里防首帧跳变 */
   }
   @media (prefers-reduced-motion: reduce) {
@@ -85,25 +90,19 @@ const on = Boolean(VIDEO_BG.src);
      没加 has-poster 时（组件未接管）保持可见，避免万一脚本失效导致视频被永久藏住。 */
   .video-bg.has-poster:not(.is-playing) .video-bg__el { opacity: 0; }
   .video-bg__el { transition: opacity 0.6s var(--ease, ease); }
-  /* 视频之上的遮罩（压高光，保证正文对比度）。层次：视频 → 本层 → 页面底色之上的一切。
-     浅色主题用**白色**薄膜（把整体抬亮，深色文字才压得住）；
-     深色主题用**黑色**薄膜（压住素材高光，避免出现刺眼的白块）。
-     两层都只是"薄膜"，视频依然可见、依然在动。 */
-  /* 遮罩：**上浅下深的渐变**，中心适当留亮。
-     这样白色文字在顶部（导航栏）与底部（页脚/长文）都有足够对比，
-     中间仍能看清画面动态 —— 比"整块均匀压暗"更有电影感，也更省视频亮度。
-     同一个层里的伪元素直接盖在视频之上（不给单独 z-index，避免和 body::before 抢层）。 */
-  .video-bg::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      180deg,
-      rgba(4, 7, 10, var(--scrim-top, 0.35)) 0%,
-      rgba(4, 7, 10, var(--scrim-mid, 0.42)) 45%,
-      rgba(4, 7, 10, var(--scrim-bottom, 0.72)) 100%
-    );
-  }
+  /* ★★ 这里曾经有一层 `.video-bg::after` 遮罩（上浅下深的黑色渐变）—— 已整块删除
+     （2026-09-18 三轮；用户连续三轮指出"标题后方的黑色矩形"→"首页两边有瑕疵"→
+     "在导航栏和主容器两侧能看见边缘"）★★
+     它原本的作用是压住素材高光、保证白字对比度。但**只要在内容层之上再盖一层东西，
+     无论多浓多淡都会被看出来**，三轮都在为它返工。
+     **正解：压暗要压在被压对象自己的图层里** —— 现在用：
+       · `src/site.ts` 的 `VIDEO_BG.dim` → `.video-bg__el` 的 `filter: brightness()`（视频自身）；
+       · `.video-bg` 的兜底底改成纯深色 `#05080c`（原来是 poster 静帧 + 亮渐变，
+         它们在半透明 video **之下**，会把画面整体洗亮 —— 见上面 `.video-bg` 的注释）；
+       · 副标题 `.hero-subtitle` 的白度 .7 → .92。
+     ⚠️ `VIDEO_BG.scrimTop/Mid/Bottom/Light` 四个令牌已废弃（仅保留字段），**不要接回样式**。
+     ⚠️ 以后若还想加"薄膜"，先读 HANDOFF §36.2/§36.3：两次同源事故都出在"只铺在容器盒里"。 */
+
   /* 兜底：万一切到浅色态（本设计只提供暗色，这里仅为防御） */
   /* ── 强调色预设的"整页颜色滤镜" ──
      一层纯色 + 混合模式，给整个画面（含背景视频）换色调，

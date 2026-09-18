@@ -1,7 +1,9 @@
 // 导航验收（照 ReactBits 的 shrink-on-scroll + mobile-menu）：
-//   未滚动：贴顶通栏（padding-top 0、1280 宽、64 高、无圆角、透明）
-//   滚动后：下沉 16px 收成胶囊（1120 宽、52 高、圆角 999px、玻璃底 + 模糊 + 阴影）
+//   未滚动：贴顶通栏（padding-top 0、1300 宽、64 高、无圆角、透明）
+//   滚动后：下沉 16px 收成胶囊（1140 宽、56 高、圆角 999px、玻璃底 + 模糊 + 阴影）
 //   移动端：汉堡按钮 + 顶部下拉玻璃菜单（淡入 + 下移）
+// ⚠️ 1300 = global.css 的 --w-max（主内容容器盒宽，header/main/footer 一致）；
+//    滚动后的 1140 = 1300 − 160，保持与上一版（1280 → 1120）相同的收缩幅度。
 // 用法：node scripts/verify-nav-shrink.mjs [baseUrl]
 import { setTimeout as sleep } from 'node:timers/promises';
 import { writeFileSync } from 'node:fs';
@@ -52,7 +54,7 @@ console.log('=== 未滚动：贴顶通栏 ===');
 const top = await cap();
 console.log('  ' + JSON.stringify(top));
 check('外层 padding-top = 0', top.外层paddingTop === '0px', top.外层paddingTop);
-check('容器宽 1280', top.宽 === 1280, String(top.宽));
+check('容器宽 1300（= --w-max，与主内容容器同宽）', top.宽 === 1300, String(top.宽));
 check('容器高 64', top.高 === 64, String(top.高));
 check('无圆角（贴顶通栏）', parseFloat(top.圆角) === 0, top.圆角);
 check('背景透明', /rgba\(0, 0, 0, 0\)|transparent/.test(top.背景), top.背景);
@@ -65,7 +67,7 @@ await sleep(1300);
 const sc = await cap();
 console.log('  ' + JSON.stringify(sc));
 check('外层下沉 16px', sc.外层paddingTop === '16px', sc.外层paddingTop);
-check('容器宽收到 1120', sc.宽 === 1120, String(sc.宽));
+check('容器宽收到 1140', sc.宽 === 1140, String(sc.宽));
 check('容器高收到 56（参考实测值）', sc.高 === 56, String(sc.高));
 check('圆角 999px', parseFloat(sc.圆角) >= 900, sc.圆角);
 check('玻璃底 + 模糊', /rgba\(10, 10, 15, 0\.7\)/.test(sc.背景) && /blur\(12px\)/.test(String(sc.模糊)), `${sc.背景} | ${sc.模糊}`);
@@ -79,9 +81,32 @@ console.log('\n=== 回顶恢复 ===');
 await ev(`window.scrollTo(0, 0)`);
 await sleep(1300);
 const back = await cap();
-check('恢复 1280/64/无圆角/透明', back.宽 === 1280 && back.高 === 64 && parseFloat(back.圆角) === 0 && /rgba\(0, 0, 0, 0\)/.test(back.背景),
+check('恢复 1300/64/无圆角/透明', back.宽 === 1300 && back.高 === 64 && parseFloat(back.圆角) === 0 && /rgba\(0, 0, 0, 0\)/.test(back.背景),
   `${back.宽}/${back.高}/${back.圆角}/${back.背景}`);
 check('桌面无横向溢出', back.溢出 === 0, String(back.溢出));
+/* 2026-09-18 二轮：导航容器必须与主内容容器"同宽 + 同左缘 + 各自居中"，
+   否则导航内容左缘会比正文左缘多出 ~54px（改宽度前实测）。
+   注意比的是**容器盒**左缘，不是内容左缘：导航内边距 32、.wrap 内边距 52，
+   两者内边距本来就不同（参考也是"同容器宽、内容各自内缩"）。
+   ⚠️ 不能用 `.shell .wrap` 取样：三栏壳层里的 .wrap 被 shell.css 改成
+   `max-width:none`（宽度交给栅格列），量出来的不是主容器宽（踩过）。 */
+const navAlign = JSON.parse(await ev(`(function(){
+  var h=document.querySelector('.header-container');
+  var w=null, all=document.querySelectorAll('.wrap');
+  for (var i=0;i<all.length;i++){ if (getComputedStyle(all[i]).maxWidth!=='none'){ w=all[i]; break; } }
+  if(!h||!w) return JSON.stringify({ok:false, hasNav:!!h, hasWrap:!!w});
+  var hb=h.getBoundingClientRect(), wb=w.getBoundingClientRect();
+  var vw=document.documentElement.clientWidth;
+  return JSON.stringify({ok:true,
+    宽差:Math.round((hb.width-wb.width)*10)/10,
+    左缘差:Math.round((hb.left-wb.left)*10)/10,
+    导航居中差:Math.round((hb.left-(vw-hb.width)/2)*10)/10});})()`));
+check('导航容器与主内容容器同宽（都用 1300）', navAlign.ok && Math.abs(navAlign.宽差) <= 1.5,
+  navAlign.ok ? `宽差 ${navAlign.宽差}` : JSON.stringify(navAlign));
+check('导航容器与主内容容器同左缘', navAlign.ok && Math.abs(navAlign.左缘差) <= 1.5,
+  navAlign.ok ? `左缘差 ${navAlign.左缘差}` : JSON.stringify(navAlign));
+check('导航容器自身水平居中', navAlign.ok && Math.abs(navAlign.导航居中差) <= 1.5,
+  navAlign.ok ? `居中差 ${navAlign.导航居中差}` : JSON.stringify(navAlign));
 
 console.log('\n=== 形态说明（改版后不再下滑收起）===');
 // 参考的导航只做"贴顶通栏 ↔ 滚动胶囊"，没有下滑隐藏这回事。

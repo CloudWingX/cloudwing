@@ -92,12 +92,95 @@ check('hero 与区块容器同内边距（都用 --gutter）', edgeState.heroPad
 check('hero 内容左缘与区块内容左缘重合（对齐主栅格）',
   Math.abs(edgeState.heroContentLeft - edgeState.sectionContentLeft) <= 1,
   `hero=${edgeState.heroContentLeft} 区块=${edgeState.sectionContentLeft}`);
-check('hero 两栏 gap 80px（参考值）', d.hero.gap === '80px', d.hero.gap);
+
+/* ── 一、容器宽度与居中不变量（2026-09-18 二轮：--w-max 1428 → 1300）──
+   用户要求：主内容容器 ≈1300、水平居中、左右留白对称；
+   header / main / footer 三者同容器宽；导航栏本身仍 width:100%。
+   这里在**同一个视口**下同时量四个容器：主内容区块 .wrap、hero、
+   导航 .header-container、页脚 .site-footer .wrap，
+   断言"同宽 + 同左缘 + 各自居中"。1440 与 1920 两档都会各跑一次
+   （下面 goto(1440) / goto(1920) 两段）。 */
+const widthInv = JSON.parse(await ev(`(function(){
+  var q=function(s){return document.querySelector(s);};
+  var vw=document.documentElement.clientWidth;
+  var wrap=q('.sec .wrap'), hero=q('.hero'), head=q('.header-container'), foot=q('.site-footer .wrap');
+  var g=function(e){ return e? e.getBoundingClientRect() : null; };
+  var padL=function(e){ return e? parseFloat(getComputedStyle(e).paddingLeft) : null; };
+  var wb=g(wrap), hb=g(head), fb=g(foot), hrb=g(hero);
+  return JSON.stringify({
+    vw: vw,
+    wrapBoxW: wb?Math.round(wb.width*10)/10:null, wrapMaxW: wrap?getComputedStyle(wrap).maxWidth:null,
+    wrapOffL: wb?Math.round(wb.left*10)/10:null, wrapOffR: wb?Math.round((vw-wb.right)*10)/10:null,
+    wrapContentL: wb?Math.round((wb.left+padL(wrap))*10)/10:null,
+    wrapContentR: wb?Math.round((wb.right-padL(wrap))*10)/10:null,
+    heroBoxW: hrb?Math.round(hrb.width*10)/10:null,
+    headW: hb?Math.round(hb.width*10)/10:null, headOffL: hb?Math.round(hb.left*10)/10:null,
+    headOffR: hb?Math.round((vw-hb.right)*10)/10:null,
+    footW: fb?Math.round(fb.width*10)/10:null, footOffL: fb?Math.round(fb.left*10)/10:null,
+    footOffR: fb?Math.round((vw-fb.right)*10)/10:null,
+    footContentL: fb?Math.round((fb.left+padL(foot))*10)/10:null
+  });})()`));
+check('主容器 max-width 1300（用户要求 ≈1300）', widthInv.wrapMaxW === '1300px', String(widthInv.wrapMaxW));
+check('主容器居中：左右偏移差 ≤1px（留白对称）', Math.abs(widthInv.wrapOffL - widthInv.wrapOffR) <= 1,
+  `左=${widthInv.wrapOffL} 右=${widthInv.wrapOffR}`);
+check('hero 与主内容区块容器同宽（都是 1300 盒宽）', widthInv.heroBoxW === widthInv.wrapBoxW,
+  `${widthInv.heroBoxW} vs ${widthInv.wrapBoxW}`);
+check('header 容器与主内容容器同宽', widthInv.headW === widthInv.wrapBoxW, `${widthInv.headW} vs ${widthInv.wrapBoxW}`);
+check('header 容器居中：左右偏移差 ≤1px', Math.abs(widthInv.headOffL - widthInv.headOffR) <= 1,
+  `左=${widthInv.headOffL} 右=${widthInv.headOffR}`);
+/* ⚠️ 首页的 <footer class="site-footer"> 被页面样式 `display:none` 掉了
+   （index.astro 的 `body.home-route .site-footer { display: none }`），
+   所以首页量不到页脚容器 —— 页脚与主容器同宽这条改由 verify-nav-shrink.mjs
+   在 /works/ 上断言。这里只做"页脚若存在就必须对齐"的条件断言。 */
+if (widthInv.footW !== null && widthInv.footW > 0) {
+  check('footer 容器与主内容容器同宽且居中', widthInv.footW === widthInv.wrapBoxW,
+    `${widthInv.footW} vs ${widthInv.wrapBoxW}`);
+  check('footer 内容左缘与主内容区块内容左缘重合',
+    Math.abs(widthInv.footContentL - widthInv.wrapContentL) <= 1,
+    `footer=${widthInv.footContentL} 区块=${widthInv.wrapContentL}`);
+}
+check('header / 主内容容器左缘重合（同一栅格）',
+  Math.abs(widthInv.headOffL - widthInv.wrapOffL) <= 1,
+  `header=${widthInv.headOffL} main=${widthInv.wrapOffL}` +
+  (widthInv.footW ? ` footer=${widthInv.footOffL}` : '（首页无页脚容器）'));
+
+/* 2026-09-18 三轮：PC 端把整块（大标题＋代码卡片）竖向居中，并加大标题字号。
+   布局三件套（互相咬合，改一个要同时改另两个）：
+     左栏 700 + 两栏间隔 96 + 卡片 400 = 1196 = 容器净宽
+   字号上限 48 → 52（第一行 28 字符在 52px 下实宽 686px，700 的栏放得下）。 */
+check('hero 两栏 gap 96px（加大后的实测值）', d.hero.gap === '96px', d.hero.gap);
 // 注意：min-height:100vh 在 getComputedStyle 里会被解析成 px（900px），
 // 所以要么按视口高比，要么直接读源码里的声明 —— 这里按"等于视口高"断言。
 check('hero min-height = 视口高（100vh）', Math.abs(d.hero.h - 900) <= 1, `${d.hero.h} vs 900`);
 check('hero 是左右两栏 flex', d.hero.display === 'flex' && d.hero.dir === 'row', `${d.hero.display}/${d.hero.dir}`);
-check('左栏 ≈ 参考的 645px（比例一致）', d.content.w >= 590 && d.content.w <= 660, String(d.content.w));
+check('左栏 ≈ 700px（放大标题后的取值）', d.content.w >= 660 && d.content.w <= 710, String(d.content.w));
+
+/* ── 竖向居中（2026-09-18 三轮：用户要求"整块挪到屏幕正中心"）──
+   口径（实测 1440×900）：主内容块 [239,610] 中心 424 ≈ 视口中心 450；
+   卡片因"与标题顶齐平"被下移 60px（标题顶 299 / 卡片 [299,769]），
+   顶部留白 299 = 卡片底留白 131 + 60×2 + (610−239−470)…… 所以只断言：
+   ① 主内容块居中；② 卡片相对主内容块居中（允许那 60px 的齐平位移）；
+   ③ 标题顶与卡片底都在视口内、且标题顶不再是"贴顶的 96px"。 */
+const vc = JSON.parse(await ev(`(function(){
+  var q=function(s){return document.querySelector(s);};
+  var vh=document.documentElement.clientHeight;
+  var c=q('.hero-content').getBoundingClientRect();
+  var card=q('.code-card').getBoundingClientRect();
+  var t=q('.hero-title').getBoundingClientRect();
+  return JSON.stringify({vh:vh,
+    topGap:Math.round(t.top), bottomGap:Math.round(vh-card.bottom),
+    contentTop:Math.round(c.top), contentBottom:Math.round(c.bottom),
+    cardTop:Math.round(card.top), cardBottom:Math.round(card.bottom),
+    contentMid:Math.round((c.top+c.bottom)/2), cardMid:Math.round((card.top+card.bottom)/2)});})()`));
+check('整块竖向居中：主内容块中心 ≈ 视口中心（±40px）',
+  Math.abs(vc.contentMid - vc.vh / 2) <= 40, `内容中心=${vc.contentMid} 视口中心=${vc.vh / 2}`);
+check('卡片与主内容块同级居中（卡片中心 − 内容中心 ≤ 120px，含齐平位移）',
+  Math.abs(vc.cardMid - vc.contentMid) <= 120,
+  `卡片中心=${vc.cardMid} 内容中心=${vc.contentMid} 差=${vc.cardMid - vc.contentMid}`);
+check('不再顶到顶部：标题顶留白 ≥ 120px（改前是 96px）', vc.topGap >= 120, String(vc.topGap));
+check('标题顶与卡片底都在视口内（居中后不会被切）',
+  vc.topGap > 0 && vc.cardBottom <= vc.vh && vc.bottomGap > 0,
+  `标题顶=${vc.topGap} 卡片底=${vc.cardBottom} 视口高=${vc.vh}`);
 
 check('徽标：圆角 9999px / 内距 6×14（参考值）',
   parseFloat(d.badge.radius) >= 900 && d.badge.padT === '6px' && d.badge.padL === '14px',
@@ -124,11 +207,11 @@ const ti = JSON.parse(titleInfo);
 check('标题第一行文案正确', ti.l1 === 'Code on clouds, life on wings', ti.l1);
 check('标题第二行文案正确', ti.l2 === 'Hello this is CloudWing', ti.l2);
 check('PC 上严格两行（两行都不折行）', ti.l1rects === 1 && ti.l2rects === 1, `L1=${ti.l1rects} L2=${ti.l2rects}`);
-/* 比例照参考站：左栏 645 / 卡片 520 / gap 111 的相对关系。
+/* 比例照参考站：左栏 / 卡片 / gap 的相对关系（现在是 700 : 400 : 96）。
    参考 h1 是 66px@645 栏；我们文案更长（第一行 28 字符），
-   同栏宽下只能到 48px 才是两行 —— 所以断言"比例"而不是"绝对值 66"。 */
-check('左栏 ≈ 616px（参考 645，比例一致）', ti.cw >= 590 && ti.cw <= 660, String(ti.cw));
-check('标题字号落在参考比例区间（40–48px）', parseFloat(ti.fs) >= 40 && parseFloat(ti.fs) <= 48, ti.fs);
+   所以断言"比例"而不是"绝对值 66"。 */
+check('左栏 ≈ 700px（放大标题后的取值）', ti.cw >= 660 && ti.cw <= 710, String(ti.cw));
+check('标题字号落在新区间（45–53px，上限已从 48 提到 52）', parseFloat(ti.fs) >= 45 && parseFloat(ti.fs) <= 53, ti.fs);
 check('两行都放得进左栏（按最长行反解字号）', ti.l1w <= ti.cw + 20 && ti.l2w <= ti.cw + 1,
   `L1=${ti.l1w} L2=${ti.l2w} 容器=${ti.cw}`);
 check('第一行为纯白', /rgb\(255,\s*255,\s*255\)/.test(ti.l1color), ti.l1color);
@@ -140,7 +223,9 @@ check('主标题字距 -0.03em', Math.abs(parseFloat(ti.ls) + parseFloat(ti.fs) 
 
 check('副标题文案正确', d.subtitleText === '记录我的学习，折腾和胡思乱想', d.subtitleText);
 check('副标题字号 18px', d.subtitle.fs === '18px', d.subtitle.fs);
-check('副标题颜色 rgba(255,255,255,0.7)', /rgba\(255,\s*255,\s*255,\s*0?\.7\)/.test(d.subtitle.color), d.subtitle.color);
+/* 2026-09-18 三轮：Hero 竖直居中后副标题正压着背景视频亮带，
+   .7 白在亮帧上对比只有 3.66（18px 需 4.5）→ 提到 .92（配套 scrimTop/Mid 提到 .45/.75）。 */
+check('副标题颜色 rgba(255,255,255,0.92)', /rgba\(255,\s*255,\s*255,\s*0?\.92\)/.test(d.subtitle.color), d.subtitle.color);
 check('副标题行高 1.6', Math.abs(parseFloat(d.subtitle.lh) - 18 * 1.6) < 1.5, d.subtitle.lh);
 
 check('统计组 gap 32px', d.features.gap === '32px', d.features.gap);
@@ -157,16 +242,16 @@ check('标签圆角 9999px / 内距 6×14', parseFloat(d.tag.radius) >= 900 && d
 check('标签组 gap 8px', d.tags.gap === '8px', d.tags.gap);
 check('标签数量 ≥ 4（来自作品 tools）', d.tagCount >= 4, String(d.tagCount));
 
-check('卡片已缩小（≤440，比参考的 520 小）', d.card.w <= 442 && d.card.w >= 380, String(d.card.w));
+check('卡片已收窄（≤410，左栏让出 40px 给大标题）', d.card.w <= 410 && d.card.w >= 360, String(d.card.w));
 /* 用户要求"大标题与卡片顶部齐平"（左栏第一块是徽标胶囊，标题在其下方，
    所以卡片要下移一个 badge 高度 + 其下边距）。 */
 const alignState = JSON.parse(await ev(`(function(){
   var q=function(s){return document.querySelector(s);};
   return JSON.stringify({titleTop:Math.round(q('.hero-title').getBoundingClientRect().top),
     cardTop:Math.round(q('.code-card').getBoundingClientRect().top),
-    cardAlign:getComputedStyle(document.documentElement).getPropertyValue('--card-align').trim()});})()`));
+    cardAlign:getComputedStyle(document.documentElement).getPropertyValue('--card-shift').trim()});})()`));
 check('大标题与卡片顶部齐平', Math.abs(alignState.titleTop - alignState.cardTop) <= 1,
-  `标题顶=${alignState.titleTop} 卡片顶=${alignState.cardTop}（--card-align=${alignState.cardAlign}）`);check('卡片圆角 12px', d.card.radius === '12px', d.card.radius);
+  `标题顶=${alignState.titleTop} 卡片顶=${alignState.cardTop}（--card-shift=${alignState.cardAlign}）`);check('卡片圆角 12px', d.card.radius === '12px', d.card.radius);
 check('卡片头有文件名', (await ev(`!!document.querySelector('.code-filename')`)) === true);
 check('卡片三色圆点', (await ev(`document.querySelectorAll('.code-dot').length`)) === 3);
 /* 代码段照参考的写法：带一个"会随色卡变色的色值胶囊"（swatch + hex），
@@ -241,7 +326,41 @@ check('内容来自站点真实数据（标题/副标题非空）',
   d.titleText.length > 4 && d.subtitleText.length > 8, `"${d.titleText}" / "${d.subtitleText.slice(0, 24)}…"`);
 check('桌面无横向溢出', d.overflow === 0, String(d.overflow));
 
-console.log('\n=== 1024：gap 40 / pad 24 / 标题 48px / 卡片 440（参考值）===');
+console.log('\n=== 1920：同样要"居中 + 左右留白对称 + 三者同宽"（用户点名的另一档）===');
+await goto(1920, 1080, false);
+const w1920 = JSON.parse(await ev(`(function(){
+  var q=function(s){return document.querySelector(s);};
+  var vw=document.documentElement.clientWidth;
+  var wrap=q('.sec .wrap'), hero=q('.hero'), head=q('.header-container'), foot=q('.site-footer .wrap');
+  var g=function(e){ return e? e.getBoundingClientRect() : null; };
+  var padL=function(e){ return e? parseFloat(getComputedStyle(e).paddingLeft) : null; };
+  var wb=g(wrap), hb=g(head), fb=g(foot), hrb=g(hero);
+  return JSON.stringify({
+    vw: vw,
+    wrapW: wb?Math.round(wb.width*10)/10:null, wrapMaxW: wrap?getComputedStyle(wrap).maxWidth:null,
+    wrapOffL: wb?Math.round(wb.left*10)/10:null, wrapOffR: wb?Math.round((vw-wb.right)*10)/10:null,
+    heroW: hrb?Math.round(hrb.width*10)/10:null,
+    headW: hb?Math.round(hb.width*10)/10:null, headOffL: hb?Math.round(hb.left*10)/10:null,
+    headOffR: hb?Math.round((vw-hb.right)*10)/10:null,
+    footW: fb?Math.round(fb.width*10)/10:null,
+    overflow: document.documentElement.scrollWidth-document.documentElement.clientWidth
+  });})()`));
+check('1920：主容器仍是 1300（不再随视口变宽）', w1920.wrapMaxW === '1300px' && w1920.wrapW === 1300,
+  `${w1920.wrapMaxW} / 实测 ${w1920.wrapW}`);
+check('1920：主容器居中，左右留白相等', Math.abs(w1920.wrapOffL - w1920.wrapOffR) <= 1,
+  `左=${w1920.wrapOffL} 右=${w1920.wrapOffR}`);
+check('1920：hero / header 与主内容容器同宽',
+  w1920.heroW === w1920.wrapW && w1920.headW === w1920.wrapW,
+  `hero=${w1920.heroW} header=${w1920.headW} main=${w1920.wrapW}` +
+  (w1920.footW ? ` footer=${w1920.footW}` : '（首页无页脚容器）'));
+if (w1920.footW !== null && w1920.footW > 0) {
+  check('1920：footer 与主内容容器同宽', w1920.footW === w1920.wrapW, `${w1920.footW} vs ${w1920.wrapW}`);
+}
+check('1920：header 容器同样居中', Math.abs(w1920.headOffL - w1920.headOffR) <= 1,
+  `左=${w1920.headOffL} 右=${w1920.headOffR}`);
+check('1920 无横向溢出', w1920.overflow === 0, String(w1920.overflow));
+
+console.log('\n=== 1024：gap 72 / pad 24 / 标题随 vw 回落 / 卡片整宽 ===');
 await goto(1024, 900, false);
 const t = await snap();
 check('gap 收到 72px（参考 1024 档）', t.hero.gap === '72px', t.hero.gap);
@@ -257,7 +376,7 @@ check('改为列向堆叠', m.hero.dir === 'column', m.hero.dir);
 // 2026-09-18 手机端优化：照参考站的手机端实测值 —— 左对齐 / gap 32 / 上内边距 96
 check('gap 40px（堆叠后略收紧）', m.hero.gap === '40px', m.hero.gap);
 check('上内边距 96px（参考手机端值）', m.hero.padT === '96px', m.hero.padT);
-check('标题字号 30px（= 参考的比例：栏宽 ÷13.19；此时第一行会自动折行）', m.title.fs === '30px', m.title.fs);
+check('标题字号 30px（= 手机端下限；此时第一行会自动折行）', m.title.fs === '30px', m.title.fs);
 check('内容**左对齐**（参考手机端不居中）', (await ev(`getComputedStyle(document.querySelector('.hero-content')).textAlign`)) === 'left');
 check('统计组左对齐', (await ev(`getComputedStyle(document.querySelector('.hero-features')).justifyContent`)) === 'flex-start');
 check('标签组左对齐', (await ev(`getComputedStyle(document.querySelector('.component-tags')).justifyContent`)) === 'flex-start');

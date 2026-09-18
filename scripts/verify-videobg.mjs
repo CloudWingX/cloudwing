@@ -168,9 +168,12 @@ const boxes = await ev(`(()=>{const out=[];
     // 渐变字（background-clip:text）的 color 是 transparent，按它算对比度会得到假 1:1，
     // 这类元素由 contrast-audit.mjs 单独覆盖，这里跳过。
     if(/rgba\\(0,\\s*0,\\s*0,\\s*0\\)/.test(fill)) continue;
-    const m=cs.color.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
+    const m=cs.color.match(/rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?/);
     if(!m) continue;
-    out.push({sel, rgb:[+m[1],+m[2],+m[3]], size:parseFloat(cs.fontSize), weight:cs.fontWeight,
+    // ⚠️ 必须带上 alpha：字幕是 rgba(255,255,255,.92)，字形本身半透明 ——
+    // 按不透明白算会把对比度算高（旧版就是这样，等于放松了标准）。
+    const a = m[4] === undefined ? 1 : parseFloat(m[4]);
+    out.push({sel, rgb:[+m[1],+m[2],+m[3]], alpha:a, size:parseFloat(cs.fontSize), weight:cs.fontWeight,
       x0:Math.round(r.left), x1:Math.round(r.right), y0:Math.round(r.top), y1:Math.round(r.bottom)});
   }
   return out;})()`);
@@ -216,13 +219,24 @@ check('对照页版式与真实页一致（框坐标相同，说明没有回流�
   bgBoxes.every((b, i) => Math.abs(b.x0 - boxes[i].x0) <= 1 && Math.abs(b.y0 - boxes[i].y0) <= 1
     && Math.abs(b.x1 - boxes[i].x1) <= 1 && Math.abs(b.y1 - boxes[i].y1) <= 1),
   JSON.stringify(bgBoxes.map((b) => [b.x0, b.y0])) + ' vs ' + JSON.stringify(boxes.map((b) => [b.x0, b.y0])));
-await bgEv(`document.querySelector('.video-bg__el') && document.querySelector('.video-bg__el').pause()`);
-await sleep(700);
-const bgShot = await bgSend('Page.captureScreenshot', { format: 'png' });
-const bg = decodePNG(Buffer.from(bgShot.result.data, 'base64'));
+/* ★取 3 帧★ —— 背景几何检查必须做"逐格取三帧最小"，否则视频自身的内容会假失败：
+   实测过：把视频停在某一帧时，x=1091,y=152 出现 4.98/255 的竖直边缘，
+   用 document.elementsFromPoint 查过，那一点上只有 `.hero` —— 是**视频画面里**的竖直纹理，
+   不是任何 CSS 层。CSS 层的边缘在每一帧都在同一格；视频纹理不会三帧都落同一格。
+   （三帧取固定时间点、跨度拉大，避免"相邻帧还长得一样"。） */
+const FRAME_TIMES = [1.5, 12, 24];
+const frames = [];
+for (const t of FRAME_TIMES) {
+  await bgEv(`(()=>{const v=document.querySelector('.video-bg__el'); if(v){v.pause(); v.currentTime=${t};} return true;})()`);
+  await sleep(900);
+  const sh = await bgSend('Page.captureScreenshot', { format: 'png' });
+  frames.push(decodePNG(Buffer.from(sh.result.data, 'base64')));
+}
+const bg = frames[0];
+// 逐格取最小：静态边缘保留，视频内容被剔除
+const minFrame = (fn) => Math.min(...frames.map(fn));
 
 for (const b of boxes || []) {
-  const tl = lum(b.rgb);
   const need = (b.size >= 24 || (b.size >= 18.66 && +b.weight >= 700)) ? 3.0 : 4.5;
   let worst = Infinity, wb = null, samples = 0, wxy = null;
   for (let y = b.y0; y <= b.y1; y += 4) {
@@ -230,13 +244,121 @@ for (const b of boxes || []) {
       if (x < 1 || y < 1 || x >= bg.width || y >= bg.height) continue;
       const px = bg.at(x, y);
       samples++;
-      const r = ratio(tl, lum(px));
+      // 字形是半透明时（alpha<1），先按 alpha 合成到该像素的底色上，再算对比度
+      const fg = b.alpha >= 1 ? b.rgb : b.rgb.map((c, i) => c * b.alpha + px[i] * (1 - b.alpha));
+      const r = ratio(lum(fg), lum(px));
       if (r < worst) { worst = r; wb = px; wxy = [x, y]; }
     }
   }
+  const tag = b.alpha >= 1 ? '' : `（文字 alpha=${b.alpha}，已按合成色计算）`;
   check(`hero ${b.sel} 在视频背景上可读`, worst >= need && samples > 0,
-    `对比 ${worst === Infinity ? 'n/a' : worst.toFixed(2)}（需 ${need}，采样 ${samples} 点）最差底色 rgb(${wb}) 于 (${wxy})`);
+    `对比 ${worst === Infinity ? 'n/a' : worst.toFixed(2)}（需 ${need}，采样 ${samples} 点）最差底色 rgb(${wb}) 于 (${wxy})${tag}`);
 }
+/* ★"两侧有没有硬边/暗带"这个坑必须自动兜住（2026-09-18 三轮踩过两次）★
+   背景：Hero 竖直居中后字幕压到视频亮带，一度靠在首页叠一层"压暗膜"修 ——
+   那层在页面上留下了可见痕迹（用户两次指出"标题后方的黑色矩形 / 首页两边有瑕疵"）。
+   只量"容器边缘两个像素"是抓不到的（两次都判成合格），必须**扫整条留白带的逐列均值**：
+   在**主内容容器之外**的左右留白带里，逐列求纵向均值，再看相邻列的阶跃。
+   ⚠️ 要排除最后 12px（滚动条槽）：满屏截图里 x≈1428 是滚动条的亮边，
+   它会给出一条 30+ 的假阶跃（踩过）。
+   ⚠️ 阈值 3.0 是实测出来的：正常背景（视频 + 光晕 + 粒子）在留白带内最大阶跃 ≤1.0；
+   一旦有"只在容器内生效的压暗/加亮层"，容器边缘会出现 20~40 的阶跃。 */
+
+/* ★2026-09-18 四轮修订：上面那两个 check 以前是**空的**（连过两轮都没抓到真瑕疵）★
+   两个独立的 bug，都修了：
+   1. **单位错**：`lum()` 返回 0..1，阈值却写 3.0 —— 永远成立，等于没测。
+      现在统一用 `gray()`（0..255 口径），阈值 3 才有上面注释里说的物理意义。
+   2. **扫描范围绕开了分界线**：留白带只扫容器**外面**（0..65），
+      而分界线正好落在容器边缘 x=65/1365 上，属于盲区。
+   四轮的真凶：`.hero::before` 强调色柔光（浓度仅 6%/4%，肉眼几乎看不见）
+   只铺在 1300px 容器盒里，被 `.hero` 的 `overflow: hidden` 沿容器左右边缘切断，
+   在导航条带（左）和卡片行（右）各留一条竖分界线 —— 正是用户报的位置。 */
+const gray = ([r, g, b]) => (r + g + b) / 3; // 0..255 口径
+const bandWidth = Math.round((bg.width - 10 - 1300) / 2);
+const bandStep = (from, to) => {
+  const yTop = Math.round(bg.height * 0.12), yBot = Math.round(bg.height * 0.88);
+  const colMean = (f, x) => { let sum = 0, n = 0; for (let y = yTop; y < yBot; y += 3) { sum += gray(f.at(x, y)); n++; } return sum / n; };
+  let mx = 0, at = null;
+  for (let x = from + 2; x <= to - 2; x++) {
+    // ⚠️ 三帧取最小：静态边缘三帧都在，视频自身的竖向纹理不会
+    const d = minFrame((f) => Math.abs(colMean(f, x + 2) - colMean(f, x - 2)));
+    if (d > mx) { mx = d; at = x; }
+  }
+  return { mx, at };
+};
+const leftBand = bandStep(0, bandWidth);
+const rightBand = bandStep(bg.width - 12 - bandWidth, bg.width - 12);
+check('容器左侧留白带内没有暗带/硬边（逐列阶跃 ≤3/255）', leftBand.mx <= 3,
+  `最大阶跃 ${leftBand.mx.toFixed(2)}/255 @x=${leftBand.at}（留白带宽 ${bandWidth}）`);
+check('容器右侧留白带内没有暗带/硬边（逐列阶跃 ≤3/255）', rightBand.mx <= 3,
+  `最大阶跃 ${rightBand.mx.toFixed(2)}/255 @x=${rightBand.at}（已排除滚动条 12px）`);
+
+/* ── A. 容器边缘偏差：把屏幕纵向切成 72px 段，逐段看"内 4 列 − 外 4 列" ──
+   分界线是**整段一致**的偏置；视频自身的横向梯度是**缓慢**的（实测各段 ≤0.29/255）。
+   ⚠️ 不能用"整屏平均"代替：柔光的左尾在整屏尺度上会被别的起伏抵消
+   （实测整屏只有 +0.31/255，看着合格；而按 72px 分段时导航条带那一段是 +1.87/255）——踩过。 */
+const cw = await bgEv(`document.documentElement.clientWidth`);
+const offX = Math.round((cw - 1300) / 2);
+const segs = [];
+for (let y0 = 8; y0 + 72 <= bg.height - 14; y0 += 72) segs.push([y0, y0 + 72]);
+const segBias = (f, y0, y1) => {
+  const colMean = (x) => { let s2 = 0, n = 0; for (let y = y0; y < y1; y += 2) { s2 += gray(f.at(x, y)); n++; } return s2 / n; };
+  const inner = (x) => (colMean(x) + colMean(x + 1) + colMean(x + 2) + colMean(x + 3)) / 4;
+  const outer = (x) => (colMean(x) + colMean(x - 1) + colMean(x - 2) + colMean(x - 3)) / 4;
+  return { left: inner(offX) - outer(offX - 1), right: inner(offX + 1299) - outer(offX + 1300) };
+};
+let worstL = { v: 0 }, worstR = { v: 0 };
+for (const [y0, y1] of segs) {
+  // 三帧取最小：静态分界线的偏差三帧都差不多，视频亮度起伏会被压掉
+  const bs = frames.map((f) => segBias(f, y0, y1));
+  const left = bs.reduce((a, b) => (Math.abs(b.left) < Math.abs(a) ? b.left : a), bs[0].left);
+  const right = bs.reduce((a, b) => (Math.abs(b.right) < Math.abs(a) ? b.right : a), bs[0].right);
+  if (Math.abs(left) > Math.abs(worstL.v)) worstL = { v: left, y: y0 };
+  if (Math.abs(right) > Math.abs(worstR.v)) worstR = { v: right, y: y0 };
+}
+// 阈 0.5/255（实测标定）：
+//   · 修好之后各段 |偏差| ≤0.29/255（就是视频自身的横向梯度）
+//   · 把柔光加回去（EXTRA_CSS 注入，模拟缺陷）时：导航条带左缘 +1.87/255、卡片行右缘 -1.37/255
+//   缺陷比本底大 4.7 倍，本底距阈值还有 1.7 倍余量 → 这条断言既不会漏，也不会误报。
+check('容器左缘没有分界线（逐 72px 段 |内−外| ≤0.5/255）', Math.abs(worstL.v) <= 0.5,
+  `最大偏差 ${worstL.v.toFixed(2)}/255 @y=${worstL.y}`);
+check('容器右缘没有分界线（逐 72px 段 |内−外| ≤0.5/255）', Math.abs(worstR.v) <= 0.5,
+  `最大偏差 ${worstR.v.toFixed(2)}/255 @y=${worstR.y}`);
+
+/* ── B. 结构性规则：容器的"绝对定位伪元素 + 渐变"会被容器边缘切断 ──
+   为什么不用像素扫描做这件事（试过，**不可靠**）：
+   一开始写的是"在纯背景列上扫 1px 灰度差"，结果视频画面自身的竖直纹理会被判成分界线 ——
+   实测 x=1091,y=152 报 4.98/255、x=871,y=152 报 1.70/255，
+   用 document.elementsFromPoint 查过，这两点上只有 `.hero`（没有任何元素在画），
+   说明是**视频内容**；而真凶柔光的实测幅度只有 1.37/255，
+   **视频纹理比瑕疵还大**，任何阈值都分不开 → 这条像素断言在设计上就不成立，删掉。
+   （留三帧取最小能压掉 4.98 那一档，但压不掉 1.70 那一档。）
+
+   改成结构判定：遍历所有"宽度等于主容器宽"的元素，看它有没有画着渐变的
+   `::before / ::after` 且 `position: absolute` —— 这种伪元素的盒子就是容器盒，
+   必然在容器左右边缘留下分界线。两次瑕疵（`.hero::after` 压暗膜、`.hero::before` 柔光）
+   都是这一个模式；而 `body::before` 那种 `position: fixed; inset: 0` 的全屏层是安全的。
+   ⚠️ 已实测：把柔光加回去（EXTRA_CSS 注入）时这条规则会指向
+   `section#top.hero::before pos=absolute inset=0px`；删掉后为空。 */
+const containerLayers = await bgEv(`(()=>{const out=[];
+  for (const el of document.querySelectorAll('body *')) {
+    const r = el.getBoundingClientRect();
+    if (Math.abs(r.width - 1300) > 2) continue;
+    for (const w of ['::before', '::after']) {
+      const c = getComputedStyle(el, w);
+      if (!c.content || c.content === 'none') continue;
+      if (c.backgroundImage === 'none') continue;
+      if (c.position !== 'absolute') continue;
+      const d = el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
+        + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\\s+/).join('.') : '');
+      out.push(d + w + ' pos=' + c.position + ' inset=' + c.inset);
+    }
+  }
+  return JSON.stringify(out);})()`);
+const containerLayerList = JSON.parse(containerLayers || '[]');
+check('主容器上没有"会被容器边缘切断"的装饰伪元素', containerLayerList.length === 0,
+  containerLayerList.length ? containerLayerList.join(' , ') : '已扫描全部元素（含 ::before/::after）');
+
 try { await fetch(`${CDP}/json/close/${bgTab.id}`); } catch { /* 忽略 */ }
 try { bgWs.close(); } catch { /* 忽略 */ }
 

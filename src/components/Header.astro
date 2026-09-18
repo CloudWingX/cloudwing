@@ -1,8 +1,10 @@
 ---
 /* ============================================================
    顶部导航 —— 按 reference（code_20260918.html）像素级复刻形态
-   · 几何/间距/断点/过渡全部照参考：1280→1120、64→56、32→24、
+   · 几何/间距/断点/过渡全部照参考：1300→1140、64→56、32→24、
      0→999px 圆角、gap 32→24、按钮 8px→9999px
+     （1300/1140 是 2026-09-18 二轮改的：原来 1280/1120，
+      为的是与 global.css 的 --w-max = 1300 对齐，见下方 .site-header 的注释）
    · 强调色保留站点雾蓝（--accent），不用参考里的紫/粉/红
    · 按用户要求去掉导航里的搜索入口（悬浮窗仍可由 ⌘/Ctrl+K 打开）
    · 保留站点功能：品牌标志、动效暂停按钮、移动端下拉菜单、二级菜单数据
@@ -144,13 +146,18 @@ try {
 
 <style>
   /* ============================================================
-     导航令牌（几何全部取自参考实测值）
-     未滚动：max-w 1280 / h 64 / pad 32 / radius 0
-     滚动后：max-w 1120 / h 56 / pad 24 / radius 999 / 玻璃加深
+     导航令牌（几何取自参考实测值）
+     未滚动：max-w 1300 / h 64 / pad 32 / radius 0
+     滚动后：max-w 1140 / h 56 / pad 24 / radius 999 / 玻璃加深
+     ⚠️ 未滚动的 1300 必须与 global.css 的 --w-max 同步：那是"主内容容器盒宽"
+        （header / main / footer 三者一致），导航内部的左右内边距比 .wrap 小
+        （32 vs 52），所以是"同一容器宽、同一左缘、内容各自内缩"，不是窄一圈。
+        改 1300 之前导航是 1280，滚动后 1120（"收一圈"的手感）；
+        现在基准 +20，收缩态同步 +20 → 1140，保持同样的收缩幅度。
      ============================================================ */
   .site-header {
-    --nav-w: 1280px;
-    --nav-w-scrolled: 1120px;
+    --nav-w: 1300px;
+    --nav-w-scrolled: 1140px;
     --nav-h: 64px;
     --nav-h-scrolled: 56px;
     --nav-pad-x: 32px;
@@ -206,11 +213,15 @@ try {
 
   /* ── 容器条 ──
      ⚠️ max-width 必须写字面 px：写成 var(--nav-w) 时 Astro 的作用域编译会把它
-     变成 `calc(0.1066% + 1278.64px)`，在带 padding 的父层下算不到 1280。 */
+     变成 `calc(0.1066% + 1278.64px)`，在带 padding 的父层下算不到目标值。
+     所以 --nav-w / --nav-w-scrolled 只是"记着真值"的注释性令牌，
+     下面两处 max-width 必须与它们（以及 global.css 的 --w-max）**手工保持同步**。
+     脚本会兜底：verify-nav-shrink.mjs 断言 1300/1140，
+     并断言"导航容器与主内容容器同宽、同左缘"。 */
   .header-container {
     box-sizing: border-box;
     width: 100%;
-    max-width: 1280px;
+    max-width: 1300px;
     margin: 0 auto;
     /* 窄于 max-width 时由 margin 撑开左右留白（等价于参考的 padding 效果），
        宽于 max-width 时用 padding 让内容与页面栅格对齐 */
@@ -343,7 +354,7 @@ try {
   /* ── 滚动收缩态 ── */
   html[data-scrolled='1'] .site-header { padding-top: var(--nav-top-scrolled); }
   html[data-scrolled='1'] .header-container {
-    max-width: 1120px;
+    max-width: 1140px;
     height: 56px;
     padding: 0 var(--nav-pad-x-scrolled);
     border-radius: var(--nav-radius-scrolled);

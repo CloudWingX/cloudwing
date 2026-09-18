@@ -194,12 +194,15 @@ export function initHeroTheme() {
 
   if (!st.wired) {
     st.wired = true;
-    /* "大标题与卡片顶部齐平"：左栏第一块是徽标胶囊、标题在它下面
-       （中间还有 badge 的 margin-bottom，实测 28px）。
-       做法：目标 = 标题自身的顶（绝对坐标）；卡片在顶对齐下的自然顶
-       = hero 内容区顶（卡片不带上外边距时就在那里，与当前 margin 无关）。
-       两者相减就是需要补的上外边距 —— 用绝对坐标算，避免"上一轮 margin"反复叠加。
-       ⚠️ 不要用 badge.bottom 当目标：那是 32，而标题顶是 60（差在 badge 的下边距）。 */
+    /* "大标题与卡片顶部齐平"（视觉对齐）：
+       目标 = 标题自身的顶；卡片当前顶 = 自然顶 + 当前位移。
+       所以需要的新位移 = 当前位移 + (标题顶 − 卡片顶)，用**绝对坐标**算，
+       与"上一轮补了多少"无关。
+       ⚠️ 位移走的是 `--card-shift` + CSS 的 `position: relative; top`，
+       **不能用 margin-top**：外边距会参与 flex 行盒高度，"居中"结果又被推下去，
+       形成正反馈（实测 5 轮越漂越远，卡片最终跑到 438）。
+       ⚠️ 不要用 badge.bottom 当目标：那是徽标底，标题顶还要再往下 28px（踩过）。
+       ⚠️ 布局会二次变化（WebFont 到位、视频层插入），rAF 里复核到收敛为止。 */
     const alignCard = () => {
       const root2 = document.documentElement;
       const hero = document.querySelector('.hero');
@@ -207,15 +210,18 @@ export function initHeroTheme() {
       const card = document.querySelector('.code-card');
       if (!hero || !title || !card) return;
       if (getComputedStyle(hero).flexDirection === 'column') {
-        root2.style.setProperty('--card-align', '0px');
+        root2.style.setProperty('--card-shift', '0px');
         return;
       }
-      const hr = hero.getBoundingClientRect();
-      const padT = parseFloat(getComputedStyle(hero).paddingTop) || 0;
-      const baseTop = hr.top + padT; // 卡片不带 margin 时所在的顶
-      const target = title.getBoundingClientRect().top;
-      const delta = Math.round(target - baseTop);
-      if (delta >= 0) root2.style.setProperty('--card-align', delta + 'px');
+      const settle = (pass) => {
+        const cur = parseFloat(getComputedStyle(root2).getPropertyValue('--card-shift')) || 0;
+        const want = Math.max(0, Math.round(cur + (title.getBoundingClientRect().top - card.getBoundingClientRect().top)));
+        root2.style.setProperty('--card-shift', want + 'px');
+        if (pass < 3 && Math.abs(want - cur) > 1) {
+          requestAnimationFrame(() => settle(pass + 1));
+        }
+      };
+      settle(0);
     };
     st.align = alignCard;
     window.addEventListener('resize', alignCard, { passive: true });
