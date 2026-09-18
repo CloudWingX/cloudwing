@@ -125,6 +125,7 @@ npm run og                  # 重新生成分享图（scripts/gen-og.mjs）
 | **`IMG_CDN = ''`（`src/site.ts`）** | 图片走本地相对路径随 dist 分发（CF 自带 CDN）。**不要改回 jsDelivr**：国内不稳，曾经整站图片打不开 |
 | 构建脚本保留 `plugins/vite-cjs-inline-shim.mjs` | 删了会构建失败 |
 | **git 走代理**（仓库级配置） | `git config --local http.proxy http://127.0.0.1:33210`（https 同）。**git 不读 Windows 系统代理设置**，代理没开时这里会超时，要改成直连：`git config --local --unset http.proxy` |
+| ★代理没开又要推送时的兜底（2026-09-18 实测成功）★ | 症状：直连 `github.com` 超时（**DNS 解析到的那个 IP 被墙**），但同一域名的**其它 A 记录直连可达**（实测 `140.82.112.4` / `140.82.113.4` / `140.82.114.4` / `20.201.28.151` 通，`20.205.243.166` 不通）。办法：**起一个本地 TCP 隧道**，把 git 发出的 `CONNECT github.com:443` 转发到可达 IP —— TLS 仍是端到端的 github.com 证书（SNI/Host 不变），**不需要关 sslVerify**。步骤：① `node <工作区>/.workbuddy/gh-tunnel.mjs 39210 140.82.112.4`；② `http_proxy= https_proxy= HTTP_PROXY= HTTPS_PROXY= git -c http.proxy=http://127.0.0.1:39210 push origin main`（必须清空环境代理变量，否则会走那个不放行 github 的代理返回 502）；③ 推完停掉隧道。⚠️ `http.curloptResolve` 这条路走不通：本机 git 是 schannel 后端，会报 `Unsupported SSL backend 'openssl'` |
 | GitHub 直连时通时断 | 推送失败就重试（本仓库实测最多重试 12 次才成功）；开了代理基本一次过 |
 
 **没有云端凭据**：仓库里没有任何 token/密钥；Cloudflare 是 Git 集成自动构建，改不了就去看 CF 控制台的 Build log。
@@ -401,7 +402,12 @@ items:
     - **`backdrop-filter` 的书写顺序会影响构建产物**：写成
       `backdrop-filter: …; -webkit-backdrop-filter: …;`（标准属性在前）时，
       构建时的 CSS 压缩会把这条**整个丢掉**（实测计算值直接是 `none`，页面看起来没模糊）。
-      按 `-webkit-` 在前的顺序写就正常保留。**凡是改完模糊没效果，先去构建产物里搜一下
+      按 `-webkit-` 在前的顺序写就正常保留。
+      ⚠️ **2026-09-18 修订**：当前构建链（Astro 7.3 的 CSS 压缩）**会剥掉 `-webkit-` 前缀** ——
+      即使把两条写成不同写法（`saturate(1.4)` / `saturate(140%)`）也只留无前缀那条
+      （已核对 `dist/_astro/*.css`）。影响：Safari（<18）拿不到模糊。
+      这是**全站既有状况**（导航胶囊、作品卡等玻璃面同样只有无前缀版），不是新引入的；
+      源码里仍建议保留有前缀那条，等换构建链/降级目标时会自动生效。**凡是改完模糊没效果，先去构建产物里搜一下
       这条规则还在不在。**
     - 结构约定：`.hd` 是**通栏**容器（`position:relative` + `isolation:isolate`，`display:block`），
       `.hd-glass` 是绝对定位、铺满整条的玻璃层（`z-index:-1`，底边框 + `--glass-panel` + 模糊），
@@ -1187,6 +1193,13 @@ A/B 开关：`CW_DISABLE_SAFE_UNMOUNT=1` 重新构建即可关掉补丁做对照
 回归（本地、串行）：`smoke` 45/45、`verify-hero` 85/85、`verify-nav-shrink` 39/39、
 `verify-search` 17/17、`verify-home` 23/23、`diag-errors` 7 页 0 异常、
 `verify-countup` 首屏 / 软导航 / 硬刷新三种情况**都正常重放**（说明岛照旧水合）。
+
+**线上复验（推送后）**：
+- `poll-deploy` 三项正向（`.code-card{...flex:none`、`border-radius:18px`）+ 三项反向
+  （`motion-toggle` / `mm-actions` / `mm-group` 线上查不到）**全部成立** → 线上已是本次构建；
+- 线上 JS chunk `client.B08QaFNc.js` 里 `astro:unmount → v(t)` + 安全卸载函数 `function v(e){…_internalRoot…}`
+  存在 → **#424 补丁确实上了线**（`poll-deploy` 只查 HTML/CSS，JS 要另查，见 §7.5）；
+- 线上 `diag-424.mjs` 3 轮 **0 命中**；线上 `smoke` **45/45**（含"软导航一圈后仍无 JS 异常"）。
 ⚠️ `verify-search` 依赖 pagefind 索引：**只跑 `astro build` 不跑 pagefind 会 14/17**，
 跑完整 `npm run build`（含 `pagefind --site dist`）才是 17/17。
 
@@ -1198,6 +1211,26 @@ A/B 开关：`CW_DISABLE_SAFE_UNMOUNT=1` 重新构建即可关掉补丁做对照
    真正的变量是"**水合被推迟多久**"。`client:idle` 只是让它通常赶在换页前完成，
    一旦 CPU/网络慢或连点，照样命中。**常驻小岛仍应继续用 `client:idle`**（见 §6.19），
    但别以为换了指令就根治了。
+
+---
+
+## 39. ★首页代码卡片：磨砂玻璃材质★（2026-09-18）
+
+原来只有"半透明底 + `blur(10px)`"，观感像一层灰膜。改成四层叠加：
+
+| 层 | 做法 | 作用 |
+|---|---|---|
+| ① 渐变高光 | `linear-gradient(165deg, rgba(255,255,255,.10) → 0)` 叠在半透明底上 | 模拟玻璃受光（上沿更亮） |
+| ② 模糊 + 提饱和 | `blur(22px) saturate(1.4)`（原 10px、无饱和） | 把背后的视频揉成雾面，不灰 |
+| ③ 更细更亮的边 | `1px solid rgba(255,255,255,.14)`（原 `--line-2` = .2 偏重） | 收边更精致 |
+| ④ 分层投影 + 内侧高光 | `0 24px 64px / 0 6px 18px` + `inset 0 1px 0 rgba(255,255,255,.14)` | 远/近两层投影给纵深，**内侧 1px 顶部高光是"玻璃厚度"的关键** |
+
+- 卡片标题栏同步：一层自上而下收掉的亮部 + 更淡的分隔线（`.09`）。
+- 圆角保持 **12px**（几何真值，`verify-hero` 有断言）；底色/模糊不影响任何几何。
+- 实测：卡内高频能量 **0.135** vs 紧邻的卡外背景 **0.639** → 背后的视频确实被揉开了约 4.7 倍。
+- 断言：`verify-hero` 新增 2 条（模糊 ≥16px 且提饱和 / 多层玻璃 = 渐变+半透明底+内侧高光），
+  **基线 86 → 88**。
+- ⚠️ 有前缀的 `-webkit-backdrop-filter` 会被当前构建链剥掉（见 §22 修订）。
 
 ---
 
@@ -1535,7 +1568,7 @@ $css  = ([regex]::Matches($html,'href="(/_astro/[^"]+\.css)"') | % { $_.Groups[1
 | 画廊原图 | 40 张原始 PNG 备份已随工作区清理删除，仓库里的 webp 是唯一副本（详见 §11） |
 | `SESSION_HANDOFF.md` | **已删除**（交接时清理，见 §11.2） |
 | 文案复核机制 | 2026-09-17 修掉了线上"浅色通透"文案（§32），并加了 §7.4.2 的手动检查清单 —— 但**文案仍然没有自动化断言**。要不要给 `SITE.notice` / `tagline` 也加一条脚本断言，避免下次再漂移？ |
-| ~~线上间歇 `React error #424`~~ | **已定位并修复**（2026-09-18 五轮，见 §37）：软导航时 Astro 对**尚未水合**的 React 岛调用 `root.unmount()` 触发。它既不是"仅线上"也不是缓存问题，而是时序竞态（本地也能复现，只是概率低）。修法见 `plugins/vite-react-safe-unmount.mjs`。⚠️ **改动尚未推送上线** —— 等本地确认后再推 |
+| ~~线上间歇 `React error #424`~~ | **已定位并修复**（2026-09-18 五轮，见 §37）：软导航时 Astro 对**尚未水合**的 React 岛调用 `root.unmount()` 触发。它既不是"仅线上"也不是缓存问题，而是时序竞态（本地也能复现，只是概率低）。修法见 `plugins/vite-react-safe-unmount.mjs`。✅ **已推送上线**（`6a1564f..2ee2e16`），线上复验见 §37.5 |
 | 变更记录未写 | 2026-09-17 与 **2026-09-18（整轮导航/Hero/色卡/容器改动）** 都**没有**写进 `src/content/changelog/`，所以侧栏「更新日历」看不到这些改动。要补一条 `2026-09-18.md` 说一声 |
 | `/account/` 页面很短 | 手机端实测页面高只有 906px（其它页 4000+），目前只有留言板一块，要不要补内容？ |
 | 首页 Hero 右侧留白（1920） | 左栏 645 + gap 80 + 卡片 440 = 1165，用不满 1324 的内容宽，**右侧空约 159px**。要填满就得加宽左栏或卡片 —— 那属于"改内部组件尺寸"，本次按要求没动。要改说一声（§36） |

@@ -589,21 +589,46 @@ const codeSample = [
     position: relative;
     top: var(--card-shift, 0px);
     margin-top: 0;
-    background: rgba(18, 18, 26, 0.7);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--line-2);
+    /* ── 磨砂玻璃材质（2026-09-18）──
+       原来只有"半透明底 + blur(10px)"，像一层灰膜；改成四层叠加出高级感：
+         ① 上浅下深的**渐变高光**（模拟玻璃受光）叠在半透明底上；
+         ② 更强的模糊 + 提饱和（blur 22px / saturate 1.4），把背后的视频揉成雾面；
+         ③ 更细更亮的描边（.14）收边；
+         ④ 分层投影（远/近两层）+ **内侧 1px 顶部高光**（玻璃厚度的关键）。
+       ⚠️ backdrop-filter 的书写顺序必须是 `-webkit-` 在前（标准属性在前会被压缩器整条丢掉，
+          见 §22）；圆角保持 12px（几何真值，verify-hero 有断言）。 */
+    background:
+      linear-gradient(
+        165deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.045) 32%,
+        rgba(255, 255, 255, 0.015) 62%,
+        rgba(255, 255, 255, 0) 100%
+      ),
+      rgba(12, 14, 20, 0.52);
+    /* ⚠️ 实测（2026-09-18）：**当前构建链会剥掉 `-webkit-backdrop-filter`** ——
+       写两条、甚至刻意写成不同写法（1.4 / 140%）都一样，产物里只剩无前缀那条。
+       所以 Safari（<18）拿不到模糊；这是全站既有的状况（导航胶囊等玻璃面同样只有无前缀版），
+       不是本次改动引入的。这里**仍然保留有前缀那条**：万一以后换了构建链/降级目标就会生效。
+       详见 §22 的修订说明。 */
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    backdrop-filter: blur(22px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow:
+      0 24px 64px rgba(0, 0, 0, 0.45),
+      0 6px 18px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
+  /* 标题栏：一层自上而下收掉的亮部（像玻璃上沿更亮），分隔线比卡边更淡 */
   .code-header {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--line-2);
-    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
   }
   .code-dot { width: 12px; height: 12px; border-radius: 50%; }
   .code-dot.red { background: #ff5f56; }

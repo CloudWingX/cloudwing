@@ -254,6 +254,25 @@ check('大标题与卡片顶部齐平', Math.abs(alignState.titleTop - alignStat
   `标题顶=${alignState.titleTop} 卡片顶=${alignState.cardTop}（--card-shift=${alignState.cardAlign}）`);check('卡片圆角 12px', d.card.radius === '12px', d.card.radius);
 check('卡片头有文件名', (await ev(`!!document.querySelector('.code-filename')`)) === true);
 check('卡片三色圆点', (await ev(`document.querySelectorAll('.code-dot').length`)) === 3);
+/* ★代码卡片 = 磨砂玻璃★（2026-09-18 材质升级）：
+   ① 背后要真的被**揉开**（blur ≥ 16px）且提了饱和（saturate > 1）—— 否则就是一层灰膜；
+   ② 底色是**多层**（渐变高光 + 半透明底），不是单色；
+   ③ 有内侧顶部高光（玻璃厚度的关键，box-shadow 里带 inset）。 */
+const glassCard = await ev(`(()=>{
+  const c=document.querySelector('.code-card'); if(!c) return null;
+  const cs=getComputedStyle(c);
+  const bf=String(cs.backdropFilter||cs.webkitBackdropFilter||'');
+  const m=bf.match(/blur\\((\\d+(?:\\.\\d+)?)px\\)/);
+  const s=bf.match(/saturate\\(([\\d.]+)\\)/);
+  return {blur:m?parseFloat(m[1]):null, saturate:s?parseFloat(s[1]):null, bf,
+    层:cs.backgroundImage.split('gradient').length-1, 底:cs.backgroundColor,
+    inset:/inset/.test(cs.boxShadow)};})()`);
+const gc = typeof glassCard === 'string' ? JSON.parse(glassCard) : glassCard;
+check('代码卡片：磨砂模糊 ≥16px 且提饱和',
+  gc && gc.blur >= 16 && gc.saturate > 1, gc ? `blur=${gc.blur}px saturate=${gc.saturate}` : 'null');
+check('代码卡片：多层玻璃（渐变高光 + 半透明底 + 内侧高光）',
+  gc && gc.层 >= 1 && /rgba\(/.test(String(gc.底)) && gc.inset === true,
+  gc ? `渐变层=${gc.层} 底=${gc.底} inset=${gc.inset}` : 'null');
 /* 代码段照参考的写法：带一个"会随色卡变色的色值胶囊"（swatch + hex），
    并且代码里有随预设变化的数值。 */
 const codeState = JSON.parse(await ev(`(function(){var q=function(s){return document.querySelector(s);};
