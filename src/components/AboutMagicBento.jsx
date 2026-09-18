@@ -13,11 +13,11 @@ const GLOWS = {
 
 // 卡片底色不再由 JS 内联指定（避免依赖水合/主题状态），改由 CSS 变量随主题切换
 const CARD_DATA = [
-  { label: 'Profile', title: 'CloudWing_X', description: '计算机科学与技术 · 本科在读 · 后端/质量方向' },
+  { label: 'Profile', title: 'CloudWing_X', description: '本科在读 · 写 Java，也做测试' },
   { label: 'Posts', title: '文章', description: '博客文章 · 持续更新' },
   { label: 'Gallery', title: '影集', description: '40 张截图 · MC 为主' },
   { label: 'Contact', title: '联系', description: '邮件 · GitHub · Bilibili' },
-  { label: 'Site', title: '本站', description: `Astro · 玻璃扁平 · 记录可追溯 · EST ${SITE.since}` },
+  { label: 'Site', title: '本站', description: `Astro 静态站 · 部署在 Cloudflare Pages · ${SITE.since} 年上线` },
 ];
 
 const initialTheme = () => {

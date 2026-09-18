@@ -61,9 +61,6 @@ const totalDays = days.size;
       <header class="page-head" data-ent>
         <p class="kicker"><b>ARCHIVE</b> / 归档 · 时间线</p>
         <h1>归档</h1>
-        <p class="head-sub">
-          自 2025 年创立以来的每一条改动与更新 · 共 {totalDays} 天 · 精确到日 · 点文字阅读当天全文
-        </p>
       </header>
 
       {yearList.map(([year, list]) => (
@@ -98,7 +95,6 @@ const totalDays = days.size;
 <style>
   .archive-root { padding: 2.4rem 0 3rem; }
   .page-head { margin-bottom: 2rem; }
-  .head-sub { margin: 0.4rem 0 0; font-size: 0.92rem; color: var(--ink-2); }
 
   .tl-year { margin-bottom: 2.4rem; }
   .tl-yy {

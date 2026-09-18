@@ -21,9 +21,6 @@ posts.forEach((p) => p.data.tags.forEach((t) => totalTags.add(t)));
       <header class="page-head" data-ent>
         <p class="kicker"><b>POSTS</b> / 文章</p>
         <h1>文章</h1>
-        <p class="head-sub">
-          {posts.length} 篇 · {totalTags.size} 个标签 · 点标题阅读全文；改动史见<a href="/blog/">归档时间线</a>
-        </p>
       </header>
 
       <ol class="posts-list">
@@ -55,9 +52,6 @@ posts.forEach((p) => p.data.tags.forEach((t) => totalTags.add(t)));
 <style>
   .posts-root { padding: 2.4rem 0 3rem; }
   .page-head { margin-bottom: 2rem; }
-  .head-sub { margin: 0.4rem 0 0; font-size: 0.92rem; color: var(--ink-2); }
-  .head-sub a { color: var(--accent); text-decoration: none; }
-  .head-sub a:hover { text-decoration: underline; }
 
   .posts-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
   .pcard {

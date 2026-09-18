@@ -94,19 +94,29 @@ const navAlign = JSON.parse(await ev(`(function(){
   var h=document.querySelector('.header-container');
   var w=null, all=document.querySelectorAll('.wrap');
   for (var i=0;i<all.length;i++){ if (getComputedStyle(all[i]).maxWidth!=='none'){ w=all[i]; break; } }
-  if(!h||!w) return JSON.stringify({ok:false, hasNav:!!h, hasWrap:!!w});
-  var hb=h.getBoundingClientRect(), wb=w.getBoundingClientRect();
   var vw=document.documentElement.clientWidth;
-  return JSON.stringify({ok:true,
+  var hb=h.getBoundingClientRect();
+  /* 2026-09-19：/blog/ 已改为 shell 三栏页（.shell .wrap 特意 max-width:none，
+     宽度交给栅格列），找不到标准 wrap 时退化为只校验导航自身水平居中。 */
+  if(!h) return JSON.stringify({ok:false, hasNav:false, mode:'none'});
+  if(!w) return JSON.stringify({ok:true, mode:'shell',
+    导航居中差:Math.round((hb.left-(vw-hb.width)/2)*10)/10,
+    导航宽:Math.round(hb.width)});
+  return JSON.stringify({ok:true, mode:'wrap',
     宽差:Math.round((hb.width-wb.width)*10)/10,
     左缘差:Math.round((hb.left-wb.left)*10)/10,
     导航居中差:Math.round((hb.left-(vw-hb.width)/2)*10)/10});})()`));
+if (navAlign.mode === 'shell') {
+  check('导航容器自身水平居中（shell 页无标准 wrap，退化为居中校验）', Math.abs(navAlign.导航居中差) <= 1.5,
+    `居中差 ${navAlign.导航居中差} / 导航宽 ${navAlign.导航宽}`);
+} else {
 check('导航容器与主内容容器同宽（都用 1300）', navAlign.ok && Math.abs(navAlign.宽差) <= 1.5,
   navAlign.ok ? `宽差 ${navAlign.宽差}` : JSON.stringify(navAlign));
 check('导航容器与主内容容器同左缘', navAlign.ok && Math.abs(navAlign.左缘差) <= 1.5,
   navAlign.ok ? `左缘差 ${navAlign.左缘差}` : JSON.stringify(navAlign));
 check('导航容器自身水平居中', navAlign.ok && Math.abs(navAlign.导航居中差) <= 1.5,
   navAlign.ok ? `居中差 ${navAlign.导航居中差}` : JSON.stringify(navAlign));
+}
 
 console.log('\n=== 形态说明（改版后不再下滑收起）===');
 // 参考的导航只做"贴顶通栏 ↔ 滚动胶囊"，没有下滑隐藏这回事。

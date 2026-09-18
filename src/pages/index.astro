@@ -40,10 +40,10 @@ const featuredShots = allShots
     aspect: s.data.aspect ?? '16:9',
   }));
 
-// 关于预览的简介（首页只放 2–3 句，细节留在 /about/）
+// 关于预览的简介（首页只放 2 句，细节留在 /about/）
 const aboutPreview = [
-  `${SITE.author} —— 计算机科学与技术（本科在读），方向偏 Java 后端与质量保障：能写 Spring Boot 接口，也用测试的眼光对待每一个缺陷。`,
-  '这个站把学习轨迹、代码与产出按编号留存，让每一次练习都可追溯。',
+  `${SITE.author}，计算机科学与技术本科在读。写 Java 后端，也做测试。`,
+  '这里记录我做的项目、踩过的坑，和看到的值得记下来的东西。',
 ];
 
 /* ══════════════════════════════════════════════════════════════
@@ -178,7 +178,7 @@ const codeSample = [
     </section>
 
     <!-- ═══ ② 最新文章 ═══ -->
-    <section class="sec sec-posts" id="sec-posts" aria-labelledby="h-posts">
+    <section class="sec sec-posts rv" style="--d:0ms" id="sec-posts" aria-labelledby="h-posts">
       <div class="wrap">
         <div class="sec-head">
           <h2 id="h-posts">最新文章</h2>
@@ -212,7 +212,7 @@ const codeSample = [
     </section>
 
     <!-- ═══ ③ 精选影像 ═══ -->
-    <section class="sec sec-shots" id="sec-shots" aria-labelledby="h-shots">
+    <section class="sec sec-shots rv" style="--d:.08s" id="sec-shots" aria-labelledby="h-shots">
       <div class="wrap">
         <div class="sec-head">
           <h2 id="h-shots">精选影像</h2>
@@ -244,7 +244,7 @@ const codeSample = [
     </section>
 
     <!-- ═══ ④ 关于预览 ═══ -->
-    <section class="sec sec-about" id="sec-about" aria-labelledby="h-about">
+    <section class="sec sec-about rv" style="--d:.16s" id="sec-about" aria-labelledby="h-about">
       <div class="wrap">
         <div class="sec-head">
           <h2 id="h-about">关于</h2>
@@ -279,8 +279,7 @@ const codeSample = [
 </script>
 
 <style>
-  /* 首页路由：整页沉浸背景由全站视频/粒子层承担 —— 隐藏页脚与进度条 */
-  :global(body.home-route .site-footer) { display: none; }
+  /* 首页路由：整页沉浸背景由全站视频/粒子层承担 —— 隐藏进度条（页脚已移除） */
   :global(body.home-route .prog) { display: none; }
 
   /* 区块统一：上下 padding ≥80px（用户规范） */

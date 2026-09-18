@@ -159,9 +159,8 @@ body {
   line-height: 1.8;
   -webkit-font-smoothing: antialiased;
 }
-/* 主内容弹性撑开：内容不满一屏时也占满视口高度，页脚始终贴底 */
+/* 主内容弹性撑开：内容不满一屏时也占满视口高度 */
 .main-content { flex: 1 0 auto; }
-.site-footer { flex-shrink: 0; }
 ::selection { background: var(--accent); color: var(--on-accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 img, svg, video { display: block; max-width: 100%; height: auto; }
@@ -495,18 +494,6 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
 .ln-row .met .go { color: var(--accent); transition: transform 0.16s var(--ease); }
 .ln-row:hover .lbl { color: var(--accent-deep); }
 .ln-row:hover .met .go { transform: translate(3px, -3px); }
-
-/* ============ 页脚 ============ */
-.site-footer {
-  margin-top: clamp(3rem, 8vw, 6rem);
-  border-top: 1px solid var(--line-glass);
-  background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-}
-.site-footer .wrap { display: flex; justify-content: space-between; gap: 1.4rem; flex-wrap: wrap; padding-top: 1.5rem; padding-bottom: 1.5rem; font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.06em; color: var(--ink-2); }
-.site-footer a { text-decoration: none; border-bottom: 1px dotted var(--line-2); }
-.site-footer a:hover { color: var(--accent-deep); border-color: var(--accent); }
 
 /* ============ 页面头 / 正文区 ============ */
 .page-head { padding: clamp(2.2rem, 6vw, 4rem) 0 0.4rem; }

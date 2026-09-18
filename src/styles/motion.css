@@ -20,13 +20,14 @@ html.js [data-ent] {
   to   { opacity: 1; transform: none; }
 }
 
-/* ---------- 页面加载入场（每次进入页面：main 整体淡入上浮） ---------- */
+/* ---------- 页面加载入场（每次进入页面：main 整体淡入上浮 + 轻微聚焦） ---------- */
 html.js main.page-enter {
-  animation: page-enter 0.6s var(--ease-out) both;
+  animation: page-enter 0.7s var(--ease-out) both;
 }
 @keyframes page-enter {
-  from { opacity: 0; transform: translate3d(0, 14px, 0); }
-  to   { opacity: 1; transform: none; }
+  from { opacity: 0; transform: translate3d(0, 16px, 0); filter: blur(6px); }
+  60%  { filter: blur(1.5px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
 }
 
 /* ---------- 滚动显现（IntersectionObserver 加 .in） ---------- */
@@ -138,11 +139,23 @@ a.u-slide:hover { background-size: 100% 1px; }
 
 /* ---------- 无障碍：减少动态 ---------- */
 @media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn-github,
+  .btn-pro,
+  .mm-chip,
+  .pp-nav,
+  .heat-grid .hc,
+  .heat-grid .hc:active,
+  .sec-more > span {
+    transform: none !important;
+    transition: none !important;
+  }
   html.js [data-ent],
   html.js .rv,
   html.js main.page-enter {
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
     transition: none !important;
     animation: none !important;
   }
@@ -633,10 +646,6 @@ html[data-theme='dark'] .about .card .kicker::after { border-bottom-color: rgba(
 }
 
 /* 子页面夜间补强（页脚 / 详情元信息 / 灵感导航行 / 筛选钮等） */
-html[data-theme='dark'] .site-footer {
-  background: rgba(14, 14, 16, 0.6);
-  border-color: rgba(255, 255, 255, 0.14);
-}
 html[data-theme='dark'] .work-head .meta-grid {
   background: rgba(16, 16, 18, 0.55);
   border-color: rgba(255, 255, 255, 0.18);
@@ -727,3 +736,32 @@ html[data-theme='dark'] .state::before { box-shadow: none; }
 /* 页面内容浮于漂移墙之上 */
 .gal-content, .dw-content { position: relative; z-index: 1; }
 
+
+/* ---------- 按钮与链接的微交互（2026-09-19）----------
+   统一的 hover 轻抬 / active 按压；仅动 transform 与阴影，不引起回流。
+   ⚠️ 减少动态时整体关闭（见上方 reduce 块的追加规则）。 */
+.btn, .btn-github, .btn-pro, .mm-chip, .pp-nav, .gf-clear, .sec-more,
+.st-search, .pp-back a, .pt-body summary {
+  transition:
+    transform 0.18s var(--ease-out),
+    box-shadow 0.18s var(--ease-out),
+    background-color 0.18s var(--ease-out),
+    border-color 0.18s var(--ease-out),
+    color 0.18s var(--ease-out),
+    opacity 0.18s var(--ease-out);
+}
+.btn:hover, .btn-github:hover, .btn-pro:hover, .pp-nav:hover, .mm-chip:hover {
+  transform: translateY(-1px);
+}
+.btn:active, .btn-github:active, .btn-pro:active, .pp-nav:active, .mm-chip:active, .tag:active {
+  transform: translateY(0) scale(0.97);
+  transition-duration: 0.06s;
+}
+/* 「全部文章 →」这类入口：箭头随悬停轻移 */
+.sec-more > span, .pp-back a { display: inline-block; }
+.sec-more > span { transition: transform 0.2s var(--ease-out); }
+.sec-more:hover > span { transform: translateX(3px); }
+.pp-nav:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); }
+/* 热力图色块的按压反馈 */
+.heat-grid .hc { transition: transform 0.12s var(--ease-out); }
+.heat-grid .hc:active { transform: scale(0.9); }

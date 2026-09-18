@@ -54,12 +54,9 @@ check('旧六边形标志已移除', brand.旧六边形 === 0, String(brand.旧�
 check('标志高度合理（20px，照参考的字标高度）', (() => { const h = parseInt(brand.宽高.split('×')[1]); return h === 20; })(), brand.宽高);
 
 console.log('\n=== 页脚品牌 ===');
-const foot = await ev(`(()=>{const f=document.querySelector('.site-footer .brandmark');
-  if(!f) return {有:false};
-  const r=f.getBoundingClientRect();
-  return {有:true, 宽高:Math.round(r.width)+'×'+Math.round(r.height), viewBox:f.getAttribute('viewBox')};})()`);
-console.log('  ' + JSON.stringify(foot));
-check('页脚也使用品牌标志（图标版）', foot.有 === true && String(foot.viewBox) === '0 0 64 64', JSON.stringify(foot));
+// 2026-09-19 需求：移除各页面页脚 —— 改为校验页脚确实不存在。
+const footGone = await ev(`!document.querySelector('.site-footer')`);
+check('页脚已按 2026-09-19 需求移除', footGone === true, String(footGone));
 
 console.log('\n=== 不遮挡 / 不溢出 ===');
 check('无横向溢出', (await ev(`document.documentElement.scrollWidth-document.documentElement.clientWidth`)) === 0);

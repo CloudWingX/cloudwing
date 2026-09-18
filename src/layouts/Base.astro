@@ -2,7 +2,6 @@
 import { SITE, VIDEO_BG } from '../site';
 import ClientRouter from 'astro/components/ClientRouter.astro';
 import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
 import SearchModal from '../components/SearchModal.astro';
 import VideoBackground from '../components/VideoBackground.astro';
 import PageParticlesBackground from '../components/PageParticlesBackground.jsx';
@@ -106,7 +105,6 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
         <slot />
       </main>
     )}
-    <Footer />
     {/* 全站搜索悬浮窗（Pagefind；首屏不加载其 JS/CSS，首次打开时再拉，见 ui.js 的 searchModal()） */}
     <SearchModal />
   </body>
