@@ -27,11 +27,11 @@ const waitFor = async (x, ms = 40000) => { const t0 = Date.now(); while (Date.no
 
 await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
-await s('Page.navigate', { url: BASE + '/blog/' });
+await s('Page.navigate', { url: BASE + '/posts/' });
 await waitFor(`!!document.querySelector('.hd')`);
 // 清偏好 → 站点默认（dark）
 await ev(`try{localStorage.clear();sessionStorage.clear();document.cookie.split(';').forEach(c=>{const k=c.split('=')[0].trim();document.cookie=k+'=;path=/;max-age=0';});}catch(e){}`);
-await s('Page.navigate', { url: BASE + '/blog/' });
+await s('Page.navigate', { url: BASE + '/posts/' });
 await waitFor(`(()=>{const v=document.querySelector('.video-bg__el');return v&&v.readyState>=2;})()`, 60000);
 await sleep(2500);
 
@@ -46,7 +46,7 @@ await sleep(1200);
 const glass = await ev(`(()=>{
   const g=document.querySelector('.header-container');
   const c=getComputedStyle(g);
-  const card=document.querySelector('.post');
+  const card=document.querySelector('.pcard');
   const cc=card?getComputedStyle(card):null;
   const btn=document.querySelector('.btn-github');
   const bc=btn?getComputedStyle(btn):null;

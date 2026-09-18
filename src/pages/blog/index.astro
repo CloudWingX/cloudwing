@@ -1,78 +1,104 @@
 ---
-// 博客归档页：按年份分组；link 有值 → 外链，否则展开正文（<details>）。
+// 归档页：从网站创立开始的**每一条改动与更新**，按日精确记录，时间轴呈现。
+// 数据源 = changelog（改动/更新）+ posts（文章发布日）；
+// 每天一句话概括；当天发过文章的，文字可点进 /posts/[slug]/ 详情。
 import SidebarLayout from '../../layouts/SidebarLayout.astro';
-import { getCollection, render } from 'astro:content';
-import { SITE } from '../../site';
+import { getCollection } from 'astro:content';
+
+/* ---------- 数据：changelog 全量 + 文章发布日 ---------- */
+const logs = (await getCollection('changelog'))
+  .flatMap((e) =>
+    (e.data.items ?? []).map((it) => ({
+      date: new Date(e.data.date).toISOString().slice(0, 10),
+      year: new Date(e.data.date).getFullYear(),
+      kind: it.kind || '更新',
+      title: it.title,
+      note: it.note || '',
+    })),
+  )
+  .sort((a, b) => (a.date < b.date ? 1 : -1));
 
 const posts = (await getCollection('posts')).sort(
   (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
 );
-
-/* 预渲染正文（有正文的条目在归档页里用 <details> 展开，不再单独出详情路由） */
-const entries = await Promise.all(
-  posts.map(async (p) => {
-    const hasBody = (p.body ?? '').trim().length > 0 && !p.data.link;
-    const Body = hasBody ? (await render(p)).Content : null;
-    return { post: p, Body, slug: 'p-' + p.id };
-  }),
+/* 文章发布日 → 详情页链接（当天发多篇取最新一篇） */
+const postByDay = new Map(
+  posts.map((p) => [new Date(p.data.date).toISOString().slice(0, 10), p]),
 );
 
-/* 按年份分组（新 → 旧） */
-const years = new Map<number, typeof entries>();
-entries.forEach((e) => {
-  const y = new Date(e.post.data.date).getFullYear();
-  years.set(y, [...(years.get(y) ?? []), e]);
-});
-const yearList = [...years.entries()].sort((a, b) => b[0] - a[0]);
+/* 按日聚合（改动与更新为主，文章发布日并入同一天） */
+const days = new Map();
+for (const it of logs) {
+  const d = days.get(it.date) ?? { date: it.date, year: it.year, items: [] };
+  d.items.push(it);
+  days.set(it.date, d);
+}
+for (const p of posts) {
+  const key = new Date(p.data.date).toISOString().slice(0, 10);
+  if (!days.has(key)) {
+    days.set(key, {
+      date: key,
+      year: new Date(p.data.date).getFullYear(),
+      items: [{ date: key, year: new Date(p.data.date).getFullYear(), kind: '文章', title: `发布《${p.data.title}》`, note: '' }],
+    });
+  } else {
+    const d = days.get(key);
+    if (!d.items.some((it) => it.kind === '文章')) {
+      d.items.push({ date: key, year: d.year, kind: '文章', title: `发布《${p.data.title}》`, note: '' });
+    }
+  }
+}
 
-const fmt = (d: Date) => {
-  const s = d.toISOString().slice(0, 10);
-  return `${s.slice(0, 4)}.${s.slice(5, 7)}.${s.slice(8, 10)}`;
-};
-const totalTags = new Set<string>();
-posts.forEach((p) => p.data.tags.forEach((t) => totalTags.add(t)));
+/* 年份分组（新 → 旧）；每天一句话概括 */
+const years = new Map();
+for (const d of [...days.values()].sort((a, b) => (a.date < b.date ? 1 : -1))) {
+  const oneLine =
+    d.items.length === 1
+      ? d.items[0].title
+      : `${d.items[0].title} 等 ${d.items.length} 条更新`;
+  const post = postByDay.get(d.date);
+  years.set(d.year, [...(years.get(d.year) ?? []), { ...d, oneLine, post }]);
+}
+const yearList = [...years.entries()].sort((a, b) => b[0] - a[0]);
+const totalDays = [...days.values()].length;
 ---
-<SidebarLayout title="博客" bodyClass="blog-route">
-  <div class="blog-root">
+<SidebarLayout title="归档" bodyClass="archive-route">
+  <div class="archive-root">
     <div class="wrap">
       <header class="page-head" data-ent>
-        <p class="kicker"><b>BLOG</b> / 博客 · 归档</p>
-        <h1>博客归档</h1>
+        <p class="kicker"><b>ARCHIVE</b> / 归档 · 时间线</p>
+        <h1>归档</h1>
         <p class="head-sub">
-          {SITE.since} 年至今共 {posts.length} 篇 · {totalTags.size} 个标签 · 按年份归档
+          自 {2025} 年创立以来的每一条改动与更新 · 共 {totalDays} 天 · 精确到日
         </p>
       </header>
 
       {yearList.map(([year, list]) => (
-        <section class="year-block" data-ent aria-label={`${year} 年文章（${list.length} 篇）`}>
-          <header class="year-head">
-            <h2 class="year-no">{year}</h2>
-            <span class="year-n">{list.length} 篇</span>
-            <span class="year-line" aria-hidden="true"></span>
-          </header>
-          <ol class="post-list">
-            {list.map(({ post: p, Body, slug }) => {
-              const d = fmt(new Date(p.data.date));
+        <section class="tl-year" data-ent aria-label={`${year} 年（${list.length} 天）`}>
+          <h2 class="tl-yy">{year}</h2>
+          <ol class="tl">
+            {list.map((d) => {
+              const hasPost = !!d.post;
+              const body = hasPost ? (
+                <a class="tl-text" href={`/posts/${d.post.id}/`}>{d.oneLine}</a>
+              ) : (
+                <span class="tl-text">{d.oneLine}</span>
+              );
               return (
-                <li class="post" id={slug}>
-                  <p class="pt-date"><time datetime={new Date(p.data.date).toISOString().slice(0, 10)}>{d}</time></p>
-                  <div class="pt-main">
-                    <h3 class="pt-title">
-                      {p.data.link
-                        ? <a class="pt-link" href={p.data.link} target="_blank" rel="noreferrer">{p.data.title} <span class="ext" aria-hidden="true">↗</span></a>
-                        : <span class="pt-link" id={slug + '-t'}>{p.data.title}</span>}
-                    </h3>
-                    {p.data.summary && <p class="pt-summary">{p.data.summary}</p>}
-                    {p.data.tags.length > 0 && (
-                      <p class="pt-tags">
-                        {p.data.tags.map((t) => <span class="tag">{t}</span>)}
-                      </p>
+                <li class="tl-day">
+                  <span class="tl-dot" aria-hidden="true"></span>
+                  <time class="tl-date" datetime={d.date}>{d.date.slice(5).replace('-', '.')}</time>
+                  <div class="tl-body">
+                    {body}
+                    {hasPost && (
+                      <a class="tl-more" href={`/posts/${d.post.id}/`}>
+                        阅读《{d.post.data.title}》 →
+                      </a>
                     )}
-                    {Body && (
-                      <details class="pt-body">
-                        <summary>展开正文</summary>
-                        <div class="pt-md"><Body /></div>
-                      </details>
+                    {!hasPost && d.items.length > 1 && (
+                      <span class="tl-kinds" aria-hidden="true">
+                        {d.items.map((it) => it.kind).filter((k, i, a) => a.indexOf(k) === i).join(' · ')}
+                      </span>
                     )}
                   </div>
                 </li>
@@ -81,80 +107,54 @@ posts.forEach((p) => p.data.tags.forEach((t) => totalTags.add(t)));
           </ol>
         </section>
       ))}
-
-      {posts.length === 0 && (
-        <section class="year-block" data-ent>
-          <p class="pt-summary">还没有文章 —— 第一篇正在写。</p>
-        </section>
-      )}
     </div>
   </div>
 </SidebarLayout>
 
 <style>
-  .blog-root { padding: 2.4rem 0 3rem; }
-  .page-head { margin-bottom: 2.2rem; }
+  .archive-root { padding: 2.4rem 0 3rem; }
+  .page-head { margin-bottom: 2rem; }
   .head-sub { margin: 0.4rem 0 0; font-size: 0.92rem; color: var(--ink-2); }
 
-  .year-block { margin-bottom: 2.6rem; }
-  .year-head {
-    display: flex; align-items: baseline; gap: 0.8rem;
-    margin-bottom: 1.1rem;
-  }
-  .year-no {
-    margin: 0; font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 600;
+  .tl-year { margin-bottom: 2.4rem; }
+  .tl-yy {
+    margin: 0 0 0.9rem; font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 600;
     color: var(--accent); letter-spacing: 0.02em; font-variant-numeric: tabular-nums;
   }
-  .year-n { font-size: 0.8rem; color: var(--ink-3); }
-  .year-line { flex: 1; height: 1px; background: var(--line-2); opacity: 0.6; }
 
-  .post-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
-  .post {
-    display: grid; grid-template-columns: 6.2em 1fr; gap: 0.4rem 1.1rem;
-    padding: 1rem 1.2rem;
-    background: var(--glass); border: var(--line-w) solid var(--line-2);
-    border-radius: var(--r-m);
+  /* 时间轴：左侧竖线 + 每天一个圆点 */
+  .tl { list-style: none; margin: 0; padding: 0 0 0 1.1rem; position: relative; }
+  .tl::before {
+    content: ''; position: absolute; left: 0.28rem; top: 0.45rem; bottom: 0.45rem;
+    width: 1px; background: var(--line-2); opacity: 0.7;
   }
-  .pt-date {
-    margin: 0.15em 0 0; font-size: 0.86rem; color: var(--ink-3);
+  .tl-day {
+    position: relative;
+    display: flex; align-items: baseline; gap: 0.9rem;
+    padding: 0.34rem 0;
+  }
+  .tl-dot {
+    position: absolute; left: -1.1rem; top: 50%; transform: translateY(-50%);
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); opacity: 0.85;
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.15);
+  }
+  .tl-day:hover .tl-dot { opacity: 1; box-shadow: 0 0 0 4px rgba(var(--accent-rgb), 0.22); }
+  .tl-date {
+    flex: none; width: 3.4em;
+    font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-3);
     font-variant-numeric: tabular-nums;
   }
-  .pt-main { min-width: 0; }
-  .pt-title { margin: 0; font-size: 1.14rem; font-weight: 600; line-height: 1.35; }
-  .pt-link { color: var(--ink); text-decoration: none; }
-  a.pt-link:hover { color: var(--accent); }
-  .pt-link .ext { font-size: 0.85em; opacity: 0.7; }
-  .pt-summary { margin: 0.45rem 0 0; font-size: 0.95rem; line-height: 1.7; color: var(--ink-2); }
-  .pt-tags { margin: 0.6rem 0 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-  .pt-tags .tag {
-    font-size: 0.74rem; padding: 0.1em 0.6em; border-radius: 999px;
-    border: 1px solid var(--line-2); color: var(--ink-2);
-  }
-  .pt-body { margin-top: 0.7rem; }
-  .pt-body summary {
-    cursor: pointer; font-size: 0.85rem; color: var(--accent);
-    list-style: none; user-select: none;
-  }
-  .pt-body summary::-webkit-details-marker { display: none; }
-  .pt-body summary::before { content: '▸ '; }
-  .pt-body[open] summary::before { content: '▾ '; }
-  .pt-md { margin-top: 0.7rem; font-size: 0.95rem; line-height: 1.85; color: var(--ink-2); }
-  .pt-md :global(h2) { font-size: 1.1rem; margin: 1.2em 0 0.5em; color: var(--ink); }
-  .pt-md :global(h3) { font-size: 1rem; margin: 1em 0 0.4em; color: var(--ink); }
-  .pt-md :global(p) { margin: 0.6em 0; }
-  .pt-md :global(ul), .pt-md :global(ol) { margin: 0.6em 0; padding-left: 1.4em; }
-  .pt-md :global(code) {
-    font-family: var(--font-mono, monospace); font-size: 0.88em;
-    background: rgba(255, 255, 255, 0.06); padding: 0.1em 0.4em; border-radius: 6px;
-  }
-  .pt-md :global(pre) {
-    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-2);
-    border-radius: var(--r-s); padding: 0.9em 1.1em; overflow-x: auto;
-  }
-  .pt-md :global(pre code) { background: none; padding: 0; }
+  .tl-body { min-width: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.3rem 0.9rem; }
+  .tl-text { color: var(--ink-2); font-size: 0.94rem; line-height: 1.6; }
+  a.tl-text { color: var(--ink); text-decoration: none; }
+  a.tl-text:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .tl-more { font-size: 0.84rem; color: var(--accent); text-decoration: none; white-space: nowrap; }
+  .tl-more:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .tl-kinds { font-size: 0.72rem; color: var(--ink-3); }
 
   @media (max-width: 640px) {
-    .post { grid-template-columns: 1fr; }
-    .pt-date { margin: 0; }
+    .tl-day { flex-direction: column; gap: 0.15rem; }
+    .tl-date { width: auto; }
   }
 </style>

@@ -23,7 +23,7 @@ const latestPosts = postsAll
       title: p.data.title ?? '未命名文章',
       summary: p.data.summary ?? '',
       tags: (p.data.tags ?? []).slice(0, 3),
-      url: p.data.link ?? `/blog/#p-${p.id}`,
+      url: `/posts/${p.id}/`,
     };
   });
 
@@ -177,12 +177,12 @@ const codeSample = [
       </div>
     </section>
 
-    <!-- ═══ ② 最新博客 ═══ -->
+    <!-- ═══ ② 最新文章 ═══ -->
     <section class="sec sec-posts" id="sec-posts" aria-labelledby="h-posts">
       <div class="wrap">
         <div class="sec-head">
-          <h2 id="h-posts">最新博客</h2>
-          <a class="sec-more" href="/blog/">全部文章 <span aria-hidden="true">→</span></a>
+          <h2 id="h-posts">最新文章</h2>
+          <a class="sec-more" href="/posts/">全部文章 <span aria-hidden="true">→</span></a>
         </div>
         <ul class="work-cards">
           {latestPosts.map((p, i) => (

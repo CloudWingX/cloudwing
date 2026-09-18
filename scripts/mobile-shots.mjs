@@ -13,7 +13,7 @@ const DEVICES = [
   { name: '390-iphone14', w: 390, h: 844 },
   { name: '414-plus', w: 414, h: 896 },
 ];
-const PAGES = [['home', '/'], ['blog', '/blog/'], ['gallery', '/gallery/'], ['about', '/about/'], ['account', '/account/']];
+const PAGES = [['home', '/'], ['posts', '/posts/'], ['blog', '/blog/'], ['gallery', '/gallery/'], ['about', '/about/'], ['account', '/account/']];
 
 mkdirSync(OUT, { recursive: true });
 

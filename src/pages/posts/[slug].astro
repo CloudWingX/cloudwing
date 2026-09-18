@@ -1,0 +1,123 @@
+---
+// 文章详情页：/posts/[slug]/ —— 正文 + 上下篇 + giscus 评论。
+import SidebarLayout from '../../layouts/SidebarLayout.astro';
+import { getCollection, render } from 'astro:content';
+import GiscusComments from '../../components/GiscusComments.astro';
+
+export async function getStaticPaths() {
+  const posts = (await getCollection('posts')).filter((p) => !p.data.link);
+  return posts.map((p) => ({ params: { slug: p.id }, props: { post: p } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+
+const fmt = (d: Date) => {
+  const s = d.toISOString().slice(0, 10);
+  return `${s.slice(0, 4)}.${s.slice(5, 7)}.${s.slice(8, 10)}`;
+};
+
+/* 上一篇 / 下一篇（按日期倒序的相邻条目） */
+const all = (await getCollection('posts'))
+  .filter((p) => !p.data.link)
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+const idx = all.findIndex((p) => p.id === post.id);
+const newer = all[idx - 1];
+const older = all[idx + 1];
+---
+<SidebarLayout title={post.data.title} bodyClass="post-route">
+  <article class="postpage">
+    <div class="wrap">
+      <header class="pp-head" data-ent>
+        <p class="kicker"><b>POST</b> / 文章</p>
+        <h1 class="pp-title">{post.data.title}</h1>
+        <p class="pp-meta">
+          <time datetime={new Date(post.data.date).toISOString().slice(0, 10)}>{fmt(new Date(post.data.date))}</time>
+          {post.data.tags.map((t) => <span class="tag">{t}</span>)}
+        </p>
+      </header>
+
+      <div class="pp-md" data-ent style="--ad:.1s">
+        <Content />
+      </div>
+
+      <nav class="pp-prevnext" data-ent style="--ad:.16s" aria-label="上下篇">
+        {newer && <a class="pp-nav" href={`/posts/${newer.id}/`} rel="prev"><span class="pp-nav-k">← 较新</span><span class="pp-nav-t">{newer.data.title}</span></a>}
+        {older && <a class="pp-nav pp-nav-r" href={`/posts/${older.id}/`} rel="next"><span class="pp-nav-k">较旧 →</span><span class="pp-nav-t">{older.data.title}</span></a>}
+      </nav>
+
+      <p class="pp-back" data-ent style="--ad:.2s">
+        <a href="/blog/">← 返回归档时间线</a>
+        <a href="/posts/">全部文章 →</a>
+      </p>
+
+      <GiscusComments />
+    </div>
+  </article>
+</SidebarLayout>
+
+<style>
+  .postpage { padding: 2.4rem 0 3rem; }
+  .pp-head { margin-bottom: 1.8rem; }
+  .pp-title { margin: 0.3rem 0 0; font-size: clamp(1.5rem, 3.4vw, 2.2rem); font-weight: 600; line-height: 1.3; }
+  .pp-meta {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem;
+    margin: 0.8rem 0 0; font-size: 0.86rem; color: var(--ink-3);
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  }
+  .pp-meta .tag {
+    font-family: var(--font-body);
+    font-size: 0.74rem; padding: 0.1em 0.6em; border-radius: 999px;
+    border: 1px solid var(--line-2); color: var(--ink-2);
+  }
+
+  .pp-md {
+    font-size: 0.98rem; line-height: 1.9; color: var(--ink-2);
+  }
+  .pp-md :global(h2) {
+    font-size: 1.3rem; margin: 1.8em 0 0.6em; color: var(--ink);
+    padding-bottom: 0.3em; border-bottom: 1px solid var(--line-2);
+  }
+  .pp-md :global(h3) { font-size: 1.1rem; margin: 1.4em 0 0.4em; color: var(--ink); }
+  .pp-md :global(p) { margin: 0.8em 0; }
+  .pp-md :global(ul), .pp-md :global(ol) { margin: 0.8em 0; padding-left: 1.5em; }
+  .pp-md :global(li) { margin: 0.3em 0; }
+  .pp-md :global(a) { color: var(--accent); }
+  .pp-md :global(strong) { color: var(--ink); }
+  .pp-md :global(blockquote) {
+    margin: 1em 0; padding: 0.2em 1.1em;
+    border-left: 3px solid var(--accent); color: var(--ink-2);
+  }
+  .pp-md :global(code) {
+    font-family: var(--font-mono); font-size: 0.88em;
+    background: rgba(255, 255, 255, 0.06); padding: 0.12em 0.4em; border-radius: 6px;
+  }
+  .pp-md :global(pre) {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-2);
+    border-radius: var(--r-s); padding: 1em 1.2em; overflow-x: auto;
+  }
+  .pp-md :global(pre code) { background: none; padding: 0; }
+
+  .pp-prevnext {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem;
+    margin: 2.2rem 0 0;
+  }
+  .pp-nav {
+    display: flex; flex-direction: column; gap: 0.25rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--glass); border: var(--line-w) solid var(--line-2);
+    border-radius: var(--r-m); text-decoration: none;
+    transition: border-color 0.2s var(--ease);
+  }
+  .pp-nav:hover { border-color: var(--line-hover); }
+  .pp-nav-r { text-align: right; }
+  .pp-nav-k { font-size: 0.74rem; color: var(--ink-3); }
+  .pp-nav-t { font-size: 0.92rem; color: var(--ink); }
+  .pp-back { display: flex; gap: 1.4rem; margin: 1.6rem 0 2rem; font-size: 0.88rem; }
+  .pp-back a { color: var(--accent); text-decoration: none; }
+  .pp-back a:hover { text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    .pp-prevnext { grid-template-columns: 1fr; }
+  }
+</style>

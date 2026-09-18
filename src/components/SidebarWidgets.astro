@@ -38,7 +38,7 @@ const postEvents = posts.map((e) => ({
   date: new Date(e.data.date).toISOString().slice(0, 10),
   kind: '博客',
   title: e.data.title ?? '未命名文章',
-  url: `/blog/#p-${e.id}`,
+  url: `/posts/${e.id}/`,
 }));
 const shotEvents = shots.map((e) => ({
   date: new Date(e.data.date).toISOString().slice(0, 10),
@@ -97,10 +97,10 @@ const calJson = JSON.stringify(calData).replace(/</g, '\\u003c');
 /* ---------- 最近更新（博客 + 截图混排）---------- */
 const recent = [
   ...posts.map((e) => ({
-    kind: '博客',
+    kind: '文章',
     title: e.data.title ?? '未命名文章',
     date: new Date(e.data.date).toISOString().slice(0, 10),
-    url: `/blog/#p-${e.id}`,
+    url: `/posts/${e.id}/`,
   })),
   ...shots.map((e) => ({
     kind: '截图',

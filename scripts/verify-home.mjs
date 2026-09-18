@@ -79,7 +79,7 @@ check('卡片阴影符合规范', /0px 1px 3px/.test(st.卡片阴影) && /0px 8p
 check('无横向溢出', st.溢出 === 0, String(st.溢出));
 
 console.log('\n=== SEO ===');
-for (const path of ['/', '/blog/', '/gallery/', '/about/']) {
+for (const path of ['/', '/posts/', '/blog/', '/gallery/', '/about/']) {
   await s('Page.navigate', { url: BASE + path });
   await waitFor(`!!document.querySelector('title')`);
   await sleep(900);

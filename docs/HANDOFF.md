@@ -1252,12 +1252,14 @@ A/B 开关：`CW_DISABLE_SAFE_UNMOUNT=1` 重新构建即可关掉补丁做对照
 - `content.config.ts`：移除 `works` 集合。⚠️ 集合删了但还有地方 `getCollection('works')` 时，
   构建会报 WARN「collection does not exist」—— 出现这个警告就说明还有引用没清干净（Header.astro 里就藏了一处）。
 
-### 40.2 博客归档页 `/blog/`
+### 40.2 文章子页面 `/posts/` + 博客归档 `/blog/`
 
 - `posts` 集合：title/date/tags/summary 必填，`link` 可选（外链文章直接跳转）。
-- 归档页**按年份分组**（年份数字用强调色 + 分隔线），每条：日期 + 标题 + 标签 + 摘要；
-  有正文且非外链的条目用 `<details>` 在页面内展开正文（`render()` 预渲染，不单独出详情路由）。
-- 左栏导航树「博客」分组列出全部文章；RSS 改订阅博客。
+- **`/posts/`（文章列表）**：每篇一行卡片（日期 + 标题 + 摘要 + 标签），点标题进详情。
+- **`/posts/[slug]/`（文章详情）**：`render()` 渲染正文（prose 样式齐：h2/h3/code/pre/blockquote）、
+  上下篇导航、giscus 评论、返回归档链接。纯外链文章（有 `link`）不生成详情页。
+- **`/blog/`（归档时间线）**：见 40.3；时间线里的文章条目链到 `/posts/[slug]/`。
+- 左栏导航树：「文章」分组列出全部文章（/posts/ 与每篇详情）；「站点」分组含归档时间线（/blog/）；RSS 改订阅文章详情。
 
 ### 40.3 侧栏「活跃热力图」（GitHub contributions 风格）
 
@@ -1273,11 +1275,14 @@ A/B 开关：`CW_DISABLE_SAFE_UNMOUNT=1` 重新构建即可关掉补丁做对照
 - `verify-nav`：「分类入口」→「博客归档入口在左栏」；`verify-redesign`：玻璃卡选择器
   `.wk-card` → `.post`（作品卡已不存在）；`smoke`：分类筛选块 → 博客归档入口跳转 +
   按年份分组断言，SHELL_PAGES 去掉作品页。
-- 基线更新：smoke 45→**40**、diag-errors 7→**6 页**、其余不变
-  （hero 88、home 23、nav-shrink 42、nav 14、brand 10、theme 11、redesign 16、
-  search 17、videobg 22、videobg-global 25、contrast 0、mobile 15、diag-424 0）。
+- 基线更新：smoke 45→**47**、home 23→**24**、videobg-global 25→**29**、mobile 15→**18**、
+  diag-errors 7 页（/posts/ 加入覆盖）、其余不变
+  （hero 88、nav-shrink 42、nav 14、brand 10、theme 11、redesign 16、
+  search 17、videobg 22、contrast 0、diag-424 0）。
 - ⚠️ `diag-424.mjs` 的轮数参数解析有坑：`Number(argv[3] || 4)` 在 argv[3] 传了
   `'dark'`（主题参数）时是 NaN —— 必须写 `Number(argv[3]) || 4`。
+- ⚠️ `verify-nav-shrink` 的抽屉断言、`verify-redesign` 的玻璃卡选择器（`.wk-card` → `.pcard`，
+  测量页 /blog/ → /posts/）要跟着导航与页面结构调整 —— 每次加/删子页面后这三处必查。
 
 ---
 

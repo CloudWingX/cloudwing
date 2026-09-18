@@ -16,7 +16,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 
-const SHELL_PAGES = ['/blog/', '/gallery/', '/about/', '/account/'];
+const SHELL_PAGES = ['/posts/', '/blog/', '/gallery/', '/about/', '/account/'];
 const ALL_PAGES = [ '/', ...SHELL_PAGES, '/404.html'];
 
 const results = [];
@@ -184,21 +184,39 @@ const main = async () => {
       }
       return false;
     };
-    // 分类入口：2026-09-19 起作品库已移除，左栏导航树改为「博客归档」入口。
-    // 这里点左栏的「博客归档」链接，验证软导航后能正常打开归档页。
-    await waitFor(`[...document.querySelectorAll('a[href="/blog/"]')].some((x) => x.closest('.shell-left'))`);
+    // 内容入口：2026-09-19 起作品库移除，左栏导航树为「文章」分组（/posts/），
+    // 归档时间线在 /blog/。这里点左栏的文章入口 → 打开文章列表 → 进详情页。
+    await waitFor(`[...document.querySelectorAll('a[href="/posts/"]')].some((x) => x.closest('.shell-left'))`);
     await waitFor(`!!document.querySelector('[data-cal-day]')`);
-    await evaluate(`[...document.querySelectorAll('a[href="/blog/"]')].find((x) => x.closest('.shell-left'))?.click()`);
+    await evaluate(`[...document.querySelectorAll('a[href="/posts/"]')].find((x) => x.closest('.shell-left'))?.click()`);
     // 轮询等软导航完成：线上水合比本地慢，固定 sleep 会读到中间态
-    let blogNav = false;
+    let postsNav = false;
     const t0 = Date.now();
     while (Date.now() - t0 < 15000) {
       await sleep(500);
-      blogNav = !!(await evaluate(`location.pathname === '/blog/' && !!document.querySelector('.post-list')`));
-      if (blogNav) break;
+      postsNav = !!(await evaluate(`location.pathname === '/posts/' && !!document.querySelector('.pcard')`));
+      if (postsNav) break;
     }
-    check('左栏博客归档 → 打开归档页', blogNav === true, blogNav ? '/blog/（归档列表已渲染）' : '未跳转');
-    check('归档按年份分组', !!(await evaluate(`document.querySelectorAll('.year-block').length >= 1`)));
+    check('左栏文章入口 → 打开文章列表', postsNav === true, postsNav ? '/posts/（列表已渲染）' : '未跳转');
+    // 点第一篇文章 → 详情页
+    await evaluate(`document.querySelector('.pcard .pc-title a')?.click()`);
+    let detail = null;
+    const t1 = Date.now();
+    while (Date.now() - t1 < 15000) {
+      await sleep(500);
+      detail = await evaluate(`(()=>({路径:location.pathname.startsWith('/posts/'),
+        正文:!!document.querySelector('.pp-md'), 标题:!!document.querySelector('.pp-title')}))()`);
+      if (detail && detail.路径 && detail.正文) break;
+    }
+    check('文章列表 → 详情页打开', !!detail && detail.路径 && detail.正文, detail ? detail.路径 : '未跳转');
+    // 归档时间线：/blog/ 精确到日、可跳转对应文章
+    await evaluate(`location.href = ${JSON.stringify(BASE + '/blog/')}`);
+    await sleep(2500);
+    const arch = await evaluate(`(()=>{const days=[...document.querySelectorAll('.tl-day')];
+      const withPost=[...document.querySelectorAll('.tl-day a[href^="/posts/"]')];
+      return {天数:days.length, 可跳文章:withPost.length, 年份:[...document.querySelectorAll('.tl-yy')].length};})()`);
+    check('归档时间线按日记录（≥5 天）', arch.天数 >= 5, `${arch.天数} 天 / ${arch.年份} 个年份`);
+    check('时间线条目可跳转对应文章详情', arch.可跳文章 > 0, `${arch.可跳文章} 条可跳`);
     // 更新日历：点有记录的日期应展开明细
     await evaluate(`document.querySelector('[data-cal-day]')?.click()`);
     await sleep(800);    const cal = await evaluate(`(() => { const p = document.querySelector('[data-cal-panel]');

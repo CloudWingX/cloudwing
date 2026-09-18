@@ -138,10 +138,11 @@ export const SITE = {
 
 export const NAV = [
   { href: '/', label: '首页', no: '00' },
-  { href: '/blog/', label: '博客', no: '01' },
-  { href: '/gallery/', label: '画廊', no: '02' },
-  { href: '/about/', label: '关于', no: '03' },
-  { href: '/account/', label: '互动', no: '04' },
+  { href: '/posts/', label: '文章', no: '01' },
+  { href: '/blog/', label: '归档', no: '02' },
+  { href: '/gallery/', label: '画廊', no: '03' },
+  { href: '/about/', label: '关于', no: '04' },
+  { href: '/account/', label: '互动', no: '05' },
 ];
 
 // 互动页留言板（giscus / GitHub Discussions）。已启用：

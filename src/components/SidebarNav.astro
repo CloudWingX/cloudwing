@@ -16,10 +16,11 @@ const PROFILE_BANNER = '';
 const pathname = Astro.url.pathname;
 
 const posts = (await getCollection('posts'))
+  .filter((p) => !p.data.link)
   .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
   .map((e) => ({
     title: e.data.title ?? '未命名文章',
-    url: `/blog/#p-${e.id}`,
+    url: `/posts/${e.id}/`,
   }));
 
 const shots = (await getCollection('shots'))
@@ -31,6 +32,7 @@ const shots = (await getCollection('shots'))
   }));
 
 const SITES = [
+  { href: '/blog/', label: '归档时间线' },
   { href: '/about/', label: '关于' },
   { href: '/account/', label: '互动' },
 ];
@@ -67,13 +69,13 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
     <details class="st-group">
       <summary>
         <span class="st-caret">▶</span>
-        <span>博客</span>
+        <span>文章</span>
         <span class="st-n">{posts.length}</span>
       </summary>
       <ul class="st-list">
         <li>
-          <a href="/blog/" aria-current={cur('/blog/')}>
-            <span class="st-txt">博客归档</span>
+          <a href="/posts/" aria-current={cur('/posts/')}>
+            <span class="st-txt">全部文章</span>
           </a>
         </li>
         {posts.map((p) => (

@@ -1,0 +1,98 @@
+---
+// 文章列表页（「文章」子页面）：全部博客文章，点标题进详情页 /posts/[slug]/。
+import SidebarLayout from '../../layouts/SidebarLayout.astro';
+import { getCollection } from 'astro:content';
+import { SITE } from '../../site';
+
+const posts = (await getCollection('posts'))
+  .filter((p) => !p.data.link) // 纯外链文章没有站内详情页，不进列表
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime());
+
+const fmt = (d: Date) => {
+  const s = d.toISOString().slice(0, 10);
+  return `${s.slice(0, 4)}.${s.slice(5, 7)}.${s.slice(8, 10)}`;
+};
+const totalTags = new Set<string>();
+posts.forEach((p) => p.data.tags.forEach((t) => totalTags.add(t)));
+---
+<SidebarLayout title="文章" bodyClass="posts-route">
+  <div class="posts-root">
+    <div class="wrap">
+      <header class="page-head" data-ent>
+        <p class="kicker"><b>POSTS</b> / 文章</p>
+        <h1>文章</h1>
+        <p class="head-sub">
+          {posts.length} 篇 · {totalTags.size} 个标签 · 点标题阅读全文；改动史见<a href="/blog/">归档时间线</a>
+        </p>
+      </header>
+
+      <ol class="posts-list">
+        {posts.map((p, i) => {
+          const slug = 'p-' + p.id;
+          return (
+            <li class="pcard" data-ent style={`--ad:${(i % 8) * 60}ms`}>
+              <p class="pc-date"><time datetime={new Date(p.data.date).toISOString().slice(0, 10)}>{fmt(new Date(p.data.date))}</time></p>
+              <div class="pc-main">
+                <h2 class="pc-title">
+                  <a href={`/posts/${p.id}/`}>{p.data.title}</a>
+                </h2>
+                {p.data.summary && <p class="pc-summary">{p.data.summary}</p>}
+                {p.data.tags.length > 0 && (
+                  <p class="pc-tags">{p.data.tags.map((t) => <span class="tag">{t}</span>)}</p>
+                )}
+              </div>
+              <span class="pc-go" aria-hidden="true">→</span>
+            </li>
+          );
+        })}
+      </ol>
+
+      {posts.length === 0 && <p class="pc-empty">还没有文章。</p>}
+    </div>
+  </div>
+</SidebarLayout>
+
+<style>
+  .posts-root { padding: 2.4rem 0 3rem; }
+  .page-head { margin-bottom: 2rem; }
+  .head-sub { margin: 0.4rem 0 0; font-size: 0.92rem; color: var(--ink-2); }
+  .head-sub a { color: var(--accent); text-decoration: none; }
+  .head-sub a:hover { text-decoration: underline; }
+
+  .posts-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  .pcard {
+    position: relative;
+    display: flex; align-items: flex-start; gap: 1.1rem;
+    padding: 1.1rem 1.3rem;
+    background: var(--glass); border: var(--line-w) solid var(--line-2);
+    border-radius: var(--r-m);
+    transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
+  }
+  .pcard:hover { border-color: var(--line-hover); transform: translateY(-2px); }
+  .pc-date {
+    margin: 0.2em 0 0; flex: none; width: 5.6em;
+    font-size: 0.86rem; color: var(--ink-3);
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  }
+  .pc-main { min-width: 0; flex: 1; }
+  .pc-title { margin: 0; font-size: 1.16rem; font-weight: 600; line-height: 1.35; }
+  .pc-title a { color: var(--ink); text-decoration: none; }
+  .pc-title a:hover { color: var(--accent); }
+  .pc-summary { margin: 0.45rem 0 0; font-size: 0.94rem; line-height: 1.7; color: var(--ink-2); }
+  .pc-tags { margin: 0.55rem 0 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .pc-tags .tag {
+    font-size: 0.74rem; padding: 0.1em 0.6em; border-radius: 999px;
+    border: 1px solid var(--line-2); color: var(--ink-2);
+  }
+  .pc-go {
+    align-self: center; flex: none; color: var(--ink-3);
+    transition: transform 0.2s var(--ease), color 0.2s var(--ease);
+  }
+  .pcard:hover .pc-go { color: var(--accent); transform: translateX(3px); }
+
+  @media (max-width: 640px) {
+    .pcard { flex-direction: column; gap: 0.3rem; }
+    .pc-date { width: auto; }
+    .pc-go { display: none; }
+  }
+</style>

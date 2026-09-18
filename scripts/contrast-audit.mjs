@@ -12,7 +12,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const THEME = process.argv[3] === 'dark' ? 'dark' : 'light'; // 第二参数：light（默认）| dark
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
-const PAGES = ['/', '/blog/', '/gallery/', '/about/', '/account/'];
+const PAGES = ['/', '/posts/', '/blog/', '/gallery/', '/about/', '/account/'];
 
 // 在浏览器里跑：合成背景（穿透透明祖先，把半透明叠加算进去）+ 算对比度
 const AUDIT_FN = `(() => {

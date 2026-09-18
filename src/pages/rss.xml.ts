@@ -23,7 +23,7 @@ export async function GET(context: APIContext) {
       title: p.data.title,
       description: p.data.summary || '',
       pubDate: new Date(p.data.date),
-      link: p.data.link ?? `/blog/#p-${p.id}`,
+      link: `/posts/${p.id}/`,
       categories: p.data.tags ?? [],
     })),
   });
