@@ -113,7 +113,8 @@ function boot() {
     weatherWidget,      // 左侧栏天气小帖（uapis.cn，浏览器端拉取 + 30 分钟缓存）
     musicPlayer,        // 左侧栏音乐播放器（歌曲见 site.ts 的 MUSIC）
     searchModal,        // 全站搜索悬浮窗（Pagefind，首次打开才加载）
-    motionToggle,       // 背景动态开关（可访问性：WCAG 2.2.2 暂停入口）
+    // motionToggle 已移除：2026-09-18 按用户要求删掉导航栏的「暂停背景动态」按钮，
+    // 背景视频默认播放；减少动态仍由 prefers-reduced-motion 自动处理。
   ].forEach((fn) => {
     try {
       fn();
@@ -1892,32 +1893,6 @@ function searchModal() {
       if (cur && cur.open) close(); else open();
     }
   });
-}
-
-/* ---------- 背景动态开关（可访问性） ----------
-   WCAG 2.2.2：自动播放且超过 5 秒的动态内容必须能暂停。
-   背景视频是纯装饰但会长时间循环，故提供显式暂停入口。
-   状态放进单例 + 委托监听，软导航后照常可用。 */
-function motionToggle() {
-  const st = window.__cwMotion || (window.__cwMotion = { wired: false });
-  if (st.wired) return;
-  st.wired = true;
-  const sync = () => {
-    const on = typeof window.__cwVideoPaused === 'function' ? window.__cwVideoPaused() : false;
-    document.querySelectorAll('[data-motion-toggle]').forEach((b) => {
-      b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      b.setAttribute('aria-label', on ? '播放背景动态' : '暂停背景动态');
-    });
-  };
-  document.addEventListener('click', (ev) => {
-    const t = ev.target instanceof Element ? ev.target.closest('[data-motion-toggle]') : null;
-    if (!t) return;
-    ev.preventDefault();
-    if (typeof window.__cwVideoToggle === 'function') window.__cwVideoToggle();
-    sync();
-  });
-  document.addEventListener('astro:page-load', sync);
-  sync();
 }
 
 // 首次加载与每次导航后都执行（函数内部有守卫，可安全重复调用）

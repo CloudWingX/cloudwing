@@ -141,14 +141,15 @@ const on = Boolean(VIDEO_BG.src);
 
     var playing = function () { wrap.classList.add('is-playing'); wrap.classList.remove('is-failed'); };
 
-    // 减少动态：只显示首帧，不播放
+    // 减少动态：只显示首帧，不播放。
+    // ★2026-09-18：导航栏的「暂停背景动态」按钮已删除，视频**默认播放**；
+    //   这里只剩系统级偏好这一个"不播"的条件（WCAG 的减少动态仍由它兜住）。
     var rm = window.matchMedia('(prefers-reduced-motion: reduce)');
-    var userPaused = false;
 
     var apply = function () {
-      if (rm.matches || userPaused) {
+      if (rm.matches) {
         v.pause();
-        if (rm.matches) v.autoplay = false;
+        v.autoplay = false;
         playing(); // 暂停也要显示画面（首帧）
         return;
       }
@@ -176,13 +177,8 @@ const on = Boolean(VIDEO_BG.src);
       else apply();
     });
 
-    // 供导航栏的「暂停动态」按钮调用（可访问性要求：提供暂停入口）
-    window.__cwVideoToggle = function () {
-      userPaused = !userPaused;
-      apply();
-      return userPaused;
-    };
-    window.__cwVideoPaused = function () { return userPaused || rm.matches; };
+    // 旧的两个暂停接口（__cwVideoToggle / __cwVideoPaused）随按钮一起删除；
+    // 若以后要加回暂停入口，在这里重新暴露即可。
   }
   initVideoBg();
   document.addEventListener('astro:page-load', initVideoBg);

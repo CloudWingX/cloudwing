@@ -87,21 +87,9 @@ try {
         )
       }
       {SITE.bilibili && <a class="btn btn-pro" href={SITE.bilibili} target="_blank" rel="noreferrer">Bilibili</a>}
-      <button
-        type="button"
-        class="motion-toggle"
-        data-motion-toggle
-        aria-label="暂停背景动态"
-        aria-pressed="false"
-        title="暂停 / 播放背景动态"
-      >
-        <svg class="mt-pause" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
-          <path d="M9 5v14M15 5v14"></path>
-        </svg>
-        <svg class="mt-play" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
-          <path d="M7 4.8 19 12 7 19.2Z"></path>
-        </svg>
-      </button>
+      {/* ★「暂停背景动态」按钮已于 2026-09-18 按用户要求删除：背景视频默认播放，
+          不再提供手动暂停入口（减少动态的可访问性需求仍由 prefers-reduced-motion 兜住，
+          见 VideoBackground.astro）。 */}
       <button
         type="button"
         class="hamburger"
@@ -122,25 +110,14 @@ try {
     {items.map((item) => (
       <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
     ))}
-    {
-      items
-        .filter((i) => i.sub.length > 0)
-        .map((i) => (
-          <div class="mm-group">
-            <span class="mm-group-t">{i.label}分类</span>
-            <div class="mm-chips">
-              {i.sub.map((s) => (
-                <a class="mm-chip" href={s.href}>{s.label}</a>
-              ))}
-            </div>
-          </div>
-        ))
-    }
-    <div class="mm-actions">
-      {SITE.github && <a class="mm-btn" href={SITE.github} target="_blank" rel="noreferrer">GitHub</a>}
-      {SITE.bilibili && <a class="mm-btn" href={SITE.bilibili} target="_blank" rel="noreferrer">Bilibili</a>}
-      <a class="mm-btn" href="/rss.xml">RSS</a>
-    </div>
+    {/* ★手机端抽屉现在**只有 5 个一级页面入口**★
+        —— 2026-09-18 按用户要求依次删掉了两组分类（作品库 / 画廊）与底部外链
+        （GitHub / Bilibili / RSS，桌面端顶栏与页脚仍有）。
+        ⚠️ 两处取舍要记得：
+        1. <1200px 侧栏是 display:none，所以手机端目前**没有分类入口**；
+           若以后要补，建议在 /works/ 与 /gallery/ 页面内各加一排筛选 chip
+           （它们现在只有"当前分类回显条"，本身没有选择器）。
+        2. 手机端也**没有 GitHub / Bilibili / RSS 入口**了（页脚仍可达）。 */}
   </div>
 </header>
 
@@ -384,31 +361,7 @@ try {
     .btn { transition: none; }
   }
 
-  /* ── 可访问性：暂停背景动态（WCAG 2.2.2）── */
-  .motion-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    flex: none;
-    padding: 0;
-    border: 1px solid transparent;
-    border-radius: 9999px;
-    background: transparent;
-    color: var(--nav-ink-dim);
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-  }
-  .site-header:hover .motion-toggle,
-  .motion-toggle:focus-visible { opacity: 1; }
-  .motion-toggle:hover,
-  .motion-toggle:focus-visible { color: var(--nav-ink); border-color: var(--nav-border-scrolled); }
-  .motion-toggle .mt-play { display: none; }
-  .motion-toggle[aria-pressed='true'] { color: var(--accent-deep); border-color: var(--accent); }
-  .motion-toggle[aria-pressed='true'] .mt-pause { display: none; }
-  .motion-toggle[aria-pressed='true'] .mt-play { display: inline-flex; }
+  /* 「暂停背景动态」按钮已于 2026-09-18 删除（背景视频默认播放），相关样式一并移除。 */
 
   /* ── 汉堡按钮（参考同款：三条线 → 叉号）── */
   .hamburger {
@@ -437,20 +390,25 @@ try {
   .site-header.mnav-open .hamburger span:nth-child(2) { opacity: 0; transform: translateX(-10px); }
   .site-header.mnav-open .hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-  /* ── 移动端下拉菜单 ── */
+  /* ── 移动端下拉菜单 ──
+     2026-09-18 改形：原来是"与导航同宽的通栏 + 只有底边框"，
+     现在改成**四周内缩的圆角矩形浮层**（左右各留 12px、圆角 18px、四边描边 + 投影），
+     整体也更紧凑（内边距 16/32 → 14/18、行间距 16 → 12）。 */
   .mobile-menu {
     position: absolute;
     top: 100%;
-    left: 0;
-    right: 0;
+    left: 12px;
+    right: 12px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding: 16px 32px 20px;
+    gap: 12px;
+    padding: 14px 18px 16px;
     background: var(--nav-drawer-bg);
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--nav-border-scrolled);
+    border: 1px solid var(--nav-border-scrolled);
+    border-radius: 18px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -471,34 +429,9 @@ try {
     padding: 8px 0;
   }
   .mobile-menu > a[aria-current='page'] { color: var(--accent); }
-  .mm-group { display: flex; flex-direction: column; gap: 8px; }
-  .mm-group-t {
-    font-size: 0.7rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--nav-ink-dim);
-  }
-  .mm-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .mm-chip {
-    padding: 5px 12px;
-    border-radius: 9999px;
-    border: 1px solid var(--nav-border-scrolled);
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--nav-ink-muted);
-    font-size: 13px;
-    text-decoration: none;
-  }
-  .mm-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
-  .mm-btn {
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 1px solid var(--nav-border-scrolled);
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--nav-ink);
-    font-size: 13px;
-    text-decoration: none;
-    cursor: pointer;
-  }
+  /* 以下已随手机端抽屉精简一并删除（2026-09-18）：
+     .mm-group / .mm-group-t / .mm-chips / .mm-chip（两组分类）
+     .mm-actions / .mm-btn（GitHub / Bilibili / RSS 外链） */
 
   /* ── 断点（参考实测：≤1024 pad 24 且容器满宽、≤768 换汉堡）──
      参考在 768–1100 之间没有处理，因为它的 4 个链接比本站 5 个短；
@@ -527,8 +460,7 @@ try {
     html[data-scrolled='1'] .header-container { max-width: 100%; height: 52px; }
     .btn-github span { display: none; }
     .btn-github { padding: 8px 10px; }
-    .mobile-menu { padding: 16px 20px 20px; }
-    .motion-toggle { opacity: 1; }
+    .mobile-menu { padding: 12px 16px 14px; border-radius: 16px; }
   }
 </style>
 
