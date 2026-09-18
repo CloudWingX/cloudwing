@@ -1,6 +1,6 @@
 ---
 // 左侧栏（全站子页面通用，内容固定不随页面变化）：
-//   作品库（全部作品 + 每件作品）/ 分类（可直接筛列表）/ 画廊（全部截图 + 每张）/ 站点页面
+//   博客（归档 + 每篇文章）/ 画廊（全部截图 + 每张）/ 站点页面
 // 只按 pathname 决定「哪个条目高亮」和「哪个分组默认展开」，其余完全一致。
 import { getCollection } from 'astro:content';
 import { SITE } from '../site';
@@ -15,13 +15,11 @@ const PROFILE_BANNER = '';
 
 const pathname = Astro.url.pathname;
 
-const works = (await getCollection('works'))
+const posts = (await getCollection('posts'))
   .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
   .map((e) => ({
-    no: 'W-' + String(e.data.order ?? 0).padStart(3, '0'),
-    title: e.data.title ?? '未命名档案',
-    url: `/works/${e.id}/`,
-    tags: e.data.tags ?? [],
+    title: e.data.title ?? '未命名文章',
+    url: `/blog/#p-${e.id}`,
   }));
 
 const shots = (await getCollection('shots'))
@@ -31,11 +29,6 @@ const shots = (await getCollection('shots'))
     title: e.data.title ?? '未命名截图',
     url: `/gallery/#${String(e.id).toUpperCase()}`,
   }));
-
-// 分类：按出现次数降序
-const tagCounts = new Map<string, number>();
-works.forEach((w) => w.tags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
-const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
 
 const SITES = [
   { href: '/about/', label: '关于' },
@@ -74,38 +67,19 @@ const cur = (url: string) => (url === pathname ? 'page' : undefined);
     <details class="st-group">
       <summary>
         <span class="st-caret">▶</span>
-        <span>作品库</span>
-        <span class="st-n">{works.length}</span>
+        <span>博客</span>
+        <span class="st-n">{posts.length}</span>
       </summary>
       <ul class="st-list">
         <li>
-          <a href="/works/" aria-current={cur('/works/')}>
-            <span class="st-txt">全部作品</span>
+          <a href="/blog/" aria-current={cur('/blog/')}>
+            <span class="st-txt">博客归档</span>
           </a>
         </li>
-        {works.map((w) => (
+        {posts.map((p) => (
           <li>
-            <a href={w.url} aria-current={cur(w.url)} title={`${w.no} · ${w.title}`}>
-              <span class="st-no">{w.no}</span>
-              <span class="st-txt">{w.title}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </details>
-
-    <details class="st-group">
-      <summary>
-        <span class="st-caret">▶</span>
-        <span>分类</span>
-        <span class="st-n">{tags.length}</span>
-      </summary>
-      <ul class="st-list">
-        {tags.map(([t, n]) => (
-          <li>
-            <a href={`/works/?tag=${encodeURIComponent(t)}`} title={`按分类筛选：${t}`}>
-              <span class="st-txt">{t}</span>
-              <span class="st-n">{n}</span>
+            <a href={p.url} aria-current={cur(p.url)} title={p.title}>
+              <span class="st-txt">{p.title}</span>
             </a>
           </li>
         ))}

@@ -65,7 +65,7 @@ await s('Page.enable'); await s('Runtime.enable'); await s('Network.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: THEME }] });
 await s('Page.addScriptToEvaluateOnNewDocument', { source: `try{localStorage.setItem('cw-theme-pref','${THEME}');}catch(e){}` });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 const waitFor = async (x, ms = 40000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ev(x)) return true; await sleep(500); } return false; };
 await waitFor(`!!document.querySelector('.video-bg__el')`);
 // 等视频真的能播（不只是挂上 DOM）

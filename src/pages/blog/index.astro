@@ -1,0 +1,160 @@
+---
+// 博客归档页：按年份分组；link 有值 → 外链，否则展开正文（<details>）。
+import SidebarLayout from '../../layouts/SidebarLayout.astro';
+import { getCollection, render } from 'astro:content';
+import { SITE } from '../../site';
+
+const posts = (await getCollection('posts')).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
+);
+
+/* 预渲染正文（有正文的条目在归档页里用 <details> 展开，不再单独出详情路由） */
+const entries = await Promise.all(
+  posts.map(async (p) => {
+    const hasBody = (p.body ?? '').trim().length > 0 && !p.data.link;
+    const Body = hasBody ? (await render(p)).Content : null;
+    return { post: p, Body, slug: 'p-' + p.id };
+  }),
+);
+
+/* 按年份分组（新 → 旧） */
+const years = new Map<number, typeof entries>();
+entries.forEach((e) => {
+  const y = new Date(e.post.data.date).getFullYear();
+  years.set(y, [...(years.get(y) ?? []), e]);
+});
+const yearList = [...years.entries()].sort((a, b) => b[0] - a[0]);
+
+const fmt = (d: Date) => {
+  const s = d.toISOString().slice(0, 10);
+  return `${s.slice(0, 4)}.${s.slice(5, 7)}.${s.slice(8, 10)}`;
+};
+const totalTags = new Set<string>();
+posts.forEach((p) => p.data.tags.forEach((t) => totalTags.add(t)));
+---
+<SidebarLayout title="博客" bodyClass="blog-route">
+  <div class="blog-root">
+    <div class="wrap">
+      <header class="page-head" data-ent>
+        <p class="kicker"><b>BLOG</b> / 博客 · 归档</p>
+        <h1>博客归档</h1>
+        <p class="head-sub">
+          {SITE.since} 年至今共 {posts.length} 篇 · {totalTags.size} 个标签 · 按年份归档
+        </p>
+      </header>
+
+      {yearList.map(([year, list]) => (
+        <section class="year-block" data-ent aria-label={`${year} 年文章（${list.length} 篇）`}>
+          <header class="year-head">
+            <h2 class="year-no">{year}</h2>
+            <span class="year-n">{list.length} 篇</span>
+            <span class="year-line" aria-hidden="true"></span>
+          </header>
+          <ol class="post-list">
+            {list.map(({ post: p, Body, slug }) => {
+              const d = fmt(new Date(p.data.date));
+              return (
+                <li class="post" id={slug}>
+                  <p class="pt-date"><time datetime={new Date(p.data.date).toISOString().slice(0, 10)}>{d}</time></p>
+                  <div class="pt-main">
+                    <h3 class="pt-title">
+                      {p.data.link
+                        ? <a class="pt-link" href={p.data.link} target="_blank" rel="noreferrer">{p.data.title} <span class="ext" aria-hidden="true">↗</span></a>
+                        : <span class="pt-link" id={slug + '-t'}>{p.data.title}</span>}
+                    </h3>
+                    {p.data.summary && <p class="pt-summary">{p.data.summary}</p>}
+                    {p.data.tags.length > 0 && (
+                      <p class="pt-tags">
+                        {p.data.tags.map((t) => <span class="tag">{t}</span>)}
+                      </p>
+                    )}
+                    {Body && (
+                      <details class="pt-body">
+                        <summary>展开正文</summary>
+                        <div class="pt-md"><Body /></div>
+                      </details>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ))}
+
+      {posts.length === 0 && (
+        <section class="year-block" data-ent>
+          <p class="pt-summary">还没有文章 —— 第一篇正在写。</p>
+        </section>
+      )}
+    </div>
+  </div>
+</SidebarLayout>
+
+<style>
+  .blog-root { padding: 2.4rem 0 3rem; }
+  .page-head { margin-bottom: 2.2rem; }
+  .head-sub { margin: 0.4rem 0 0; font-size: 0.92rem; color: var(--ink-2); }
+
+  .year-block { margin-bottom: 2.6rem; }
+  .year-head {
+    display: flex; align-items: baseline; gap: 0.8rem;
+    margin-bottom: 1.1rem;
+  }
+  .year-no {
+    margin: 0; font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 600;
+    color: var(--accent); letter-spacing: 0.02em; font-variant-numeric: tabular-nums;
+  }
+  .year-n { font-size: 0.8rem; color: var(--ink-3); }
+  .year-line { flex: 1; height: 1px; background: var(--line-2); opacity: 0.6; }
+
+  .post-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
+  .post {
+    display: grid; grid-template-columns: 6.2em 1fr; gap: 0.4rem 1.1rem;
+    padding: 1rem 1.2rem;
+    background: var(--glass); border: var(--line-w) solid var(--line-2);
+    border-radius: var(--r-m);
+  }
+  .pt-date {
+    margin: 0.15em 0 0; font-size: 0.86rem; color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .pt-main { min-width: 0; }
+  .pt-title { margin: 0; font-size: 1.14rem; font-weight: 600; line-height: 1.35; }
+  .pt-link { color: var(--ink); text-decoration: none; }
+  a.pt-link:hover { color: var(--accent); }
+  .pt-link .ext { font-size: 0.85em; opacity: 0.7; }
+  .pt-summary { margin: 0.45rem 0 0; font-size: 0.95rem; line-height: 1.7; color: var(--ink-2); }
+  .pt-tags { margin: 0.6rem 0 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .pt-tags .tag {
+    font-size: 0.74rem; padding: 0.1em 0.6em; border-radius: 999px;
+    border: 1px solid var(--line-2); color: var(--ink-2);
+  }
+  .pt-body { margin-top: 0.7rem; }
+  .pt-body summary {
+    cursor: pointer; font-size: 0.85rem; color: var(--accent);
+    list-style: none; user-select: none;
+  }
+  .pt-body summary::-webkit-details-marker { display: none; }
+  .pt-body summary::before { content: '▸ '; }
+  .pt-body[open] summary::before { content: '▾ '; }
+  .pt-md { margin-top: 0.7rem; font-size: 0.95rem; line-height: 1.85; color: var(--ink-2); }
+  .pt-md :global(h2) { font-size: 1.1rem; margin: 1.2em 0 0.5em; color: var(--ink); }
+  .pt-md :global(h3) { font-size: 1rem; margin: 1em 0 0.4em; color: var(--ink); }
+  .pt-md :global(p) { margin: 0.6em 0; }
+  .pt-md :global(ul), .pt-md :global(ol) { margin: 0.6em 0; padding-left: 1.4em; }
+  .pt-md :global(code) {
+    font-family: var(--font-mono, monospace); font-size: 0.88em;
+    background: rgba(255, 255, 255, 0.06); padding: 0.1em 0.4em; border-radius: 6px;
+  }
+  .pt-md :global(pre) {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line-2);
+    border-radius: var(--r-s); padding: 0.9em 1.1em; overflow-x: auto;
+  }
+  .pt-md :global(pre code) { background: none; padding: 0; }
+
+  @media (max-width: 640px) {
+    .post { grid-template-columns: 1fr; }
+    .pt-date { margin: 0; }
+  }
+</style>

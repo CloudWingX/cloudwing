@@ -8,7 +8,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const OUT = process.argv[3] || 'D:\\deep seek workplace\\_shots';
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
-const PAGES = [['home', '/'], ['works', '/works/'], ['gallery', '/gallery/'], ['about', '/about/']];
+const PAGES = [['home', '/'], ['blog', '/blog/'], ['gallery', '/gallery/'], ['about', '/about/']];
 const THEMES = ['light', 'dark'];
 const W = 1440, H = 900;
 

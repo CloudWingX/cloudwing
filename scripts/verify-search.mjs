@@ -24,7 +24,7 @@ const waitFor = async (x, ms = 30000) => { const t0 = Date.now(); while (Date.no
 
 await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.querySelector('[data-search-modal]')`);
 await sleep(1200);
 

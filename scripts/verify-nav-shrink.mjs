@@ -42,7 +42,7 @@ const cap = () => ev(`(()=>{const h=document.querySelector('.site-header'), d=do
 await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.querySelector('.header-container')`);
 await sleep(2200);
 // 每次导航后先把滚动位置复位（history 恢复可能带回上一次的滚动位置，
@@ -121,7 +121,7 @@ check('已无遗留的顶部指示线（参考导航没有）', (await ev(`docum
 
 console.log('\n=== 移动端：汉堡 + 顶部下拉菜单 ===');
 await s('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.querySelector('[data-mnav-toggle]')`);
 await sleep(2200);
 const m0 = await ev(`(()=>({
@@ -200,7 +200,7 @@ check('滚动后菜单仍在胶囊下方（几何有效）',
 check('全程无 JS 异常', errs.length === 0, errs[0] || '');
 
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await sleep(3000);
 // 顶部形态截图
 let shot = await s('Page.captureScreenshot', { format: 'png' });

@@ -21,11 +21,11 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
-const ROUNDS = Number(process.argv[3] || 4);
+const ROUNDS = Number(process.argv[3]) || 4; // ⚠️ 必须带 || 4：argv[3] 传了 'dark' 之类的主题参数时 Number() 是 NaN
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 
 // 软导航一圈：起点 /works/，再按站点导航里真实存在的链接点回去
-const SEQ = ['/gallery/', '/about/', '/account/', '/', '/works/'];
+const SEQ = ['/gallery/', '/about/', '/account/', '/', '/blog/'];
 
 // FLOW=smoke 时复刻 smoke.mjs [3] 的完整动作序列（分类链接 → 日历 → ⌘K 搜索 → 软导航一圈）。
 // 只跑上面那串点击复现不出来，说明 #424 依赖更具体的时序。
@@ -136,11 +136,11 @@ const main = async () => {
       await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
       // #424 是水合竞态：CPU 降速会把"空闲水合"推迟，把偶发变成高频（CPU=4 实测有效）
       if (process.env.CPU) await send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.CPU) });
-      await send('Page.navigate', { url: BASE + '/works/' });
+      await send('Page.navigate', { url: BASE + '/blog/' });
       await sleep(4000);
       // smoke.mjs 的 [3] 是"开页后又 location.replace 一次"——照抄，保持时序一致
       if (SMOKE_FLOW) {
-        await evaluate(`location.replace(${JSON.stringify(BASE + '/works/')})`);
+        await evaluate(`location.replace(${JSON.stringify(BASE + '/blog/')})`);
         await sleep(3500);
       }
 

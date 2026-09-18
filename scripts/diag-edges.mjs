@@ -42,7 +42,7 @@ function decodePNG(buffer) {
 }
 
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
-const PAGES = process.argv.slice(3).length ? process.argv.slice(3) : ['/', '/works/'];
+const PAGES = process.argv.slice(3).length ? process.argv.slice(3) : ['/', '/blog/'];
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 const OUT = 'D:\\deep seek workplace\\_shots';
 const W = +(process.env.W || 1440), H = +(process.env.H || 900);

@@ -125,20 +125,20 @@ export const SITE = {
   // 拉丁大字标题 / 英文品牌（hero 用，建议全大写短词）
   latin: 'CloudWing',
   // 一句话定位（hero 副标题）
-  tagline: 'CloudWing（云翼）—— 个人学习与作品档案空间 · 暗色电影感玻璃设计',
+  tagline: 'CloudWing（云翼）—— 个人博客与学习档案空间 · 暗色电影感玻璃设计',
   author: 'CloudWing_X',
   email: '246459267@qq.com',
   github: 'https://github.com/CloudWingX',
   bilibili: 'https://space.bilibili.com/470179349',
   // 关于页与 footer 使用的备注
   notice:
-    '本站为个人学习与作品档案空间，采用暗色电影感玻璃 UI，设计、文案与素材均为本人产出。',
+    '本站为个人博客与学习档案空间，采用暗色电影感玻璃 UI，设计、文案与素材均为本人产出。',
   since: 2025,
 };
 
 export const NAV = [
   { href: '/', label: '首页', no: '00' },
-  { href: '/works/', label: '作品库', no: '01' },
+  { href: '/blog/', label: '博客', no: '01' },
   { href: '/gallery/', label: '画廊', no: '02' },
   { href: '/about/', label: '关于', no: '03' },
   { href: '/account/', label: '互动', no: '04' },

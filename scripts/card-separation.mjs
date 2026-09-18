@@ -6,7 +6,7 @@ const CDP = 'http://127.0.0.1:9222';
 const BASE = process.argv[2] || 'http://127.0.0.1:4321';
 const THEME = process.argv[3] || 'light';
 
-const tab = await (await fetch(`${CDP}/json/new?` + encodeURIComponent(BASE + '/works/'), { method: 'PUT' })).json();
+const tab = await (await fetch(`${CDP}/json/new?` + encodeURIComponent(BASE + '/blog/'), { method: 'PUT' })).json();
 const ws = new WebSocket(tab.webSocketDebuggerUrl);
 await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
 let id = 0; const pending = new Map();
@@ -18,7 +18,7 @@ await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-sch
 await send('Page.addScriptToEvaluateOnNewDocument', {
   source: `try{localStorage.setItem('cw-theme-pref','${THEME}');document.cookie='cw-theme-pref=${THEME};path=/';}catch(e){}`,
 });
-await send('Page.navigate', { url: BASE + '/works/' });
+await send('Page.navigate', { url: BASE + '/blog/' });
 await sleep(4500);
 
 // 卡片内一点（标题下方留白）与卡片外页面底色点

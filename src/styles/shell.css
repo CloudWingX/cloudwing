@@ -688,6 +688,75 @@
   font-weight: 500;
   color: var(--ink-2);
 }
+
+/* ── 活跃热力图（GitHub contributions 风格）──
+   列 = 周（旧 → 新），行 = 周一到周日；格子尺寸随容器自适应。
+   强度用 rgba(var(--accent-rgb), α) 阶梯 —— 跟随色卡换色。 */
+.sw-heat { display: flex; flex-direction: column; gap: 0.3rem; }
+.heat-months,
+.heat-wd { display: grid; }
+.heat-months {
+  grid-template-columns: repeat(var(--weeks), minmax(0, 1fr));
+  margin-left: 1.35rem; /* 给左侧星期标签让位 */
+  font-size: 0.6rem;
+  color: var(--ink-3);
+}
+.heat-months .hm { grid-row: 1; white-space: nowrap; overflow: visible; }
+.heat-wrap { display: flex; gap: 0.25rem; }
+.heat-wd {
+  grid-auto-flow: row;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+  width: 1.1rem;
+  flex: none;
+}
+.heat-wd .hwd {
+  font-size: 0.58rem;
+  line-height: 1;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+}
+.heat-grid {
+  flex: 1;
+  display: grid;
+  /* 列数由内联 --weeks 提供；行固定 7（周日 → 周六） */
+  grid-template-columns: repeat(var(--weeks), minmax(0, 1fr));
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 2.5px;
+}
+.heat-grid .hc {
+  aspect-ratio: 1;
+  border: 0;
+  padding: 0;
+  border-radius: 2.5px;
+  background: rgba(255, 255, 255, 0.055);
+  min-width: 0;
+}
+.heat-grid .hc.future { visibility: hidden; }
+/* 强度阶梯：0 → 4 档，越活跃越实 */
+.heat-grid .hc.lv0 { background: rgba(255, 255, 255, 0.055); }
+.heat-grid .hc.lv1 { background: rgba(var(--accent-rgb), 0.22); }
+.heat-grid .hc.lv2 { background: rgba(var(--accent-rgb), 0.45); }
+.heat-grid .hc.lv3 { background: rgba(var(--accent-rgb), 0.7); }
+.heat-grid .hc.lv4 { background: var(--accent); }
+.heat-grid .hc.lv1, .heat-grid .hc.lv2, .heat-grid .hc.lv3, .heat-grid .hc.lv4 { cursor: pointer; }
+.heat-grid .hc.today { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45); }
+.heat-grid .hc.lv1:hover, .heat-grid .hc.lv2:hover, .heat-grid .hc.lv3:hover, .heat-grid .hc.lv4:hover {
+  outline: 1px solid rgba(255, 255, 255, 0.35);
+}
+/* 图例：少 → 多 */
+.heat-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  margin: 0.2rem 0 0;
+  font-size: 0.6rem;
+  color: var(--ink-3);
+}
+.heat-legend .hc.sm { width: 9px; height: 9px; aspect-ratio: auto; }
+.heat-legend .hl-t { margin: 0 2px; }
 .sw-cal {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));

@@ -8,7 +8,7 @@ const OUT = process.argv[3] || 'D:\\deep seek workplace\\_shots';
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 mkdirSync(OUT, { recursive: true });
 
-const tab = await (await fetch(`${CDP}/json/new?` + encodeURIComponent(BASE + '/works/'), { method: 'PUT' })).json();
+const tab = await (await fetch(`${CDP}/json/new?` + encodeURIComponent(BASE + '/blog/'), { method: 'PUT' })).json();
 const ws = new WebSocket(tab.webSocketDebuggerUrl);
 await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
 let id = 0; const pending = new Map();
@@ -28,7 +28,7 @@ const clipOf = async () => {
   return r.result?.result?.value;
 };
 
-await send('Page.navigate', { url: BASE + '/works/' });
+await send('Page.navigate', { url: BASE + '/blog/' });
 await sleep(700);                                  // 计数进行中
 let clip = await clipOf();
 console.log('  clip =', JSON.stringify(clip));

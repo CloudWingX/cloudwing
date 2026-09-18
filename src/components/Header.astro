@@ -18,9 +18,8 @@ const isActive = (href: string) =>
   href === '/' ? current === '/' : current.startsWith(href);
 
 /* ---------- 各子页面的分类 → 对应导航项的二级菜单（移动端菜单里用） ----------
-   作品库的分类 = 作品标签（tags），画廊的分类 = 截图所属游戏（game）。
-   两者都由内容集合现算，新增作品/截图后菜单自动更新，不用改这里。 */
-const worksAll = await getCollection('works');
+   画廊的分类 = 截图所属游戏（game）。由内容集合现算，新增截图后菜单自动更新。
+   （作品库已于 2026-09-19 移除，博客归档页无二级分类。） */
 const shotsAll = await getCollection('shots');
 
 const countBy = (list: string[]) => {
@@ -28,10 +27,8 @@ const countBy = (list: string[]) => {
   list.forEach((k) => k && m.set(k, (m.get(k) ?? 0) + 1));
   return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
 };
-const workTags = countBy(worksAll.flatMap((e) => e.data.tags ?? []));
 const shotGames = countBy(shotsAll.map((e) => e.data.game ?? ''));
 const SUBS: Record<string, { label: string; href: string }[]> = {
-  '/works/': workTags.map(([t]) => ({ label: t, href: `/works/?tag=${encodeURIComponent(t)}` })),
   '/gallery/': shotGames.map(([g]) => ({ label: g, href: `/gallery/?game=${encodeURIComponent(g)}` })),
 };
 

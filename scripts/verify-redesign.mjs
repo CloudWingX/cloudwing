@@ -27,11 +27,11 @@ const waitFor = async (x, ms = 40000) => { const t0 = Date.now(); while (Date.no
 
 await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.querySelector('.hd')`);
 // 清偏好 → 站点默认（dark）
 await ev(`try{localStorage.clear();sessionStorage.clear();document.cookie.split(';').forEach(c=>{const k=c.split('=')[0].trim();document.cookie=k+'=;path=/;max-age=0';});}catch(e){}`);
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`(()=>{const v=document.querySelector('.video-bg__el');return v&&v.readyState>=2;})()`, 60000);
 await sleep(2500);
 
@@ -46,7 +46,7 @@ await sleep(1200);
 const glass = await ev(`(()=>{
   const g=document.querySelector('.header-container');
   const c=getComputedStyle(g);
-  const card=document.querySelector('.wk-card');
+  const card=document.querySelector('.post');
   const cc=card?getComputedStyle(card):null;
   const btn=document.querySelector('.btn-github');
   const bc=btn?getComputedStyle(btn):null;
@@ -88,12 +88,12 @@ check('旧的暂停接口已移除（__cwVideoToggle / __cwVideoPaused / __cwMot
 
 // 系统级"减少动态"仍然生效（这是删除按钮后唯一的不播条件）
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.querySelector('.video-bg__el')`, 60000);
 await sleep(1500);
 check('prefers-reduced-motion：视频不播放', (await ev(`document.querySelector('.video-bg__el').paused`)) === true);
 await s('Emulation.setEmulatedMedia', { features: [] });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`(()=>{const v=document.querySelector('.video-bg__el');return v&&v.readyState>=2;})()`, 60000);
 await sleep(2000);
 check('恢复正常偏好后重新播放', (await ev(`document.querySelector('.video-bg__el').paused`)) === false);

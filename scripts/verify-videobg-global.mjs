@@ -39,7 +39,7 @@ const snap = () => ev(`(()=>{
     particles:!!part, grid:!!grid,
     cls:document.body.className, bgAnim:getComputedStyle(document.body).animationName};})()`);
 
-const PAGES = ['/', '/works/', '/gallery/', '/about/', '/account/', '/404.html'];
+const PAGES = ['/', '/blog/', '/gallery/', '/about/', '/account/', '/404.html'];
 console.log(`=== 逐个硬刷新访问（主题 ${THEME}）===`);
 const seqs = new Set();
 for (const path of PAGES) {
@@ -62,7 +62,7 @@ await s('Page.navigate', { url: BASE + '/' });
 await waitFor(`(()=>{const v=document.querySelector('.video-bg__el');return v&&v.readyState>=2;})()`, 45000);
 await sleep(1000);
 const before = (await snap()).seq;
-for (const path of ['/works/', '/gallery/', '/about/', '/account/']) {
+for (const path of ['/blog/', '/gallery/', '/about/', '/account/']) {
   await ev(`[...document.querySelectorAll('a')].find(a=>a.getAttribute('href')===${JSON.stringify(path)})?.click()`);
   await waitFor(`location.pathname===${JSON.stringify(path)}`, 20000);
   await sleep(1500);

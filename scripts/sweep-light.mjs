@@ -6,7 +6,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import sharp from 'sharp';
 
-const URL = process.argv[2] || 'http://127.0.0.1:4321/works/';
+const URL = process.argv[2] || 'http://127.0.0.1:4321/blog/';
 const CDP = 'http://127.0.0.1:9222';
 const OUT = 'D:\\deep seek workplace\\_shots\\sweep';
 mkdirSync(OUT, { recursive: true });

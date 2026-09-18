@@ -19,7 +19,8 @@
 | 分类入口 | 只在**左栏导航树**（子页三栏）；手机端（<1200px 侧栏隐藏）目前没有分类入口 |
 | 搜索 | **悬浮窗**（Pagefind），入口：`⌘/Ctrl + K`、左栏、移动端菜单（非独立页面） |
 | 背景 | 自托管视频 `public/media/bg-loop.mp4` + React Bits Particles 粒子层 |
-| 首页 | Hero（两行大标题 + 副标题 + 统计 + 技术标签 ｜ 右侧**磨砂玻璃代码卡片**，底部 5 个强调色预设）+ 最新作品 / 精选影像 / 关于预览 |
+| 首页 | Hero（两行大标题 + 副标题 + 统计 + 技术标签 ｜ 右侧**磨砂玻璃代码卡片**，底部 5 个强调色预设）+ 最新博客 / 精选影像 / 关于预览 |
+| 博客 | `/blog/` 归档页：按年份分组，正文在归档页内展开（无详情路由），支持外链文章 |
 | 强调色 | 5 套预设（雾蓝 / 镜蓝 / 极光 / 余烬 / 紫晶）：点一下**同步**换强调色 + 整页色调 + 代码高亮，900ms 中间色过渡 |
 | 子页面 | 三栏布局（左导航树 + 内容 + 右挂件）、更新日历、天气卡、音乐播放器 |
 | 订阅 | 作品档案 **RSS** → `/rss.xml`（head 自动发现 + 页脚入口） |
@@ -44,10 +45,10 @@ npm run og         # 重新生成分享图
 src/
   site.ts                  ← 站点信息 / NAV / IMG_CDN 图床开关 / GISCUS / MUSIC / WEATHER_CITY
   content.config.ts        ← works（作品）/ shots（影集）/ changelog（更新记录）schema
-  content/works/*.md       ← 每件作品一个 Markdown → 自动生成卡片与详情页
+  content/posts/*.md       ← 博客文章（title/date/tags/summary/link?）→ /blog/ 归档
   content/shots/*.md       ← 影集条目（title/date/game/image/aspect）
-  content/changelog/*.md   ← 一天一个文件，驱动侧栏「更新日历」
-  pages/                   ← index / works / gallery / about / account / 404 / rss.xml
+  content/changelog/*.md   ← 一天一个文件，驱动侧栏「活跃热力图」
+  pages/                   ← index / blog / gallery / about / account / 404 / rss.xml
   components/ReactBits/    ← React Bits 官方原码（**只允许在宿主层改**，见铁律三）
   components/*.jsx         ← 宿主层（Particles / Lanyard / 强调色等适配）
   layouts/Base.astro       ← 全局壳：暗色引导、Header/Footer、背景视频、Particles
@@ -71,9 +72,9 @@ public/
 
 ## 内容怎么加
 
-- **作品**：复制 `src/content/works/w001-lib.md` → 改 frontmatter（title/summary/date/**order**/tags/tools/state/cover/link）与正文；封面放 `public/covers/`。`order` 决定编号（W-00x）与排序，`tags` 进入左栏分类。
+- **博客**：在 `src/content/posts/` 新建 `YYYY-MM-DD-slug.md`，frontmatter 写 title/date/tags/summary（可选 `link` 跳外链），正文写在 md 里 —— 归档页自动按年份归档，无 `link` 时正文可在页面内展开。
 - **影集**：webp 放 `public/shots/mc/`，在 `src/content/shots/` 加一条 md（image 指向 `/shots/mc/mc-xxx.webp`）。
-- **更新记录**：`src/content/changelog/YYYY-MM-DD.md`（一天一个文件，`items[]` 写 kind/title/note），侧栏「更新日历」会自动聚合。
+- **更新记录**：`src/content/changelog/YYYY-MM-DD.md`（一天一个文件，`items[]` 写 kind/title/note），侧栏「活跃热力图」会自动聚合。
 - **留言板**：`site.ts` 的 `GISCUS` 填 repo/repoId/categoryId 后重建。
 
 ## 验证
@@ -83,7 +84,7 @@ public/
 
 | 脚本 | 覆盖 | 基线 |
 |---|---|---|
-| `smoke.mjs` | 总入口：溢出 / 异常 / 侧栏同步 / 软导航 / 手机端 | **45/45** |
+| `smoke.mjs` | 总入口：溢出 / 异常 / 侧栏同步 / 软导航 / 手机端 | **40/40** |
 | `verify-hero.mjs` | 首页 Hero 几何、与主栅格对齐、两行标题、强调色预设、**代码卡片磨砂玻璃** | **88/88** |
 | `verify-home.mjs` | 首页四层结构 / 图片策略 / SEO | **23/23** |
 | `verify-nav-shrink.mjs` | 导航三态 + 移动端汉堡（含"抽屉已无分类入口"） | **42/42** |
@@ -96,7 +97,7 @@ public/
 | `verify-videobg-global.mjs` | 全站视频一致性、软导航不重建 | **25/25** |
 | `contrast-audit.mjs` | WCAG 对比度审计 | **0 处不达标** |
 | `mobile-shots.mjs` | 三机型 × 5 页截图 + 横向溢出 | **15/15 无溢出** |
-| `diag-errors.mjs` | 逐页 JS 异常计数 | **7 页 0 异常** |
+| `diag-errors.mjs` | 逐页 JS 异常计数 | **6 页 0 异常** |
 | `diag-424.mjs` | React `error #424` 诊断（含压力复现开关） | **0 命中** |
 
 ## 发布到 GitHub + Cloudflare Pages

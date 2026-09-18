@@ -16,7 +16,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 
-const SHELL_PAGES = ['/works/', '/works/w002-site/', '/gallery/', '/about/', '/account/'];
+const SHELL_PAGES = ['/blog/', '/gallery/', '/about/', '/account/'];
 const ALL_PAGES = [ '/', ...SHELL_PAGES, '/404.html'];
 
 const results = [];
@@ -99,7 +99,7 @@ const main = async () => {
     process.exit(2);
   }
   try {
-    const r = await fetch(BASE + '/works/');
+    const r = await fetch(BASE + '/blog/');
     if (!r.ok) throw new Error(String(r.status));
   } catch {
     console.error(`✗ 连不上预览站点 ${BASE}——请先 npm run build && npm run preview -- --port 4321`);
@@ -141,7 +141,7 @@ const main = async () => {
 
   // 2) 长页面：两栏吸顶逐帧同步 + 不被导航栏压在下面
   console.log('\n[2] 侧栏吸顶同步（/gallery/ 全页往返，逐帧采样）');
-  await withTab(BASE + '/works/', async ({ send, evaluate }) => {
+  await withTab(BASE + '/blog/', async ({ send, evaluate }) => {
     await setup(send, 1440, 900);
     await evaluate(`location.replace(${JSON.stringify(BASE + '/gallery/')})`);
     await sleep(6000);
@@ -170,7 +170,7 @@ const main = async () => {
 
   // 3) 软导航往返后交互仍在（分类筛选 + 更新日历）
   console.log('\n[3] 软导航往返后的交互');
-  await withTab(BASE + '/works/', async ({ send, evaluate, errors }) => {
+  await withTab(BASE + '/blog/', async ({ send, evaluate, errors }) => {
     await setup(send, 1440, 900);
     // 二级菜单是 JS 生成的（ui.js 的 navSub()），日历面板也由 JS 渲染。
     // 固定 6s 在线上会赶在它们生成之前就查询 → 误报"未找到 ?tag= 链接 / 无日历"。
@@ -184,31 +184,21 @@ const main = async () => {
       }
       return false;
     };
-    // 分类入口：2026-09-18 导航改版后不再有二级菜单（照 reference 复刻），
-    // 分类改由左栏导航树的 ?tag= 链接承担 —— 所以这里点侧栏的分类链接。
-    await waitFor(`[...document.querySelectorAll('a[href*="?tag="]')].some((x) => x.closest('.shell-left'))`);
+    // 分类入口：2026-09-19 起作品库已移除，左栏导航树改为「博客归档」入口。
+    // 这里点左栏的「博客归档」链接，验证软导航后能正常打开归档页。
+    await waitFor(`[...document.querySelectorAll('a[href="/blog/"]')].some((x) => x.closest('.shell-left'))`);
     await waitFor(`!!document.querySelector('[data-cal-day]')`);
-    // 点左栏导航树里的第一个分类
-    const href = await evaluate(`(() => {
-      const a = [...document.querySelectorAll('a[href*="?tag="]')].find((x) => x.closest('.shell-left'));
-      return a ? a.getAttribute('href') : null; })()`);
-    if (href) {
-      await evaluate(`[...document.querySelectorAll('a[href*="?tag="]')].find((x) => x.getAttribute('href') === ${JSON.stringify(href)}).click()`);
-      // 轮询等筛选生效：线上软导航 + 水合比本地慢，固定 sleep 会读到"还没过滤"的中间态
-      let d = null;
-      const t0 = Date.now();
-      while (Date.now() - t0 < 15000) {
-        await sleep(500);
-        d = await evaluate(`(() => ({ url: location.pathname + location.search,
-          hidden: [...document.querySelectorAll('.wk-item')].filter((i) => i.hidden).length,
-          chip: document.getElementById('catnow') ? !document.getElementById('catnow').hidden : null }))()`);
-        if (d && d.hidden > 0 && d.chip === true) break;
-      }
-      check('侧栏分类 → 列表按分类过滤', !!d && d.hidden > 0, `${d ? d.url : '?'}（隐藏 ${d ? d.hidden : '?'} 项）`);
-      check('分类回显条出现', !!d && d.chip === true);
-    } else {
-      check('左栏存在分类入口', false, '未找到 ?tag= 链接');
+    await evaluate(`[...document.querySelectorAll('a[href="/blog/"]')].find((x) => x.closest('.shell-left'))?.click()`);
+    // 轮询等软导航完成：线上水合比本地慢，固定 sleep 会读到中间态
+    let blogNav = false;
+    const t0 = Date.now();
+    while (Date.now() - t0 < 15000) {
+      await sleep(500);
+      blogNav = !!(await evaluate(`location.pathname === '/blog/' && !!document.querySelector('.post-list')`));
+      if (blogNav) break;
     }
+    check('左栏博客归档 → 打开归档页', blogNav === true, blogNav ? '/blog/（归档列表已渲染）' : '未跳转');
+    check('归档按年份分组', !!(await evaluate(`document.querySelectorAll('.year-block').length >= 1`)));
     // 更新日历：点有记录的日期应展开明细
     await evaluate(`document.querySelector('[data-cal-day]')?.click()`);
     await sleep(800);    const cal = await evaluate(`(() => { const p = document.querySelector('[data-cal-panel]');
@@ -235,9 +225,9 @@ const main = async () => {
 
   // 4) 手机视口：侧栏隐藏、单列
   console.log('\n[4] 手机视口');
-  await withTab(BASE + '/works/', async ({ send, evaluate }) => {
+  await withTab(BASE + '/blog/', async ({ send, evaluate }) => {
     await setup(send, 414, 860);
-    await evaluate(`location.replace(${JSON.stringify(BASE + '/works/')})`);
+    await evaluate(`location.replace(${JSON.stringify(BASE + '/blog/')})`);
     await sleep(3000);
     // 手机端侧栏是 display:none（高度 0），所以等中栏出现即可
     await waitForLayout(evaluate, '.main-content');

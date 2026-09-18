@@ -26,7 +26,7 @@ await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: THEME }] });
 await s('Page.addScriptToEvaluateOnNewDocument', { source: `try{localStorage.setItem('cw-theme-pref','${THEME}');}catch(e){}` });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 const waitFor = async (x, ms = 30000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ev(x)) return true; await sleep(400); } return false; };
 await waitFor(`!!document.querySelector('.header-container')`);
 await sleep(1500);
@@ -68,11 +68,10 @@ check('边框不是透明', !/rgba\([^)]*,\s*0\)/.test(String(bar.边框)), bar.
 check('胶囊内有高斯模糊', /blur\(\s*\d+/.test(String(bar.模糊)) && parseFloat(String(bar.模糊).match(/blur\((\d+)/)[1]) >= 12, String(bar.模糊));
 check('背景为半透明玻璃（非纯色）', /rgba\(/.test(String(bar.背景)), String(bar.背景));
 
-console.log('\n=== 分类入口（已从导航二级菜单迁到左栏导航树）===');
-// 2026-09-18 改版：导航栏不再有二级菜单（照 reference），分类链接改由左栏承担。
-// 注意：2026-09-18 起移动端抽屉里**不再有**分类链接（按用户要求删除），分类只剩左栏一处；
-// 不过断言仍显式限定在左栏内，免得以后抽屉再加回同类链接时误判。
-const sub = await ev(`(()=>{const el=document.querySelector('.shell-left a[href*="?tag="]');
+console.log('\n=== 博客归档入口（作品库已移除，左栏承担内容入口）===');
+// 2026-09-19 起作品库移除，左栏导航树的「博客」分组成为主要内容入口；
+// 断言仍显式限定在左栏内，免得导航/抽屉再加回同类链接时误判。
+const sub = await ev(`(()=>{const el=document.querySelector('.shell-left a[href="/blog/"]');
   if(!el) return null;
   const b=el.getBoundingClientRect();
   const cs=getComputedStyle(el);
@@ -81,13 +80,13 @@ const sub = await ev(`(()=>{const el=document.querySelector('.shell-left a[href*
     文字:(el.textContent||'').trim().slice(0,20)};})()`);
 console.log('  ' + JSON.stringify(sub));
 check('导航栏已无二级菜单（照参考）', (await ev(`document.querySelectorAll('[data-nav-sub], .nav-sub').length`)) === 0);
-check('分类入口仍在（左栏导航树，可见）', !!sub && sub.在左栏 === true && sub.可见 === true,
-  sub ? `${sub.文字}（${sub.宽高}）` : '未找到左栏 ?tag= 链接');
+check('博客归档入口仍在（左栏导航树，可见）', !!sub && sub.在左栏 === true && sub.可见 === true,
+  sub ? `${sub.文字}（${sub.宽高}）` : '未找到左栏 /blog/ 链接');
 check('已无遗留的二级菜单开关', (await ev(`document.querySelectorAll('[data-nav-caret]').length`)) === 0);
 
 console.log('\n=== 布局未受影响 ===');
 check('无横向溢出', (await ev(`document.documentElement.scrollWidth-document.documentElement.clientWidth`)) === 0);
-check('导航项仍可点击（元素在最上层）', (await ev(`(()=>{const a=document.querySelector('.nav-links a[href="/works/"]');
+check('导航项仍可点击（元素在最上层）', (await ev(`(()=>{const a=document.querySelector('.nav-links a[href="/blog/"]');
   if(!a) return false; const b=a.getBoundingClientRect();
   const top=document.elementFromPoint(Math.round(b.left+b.width/2), Math.round(b.top+b.height/2));
   return a===top||a.contains(top)||top?.closest('.nav-links')!==null;})()`)) === true);

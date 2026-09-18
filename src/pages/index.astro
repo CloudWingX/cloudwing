@@ -10,20 +10,22 @@ import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
 import { SITE, ACCENTS, ACCENT_DEFAULT } from '../site';
 
-// —— ② 最新作品：取作品库最新 3 篇（与 /works/ 联动） ——
-const worksAll = await getCollection('works');
-const latestWorks = worksAll
+// —— ② 最新博客：取博客最新 3 篇（与 /blog/ 联动） ——
+const postsAll = await getCollection('posts');
+const latestPosts = postsAll
   .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
   .slice(0, 3)
-  .map((w) => ({
-    no: 'W-' + String(w.data.order ?? 0).padStart(3, '0'),
-    title: w.data.title ?? '未命名档案',
-    summary: w.data.summary ?? '',
-    tags: (w.data.tags ?? []).slice(0, 3),
-    tools: (w.data.tools ?? []).slice(0, 3),
-    cover: w.data.cover ?? '/covers/blank.svg',
-    url: `/works/${w.id}/`,
-  }));
+  .map((p) => {
+    const d = new Date(p.data.date);
+    const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return {
+      date: dateStr,
+      title: p.data.title ?? '未命名文章',
+      summary: p.data.summary ?? '',
+      tags: (p.data.tags ?? []).slice(0, 3),
+      url: p.data.link ?? `/blog/#p-${p.id}`,
+    };
+  });
 
 // —— ③ 精选影像：按日期挑 6 张（优先 16:9，网格更整齐） ——
 const allShots = await getCollection('shots');
@@ -46,7 +48,7 @@ const aboutPreview = [
 
 /* ══════════════════════════════════════════════════════════════
    Hero 数据 —— 版式照 reference（code_20260918.html）复刻，
-   内容全部来自站点真实数据（与 ②③④、/works/、/gallery/ 联动）
+   内容全部来自站点真实数据（与 ②③④、/blog/、/gallery/ 联动）
    ══════════════════════════════════════════════════════════════ */
 
 // 徽标：取最近一条更新记录（changelog）
@@ -57,12 +59,12 @@ const latestKind = changelog[0]?.data.items?.[0]?.kind ?? '更新';
 const latestTitle = changelog[0]?.data.items?.[0]?.title ?? '内容持续更新中';
 
 // 两个统计数字（参考是「170+ components / Free forever」）：用站点真实条目数
-const worksCount = worksAll.length;
+const postsCount = postsAll.length;
 const shotsCount = allShots.length;
 
-// 技术栈标签：由作品 frontmatter 的 tools 现算，取出现最多的 6 个
+// 技术栈标签：由博客 frontmatter 的 tags 现算，取出现最多的 6 个
 const toolCount = new Map<string, number>();
-for (const w of worksAll) for (const t of w.data.tools ?? []) if (t) toolCount.set(t, (toolCount.get(t) ?? 0) + 1);
+for (const p of postsAll) for (const t of p.data.tags ?? []) if (t) toolCount.set(t, (toolCount.get(t) ?? 0) + 1);
 const topTools = [...toolCount.entries()]
   .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'en'))
   .slice(0, 6)
@@ -101,7 +103,7 @@ const codeSample = [
 
 <Base
   title="首页"
-  description="CloudWing 云翼的个人档案站：Java 后端与质量保障方向。这里收录编号作品档案与影像收藏，打开即见最新产出。"
+  description="CloudWing 云翼的个人博客与学习档案：Java 后端与质量保障方向。这里归档博客文章与影像收藏，打开即见最新产出。"
   bodyClass="home-route"
 >
   <div class="home">
@@ -126,8 +128,8 @@ const codeSample = [
 
         <div class="hero-features">
           <div class="feature-item">
-            <span class="feature-number">{worksCount}</span>
-            <span class="feature-label">篇作品档案</span>
+            <span class="feature-number">{postsCount}</span>
+            <span class="feature-label">篇博客文章</span>
           </div>
           <div class="feature-divider"></div>
           <div class="feature-item">
@@ -175,35 +177,28 @@ const codeSample = [
       </div>
     </section>
 
-    <!-- ═══ ② 最新作品 ═══ -->
-    <section class="sec sec-works" id="sec-works" aria-labelledby="h-works">
+    <!-- ═══ ② 最新博客 ═══ -->
+    <section class="sec sec-posts" id="sec-posts" aria-labelledby="h-posts">
       <div class="wrap">
         <div class="sec-head">
-          <h2 id="h-works">最新作品</h2>
-          <a class="sec-more" href="/works/">全部作品 <span aria-hidden="true">→</span></a>
+          <h2 id="h-posts">最新博客</h2>
+          <a class="sec-more" href="/blog/">全部文章 <span aria-hidden="true">→</span></a>
         </div>
         <ul class="work-cards">
-          {latestWorks.map((w, i) => (
+          {latestPosts.map((p, i) => (
             <li>
-              <a class="wc" href={w.url}>
-                {/* 固定宽高比容器：图片未加载也不跳版（防 CLS） */}
-                <span class="wc-cover">
-                  <img
-                    src={w.cover}
-                    alt={`${w.no} ${w.title} 的封面`}
-                    width="1600"
-                    height="900"
-                    loading={i === 0 ? 'eager' : 'lazy'}
-                    decoding="async"
-                  />
+              <a class="wc" href={p.url}>
+                {/* 无封面：用日期徽标占位（固定高度防跳版） */}
+                <span class="wc-cover wc-cover--txt" aria-hidden="true">
+                  <span class="wc-date">{p.date}</span>
                 </span>
                 <span class="wc-body">
-                  <span class="wc-no">{w.no}</span>
-                  <span class="wc-title">{w.title}</span>
-                  {w.summary && <span class="wc-desc">{w.summary}</span>}
-                  {w.tags.length > 0 && (
+                  <span class="wc-no">BLOG</span>
+                  <span class="wc-title">{p.title}</span>
+                  {p.summary && <span class="wc-desc">{p.summary}</span>}
+                  {p.tags.length > 0 && (
                     <span class="wc-tags">
-                      {w.tags.map((t) => (
+                      {p.tags.map((t) => (
                         <span class="tag">{t}</span>
                       ))}
                     </span>
@@ -853,6 +848,17 @@ const codeSample = [
   .wc:hover { transform: scale(1.02); border-color: var(--line-hover); }
   /* 固定宽高比容器：防 CLS */
   .wc-cover { display: block; aspect-ratio: 16 / 9; overflow: hidden; background: rgba(255, 255, 255, 0.04); }
+  /* 博客卡没有封面图：用「日期徽标 + 玻璃渐变」占位，同样锁 16:9 防跳版 */
+  .wc-cover--txt {
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(120% 140% at 20% 0%, rgba(159, 211, 232, 0.18), rgba(159, 211, 232, 0) 55%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+  }
+  .wc-date {
+    font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 600; letter-spacing: 0.04em;
+    color: var(--accent); opacity: 0.85; font-variant-numeric: tabular-nums;
+  }
   .wc-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s var(--ease); }
   .wc:hover .wc-cover img { transform: scale(1.04); }
   .wc-body { display: flex; flex-direction: column; gap: 0.4rem; padding: 1rem 1.1rem 1.2rem; }

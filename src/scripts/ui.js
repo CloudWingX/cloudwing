@@ -1793,7 +1793,7 @@ function searchModal() {
           showSubResults: true,
           showImages: false,
           translations: {
-            placeholder: '搜索作品、图集与页面…',
+            placeholder: '搜索博客、图集与页面…',
             clear_search: '清空',
             load_more: '加载更多结果',
             search_label: '站内搜索',

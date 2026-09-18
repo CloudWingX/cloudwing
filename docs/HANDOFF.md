@@ -1237,6 +1237,50 @@ A/B 开关：`CW_DISABLE_SAFE_UNMOUNT=1` 重新构建即可关掉补丁做对照
 
 ---
 
+## 40. ★内容结构调整：移除作品库 → 新增博客归档 + 活跃热力图★（2026-09-19）
+
+### 40.1 移除作品库
+
+- 删除：`src/pages/works/`（列表 + 详情）、`src/content/works/`（6 篇）、
+  `src/layouts/WorkLayout.astro`、`src/components/WorkCard.astro`。
+- 连带更新：`site.ts`（NAV 作品库→博客、tagline/notice 措辞）、`index.astro`
+  （②区块改为**最新博客** 3 篇，卡片无封面 → 日期徽标占位，同样锁 16:9 防跳版；
+  hero 统计「篇作品档案」→「篇博客文章」，技术标签改由博客 tags 现算）、
+  `SidebarNav`（作品库/分类两组 → **博客**一组）、`SidebarWidgets`（统计与事件里的作品 → 博客）、
+  `rss.xml.ts`（订阅源改为博客）、`Base.astro`（RSS 标题）、`404.astro` 与 `about.astro` 的链接、
+  `AboutMagicBento`（Works 卡 → Blog 卡）、`ui.js` 搜索占位文案。
+- `content.config.ts`：移除 `works` 集合。⚠️ 集合删了但还有地方 `getCollection('works')` 时，
+  构建会报 WARN「collection does not exist」—— 出现这个警告就说明还有引用没清干净（Header.astro 里就藏了一处）。
+
+### 40.2 博客归档页 `/blog/`
+
+- `posts` 集合：title/date/tags/summary 必填，`link` 可选（外链文章直接跳转）。
+- 归档页**按年份分组**（年份数字用强调色 + 分隔线），每条：日期 + 标题 + 标签 + 摘要；
+  有正文且非外链的条目用 `<details>` 在页面内展开正文（`render()` 预渲染，不单独出详情路由）。
+- 左栏导航树「博客」分组列出全部文章；RSS 改订阅博客。
+
+### 40.3 侧栏「活跃热力图」（GitHub contributions 风格）
+
+- 替换原来的月历：**近 26 周**（列 = 周、行 = 周日→周六），格子尺寸随容器自适应；
+  强度按当天事件数（博客 + 截图 + changelog）分 **5 档**（0–4），
+  颜色用 `rgba(var(--accent-rgb), α)` 阶梯 → **跟随色卡换色**。
+- 月份标签只标每月第一次出现的列；左侧星期标签一/三/五；图例「少 → 多」；
+  今天有描边。有记录的格子可点 → 沿用 `data-cal-day` 委托展开当天明细面板（ui.js 零改动）。
+- 两栏吸顶不受影响：`sideSticky()` 会把左右栏补成等高（实测 941/941）。
+
+### 40.4 断言与基线
+
+- `verify-nav`：「分类入口」→「博客归档入口在左栏」；`verify-redesign`：玻璃卡选择器
+  `.wk-card` → `.post`（作品卡已不存在）；`smoke`：分类筛选块 → 博客归档入口跳转 +
+  按年份分组断言，SHELL_PAGES 去掉作品页。
+- 基线更新：smoke 45→**40**、diag-errors 7→**6 页**、其余不变
+  （hero 88、home 23、nav-shrink 42、nav 14、brand 10、theme 11、redesign 16、
+  search 17、videobg 22、videobg-global 25、contrast 0、mobile 15、diag-424 0）。
+- ⚠️ `diag-424.mjs` 的轮数参数解析有坑：`Number(argv[3] || 4)` 在 argv[3] 传了
+  `'dark'`（主题参数）时是 NaN —— 必须写 `Number(argv[3]) || 4`。
+
+---
+
 ## 7. 验证与调试
 
 ### 7.1 无头浏览器（CDP）
@@ -1297,11 +1341,11 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 
 | 脚本 | 覆盖什么 | 当前基线 |
 |---|---|---|
-| `smoke.mjs` | ★总入口：各页横向溢出/控制台异常/侧栏存在与等高、长页两栏逐帧同步、"不钉在导航栏下"、软导航往返后的分类筛选与日历交互、手机端侧栏隐藏 | **45/45** |
+| `smoke.mjs` | ★总入口：各页横向溢出/控制台异常/侧栏存在与等高、长页两栏逐帧同步、"不钉在导航栏下"、软导航往返后的博客归档入口与热力图交互、手机端侧栏隐藏 | **40/40** |
 | `verify-hero.mjs` | 首页 Hero：几何/比例 + 与主栅格对齐（同宽/同内边距/内容左缘重合）+ 两行标题 + 强调色预设 + **整块竖向居中/容器居中/标题字号/`--card-shift`** + **手机端代码卡片按内容展开（未被压扁裁切）** | **86/86**（2026-09-18 修手机端卡片被裁后 85 → 86） |
-| `verify-home.mjs` | 首页四层结构、图片策略、防 CLS 容器、alt、区块间距、SEO、移动端单列 | **23/23** |
+| `verify-home.mjs` | 首页四层结构（最新**博客**）、图片策略、防 CLS 容器、alt、区块间距、SEO、移动端单列 | **23/23** |
 | `verify-nav-shrink.mjs` | 导航三态（贴顶通栏/滚动胶囊/回顶）+ 形态过渡 + 移动端汉堡菜单（**含"抽屉已无分类入口"、"已无外链按钮"、"左右各内缩 12px"、"四角圆角 ≥12px 且一致"**）+ **导航容器与主内容容器同宽、同左缘、自身居中** | **42/42**（2026-09-18 删分类 + 删外链 + 菜单改圆角矩形后 39 → 42） |
-| `verify-nav.mjs` | 导航几何、玻璃、分类入口已迁左栏、无遗留二级菜单 | **14/14** |
+| `verify-nav.mjs` | 导航几何、玻璃、**博客归档入口在左栏**、无遗留二级菜单 | **14/14** |
 | `verify-brand.mjs` | 品牌标志（viewBox、云体/羽翼色值、旧六边形已清、不超导航条） | **10/10** |
 | `verify-theme.mjs` | 单主题不变量：默认暗色/系统浅色仍暗色/历史偏好切不回浅色/无开关/首屏逐帧无浅色帧 | **11/11** |
 | `verify-redesign.mjs` | 暗色电影感：玻璃令牌取值、**无暂停按钮 + 视频默认在播 + 旧暂停接口已移除 + reduced-motion 仍不播**、导航滚动过渡 | **16/16**（2026-09-18 暂停按钮删除后由 14 条改为此 6 条） |
@@ -1310,7 +1354,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 | `verify-videobg-global.mjs` | 全站背景一致性：逐页硬刷新 + 软导航一圈，视频未被重建、旧背景仍在 | **25/25** |
 | `contrast-audit.mjs` | WCAG 对比度审计（逐节点"前景 vs 实际合成背景"） | 暗色 **0 处不达标** |
 | `mobile-shots.mjs` | 三机型视口 × 5 页截图 + 横向溢出统计 | **15/15 无溢出** |
-| `diag-errors.mjs` | 逐页 JS 异常计数 | 7 页全 **0** |
+| `diag-errors.mjs` | 逐页 JS 异常计数 | 6 页全 **0** |
 | `diag-edges.mjs` | **诊断（不断言）**：容器边缘逐段偏差 + 全屏长竖线名单 + "容器级装饰层"结构判定。支持 `EXTRA_CSS='...'` 做 A/B（把被删的层注回去看断言会不会红）、`W`/`H` 环境变量换视口 | 按需 |
 | `probe-point.mjs` | **诊断（不断言）**：`node scripts/probe-point.mjs / 1091 188` 把像素坐标翻译成 DOM（`elementsFromPoint` + 各伪元素的 `backgroundImage/inset`），用来判断某处是"视频内容"还是"CSS 层" | 按需 |
 | `diag-424.mjs` | **诊断（不断言）**：抓 `React error #424` 的**完整栈**（文档创建前注入 `reportError` 钩子，并自带注入自检）。支持 `FLOW=smoke`（复刻 smoke [3]）、`STRESS=1`（`HOPS` 次快速换页，`GAP` 间隔）、`CPU=n` 降速、`LOAD=n` 开 n 个标签制造调度竞争 | 修复前 **7 次** / 修复后 **0 次** |

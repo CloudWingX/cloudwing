@@ -1,19 +1,16 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
-// 作品档案数据源：src/content/works/*.md
-const works = defineCollection({
-  loader: glob({ pattern: '**/*.md', base: './src/content/works' }),
+// 博客文章数据源：src/content/posts/*.md
+// 归档页 /blog/ 按年份分组展示；link 可选（填了就跳外链，不填则展开正文）。
+const posts = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/posts' }),
   schema: z.object({
     title: z.string(),
     summary: z.string().default(''),
     date: z.coerce.date(), // YAML 日期会被解析成 Date，这里统一收编
-    order: z.number(),
     tags: z.array(z.string()).default([]),
-    tools: z.array(z.string()).default([]),
-    state: z.string().default('已公开'),
-    cover: z.string().default('/covers/blank.svg'),
-    link: z.string().optional(), // 外部链接（如 GitHub 仓库）
+    link: z.string().optional(), // 外部链接（如博客原文 / 掘金 / 知乎专栏）
   }),
 });
 
@@ -31,7 +28,7 @@ const shots = defineCollection({
 });
 
 // 站点更新记录：src/content/changelog/*.md —— 一天一个文件，items 里写当天做了什么。
-// 侧栏「更新日历」会把这些和作品/截图一起按日期聚合，点某天就能看到当天记录。
+// 侧栏「活跃热力图」会把这些和博客/截图一起按日期聚合。
 const changelog = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/changelog' }),
   schema: z.object({
@@ -48,4 +45,4 @@ const changelog = defineCollection({
   }),
 });
 
-export const collections = { works, shots, changelog };
+export const collections = { posts, shots, changelog };

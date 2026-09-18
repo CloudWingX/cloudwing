@@ -5,7 +5,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 
-const tab = await (await fetch(`${CDP}/json/new?` + encodeURIComponent(BASE + '/works/'), { method: 'PUT' })).json();
+const tab = await (await fetch(`${CDP}/json/new?` + encodeURIComponent(BASE + '/blog/'), { method: 'PUT' })).json();
 const ws = new WebSocket(tab.webSocketDebuggerUrl);
 await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
 let id = 0; const pending = new Map(); const errs = [];
@@ -34,8 +34,8 @@ const hasIslands = async () => {
   return r.result?.result?.value;
 };
 
-console.log(`=== 首屏加载 ${BASE}/works/ ===`);
-await send('Page.navigate', { url: BASE + '/works/' });
+console.log(`=== 首屏加载 ${BASE}/blog/ ===`);
+await send('Page.navigate', { url: BASE + '/blog/' });
 // 尽早采样，捕捉从 0 计上去的过程
 const samples = [];
 for (let t = 0; t < 14; t++) {

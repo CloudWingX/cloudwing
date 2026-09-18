@@ -2,7 +2,7 @@
 //   public/og/default.png     ← public/og/default.svg（站点默认分享图）
 //   public/og/<work-id>.png   ← 该作品 cover 指向的 SVG（每篇作品专属分享图）
 //
-// 用法：npm run og        （新增作品/换封面后跑一次）
+// 用法：（作品已移除，此脚本保留备用）
 // 依赖：sharp（Astro 已带）；<slug>.astro 会自动检测 /og/<id>.png 是否存在并回退默认图。
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,7 +14,7 @@ const sharp = require('sharp');
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OG_DIR = path.join(ROOT, 'public/og');
-const WORKS = path.join(ROOT, 'src/content/works');
+const WORKS = path.join(ROOT, 'src/content/posts');
 
 const W = 1200;
 const H = 630;

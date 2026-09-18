@@ -64,19 +64,22 @@ const st = await ev(`(()=>{
     卡片阴影:getComputedStyle(cards[0]).boxShadow,
     溢出:document.documentElement.scrollWidth-document.documentElement.clientWidth};})()`);
 console.log('  ' + JSON.stringify({ ...st, 卡片阴影: st.卡片阴影.slice(0, 70) }));
-check('最新作品 3 张', st.作品卡 === 3, String(st.作品卡));
+check('最新博客 3 篇', st.作品卡 === 3, String(st.作品卡));
 check('精选影像 6 张', st.影像 === 6, String(st.影像));
 check('关于预览 2–3 句 + 入口', st.关于段 >= 2 && st.关于段 <= 3 && st.关于入口 === '/about/', `${st.关于段} 句`);
 check('每个区块 padding ≥80px', st.区块padding.every((v) => v >= 80), JSON.stringify(st.区块padding));
 check('旧编号入口卡片已删除', st.旧入口 === 0, String(st.旧入口));
 check('图片 alt 齐全', st.缺alt === 0, `缺 ${st.缺alt}`);
 check('首屏图 eager、其余 lazy', st.eager >= 1 && st.lazy >= 1, `eager=${st.eager} lazy=${st.lazy}`);
-check('图片都有固定宽高比容器（防 CLS）', st.比例容器 === st.图片, `${st.比例容器}/${st.图片}`);
+/* 每张图片都必须包在固定宽高比容器里（.wc-cover / .shot-frame）—— 防止 CLS */
+check('图片都有固定宽高比容器（防 CLS）',
+  st.图片 > 0 && (await ev(`[...document.querySelectorAll('img')].every((i) => i.closest('.wc-cover,.shot-frame'))`)) === true,
+  `${st.比例容器}/${st.图片}`);
 check('卡片阴影符合规范', /0px 1px 3px/.test(st.卡片阴影) && /0px 8px 24px/.test(st.卡片阴影), st.卡片阴影.slice(0, 60));
 check('无横向溢出', st.溢出 === 0, String(st.溢出));
 
 console.log('\n=== SEO ===');
-for (const path of ['/', '/works/', '/gallery/', '/about/']) {
+for (const path of ['/', '/blog/', '/gallery/', '/about/']) {
   await s('Page.navigate', { url: BASE + path });
   await waitFor(`!!document.querySelector('title')`);
   await sleep(900);

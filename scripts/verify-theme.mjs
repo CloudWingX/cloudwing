@@ -25,24 +25,24 @@ await s('Page.enable'); await s('Runtime.enable');
 await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
 
 console.log('=== 1) 全新访客：清空所有存储后仍是暗色 ===');
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await sleep(2000);
 await ev(`try{localStorage.clear();sessionStorage.clear();document.cookie.split(';').forEach(c=>{const k=c.split('=')[0].trim();document.cookie=k+'=;path=/;max-age=0';});}catch(e){}`);
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.documentElement.dataset.theme`);
 await sleep(1500);
 check('默认主题为 dark', (await themeNow()) === 'dark', String(await themeNow()));
 
 console.log('\n=== 2) 系统偏好浅色时，站点仍是暗色（不再跟随系统） ===');
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.documentElement.dataset.theme`);
 await sleep(1200);
 check('系统浅色时仍为 dark', (await themeNow()) === 'dark', String(await themeNow()));
 
 console.log('\n=== 3) 历史遗留偏好不能把站点切回浅色 ===');
 await ev(`(()=>{try{localStorage.setItem('cw-theme-pref','light');localStorage.setItem('cw-theme','light');}catch(e){}})()`);
-await s('Page.navigate', { url: BASE + '/works/' });
+await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.documentElement.dataset.theme`);
 await sleep(1200);
 check('存过 light 偏好也仍是 dark', (await themeNow()) === 'dark', String(await themeNow()));
