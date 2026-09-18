@@ -73,7 +73,25 @@ await goto(1440, 900, false);
 const d = await snap();
 console.log('  ' + JSON.stringify({ hero: d.hero, title: d.title, card: d.card }));
 
-check('hero 左右内边距 32px（参考值）', d.hero.padL === '32px' && d.hero.padR === '32px', `${d.hero.padL}/${d.hero.padR}`);
+/* 容器与下方区块对齐（2026-09-18 全局容器加宽后）：
+   两者同宽（--w-max 1428）同内边距（--gutter），所以"内容左缘"必须重合。
+   之前 hero 是写死 32px、max-width 1280，比区块窄 80px。 */
+const edgeState = JSON.parse(await ev(`(function(){
+  var w=document.querySelector('.sec .wrap'), h=document.querySelector('.hero');
+  var cw=w?getComputedStyle(w):null, ch=h?getComputedStyle(h):null;
+  var heroL=document.querySelector('.hero-content').getBoundingClientRect();
+  var contentLeft = w ? Math.round(w.getBoundingClientRect().left + parseFloat(cw.paddingLeft)) : null;
+  return JSON.stringify({
+    heroPadL: ch?ch.paddingLeft:null, wrapPadL: cw?cw.paddingLeft:null,
+    heroMaxW: ch?ch.maxWidth:null, wrapMaxW: cw?cw.maxWidth:null,
+    heroContentLeft: Math.round(heroL.left), sectionContentLeft: contentLeft });})()`));
+check('hero 与区块容器同宽（都用 --w-max）', edgeState.heroMaxW === edgeState.wrapMaxW,
+  `${edgeState.heroMaxW} vs ${edgeState.wrapMaxW}`);
+check('hero 与区块容器同内边距（都用 --gutter）', edgeState.heroPadL === edgeState.wrapPadL,
+  `${edgeState.heroPadL} vs ${edgeState.wrapPadL}`);
+check('hero 内容左缘与区块内容左缘重合（对齐主栅格）',
+  Math.abs(edgeState.heroContentLeft - edgeState.sectionContentLeft) <= 1,
+  `hero=${edgeState.heroContentLeft} 区块=${edgeState.sectionContentLeft}`);
 check('hero 两栏 gap 80px（参考值）', d.hero.gap === '80px', d.hero.gap);
 // 注意：min-height:100vh 在 getComputedStyle 里会被解析成 px（900px），
 // 所以要么按视口高比，要么直接读源码里的声明 —— 这里按"等于视口高"断言。

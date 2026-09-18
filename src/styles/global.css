@@ -98,7 +98,15 @@
   --gutter: clamp(1.25rem, 5vw, 3.25rem);
   /* 主标题：48–72px（用户指定），只保留一行核心信息 */
   --display-size: clamp(2.75rem, 6.4vw, 4.5rem);
-  --w-max: 1140px;
+  /* 主内容容器：1428 = 参考站（reactbits.dev）主容器 1324 + 左右各 52（本站 --gutter 上限）。
+     即"内容净宽 1324"与参考一致（参考的 ln-hero-content 实测 max-width:1324，
+     1440 与 1920 下都不变）。
+       —— 为什么不直接写 1324：参考那 1324 含 24px 内边距，
+          而 .wrap 的左右内边距是 --gutter（大屏 52px），两者不能直接等号。
+     ⚠️ 只改这一个令牌：内部栅格、间距、断点、移动端全都不动（已逐项复核）。
+     ⚠️ 首页 hero 用的是自己的 max-width（index.astro），它也指向 var(--w-max)
+        并把左右内边距换成 --gutter，这样 hero 内容左缘与区块内容左缘精确重合。 */
+  --w-max: 1428px;
   --w-text: 46em;
   --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
 }

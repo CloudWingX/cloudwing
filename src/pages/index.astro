@@ -332,21 +332,27 @@ const codeSample = [
   .hero {
     position: relative;
     min-height: 100vh;
-    max-width: 1280px;
+    /* 与全局主内容容器对齐（--w-max 1428 + --gutter 左右内边距），
+       否则 hero 会比下方区块窄 80px，看着"上窄下宽"（实测 1440：hero 左缘 133 vs 区块 53）。
+       ⚠️ 只改容器本身：内部两栏仍是 max-width 645 / 440、gap 80，一个都没动。 */
+    max-width: var(--w-max);
     margin: 0 auto;
-    /* 参考用 px 定值；站点 --gutter 是 clamp(1.25rem,5vw,3.25rem)，会算出 64px，
-       所以这里必须显式写死左右内边距（断点里分别 24/20）。
+    /* 左右内边距改成与全局 .wrap 同一套 --gutter，这样 hero 与下方区块的
+       "内容左缘/右缘"精确重合（实测改前差 80px）。
        顶部 96px 是"最小呼吸位"：内容比视口矮时居中即可（此时留白远大于 96），
-       内容更高时 min-height 失效、就靠这 96px 保证徽标不被固定导航栏压住。 */
-    padding: 96px 32px 48px;
+       内容更高时 min-height 失效、就靠这 96px 保证徽标不被固定导航栏压住。
+       断点里（≤1024 24px、≤768 20px）仍按原值收紧，移动端不变。 */
+    padding: 96px var(--gutter) 48px;
     display: flex;
     /* 用户要求"大标题与卡片顶部齐平"：从居中改为顶对齐。
        左栏第一块是标题（badge 在标题上方？不 —— 顺序是 badge→标题→…），
        所以齐平比较的是"卡片顶"与"左栏顶"；两栏现在都从同一基线开始。 */
     align-items: flex-start;
-    /* 竖向居中：卡片比左栏高，俩都顶对齐后整块居中，徽标才不会被导航栏压住。
-       内容比视口高时 100vh 的 min-height 会失效、下面照常滚动。 */
-    justify-content: center;
+    /* 横向对齐：用 flex-start，让左栏左缘与下方区块的"内容左缘"精确重合
+       （两者现在同宽同内边距：max-width 都是 --w-max、左右都是 --gutter）。
+       居中会把这一块往里推 80px，看上去比下方区块窄一圈。
+       竖向的居中仍由 padding（96px 起）+ 100vh 兜住。 */
+    justify-content: flex-start;
     gap: 80px;
     overflow: hidden;
     /* 参考的 body line-height 是 normal；站点全局 1.8 会把各块撑高 */
