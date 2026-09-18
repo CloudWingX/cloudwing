@@ -17,7 +17,9 @@
 > 部署：Cloudflare 自动构建 —— 推 `main` → 构建 `npm run build` → 线上 <https://cloudwing.pages.dev>。
 > ⚠️ **写新的像素断言之前先读 §7.6**（三条硬要求：单位口径、扫描范围必须覆盖被怀疑的边界、
 > 并**证明它在缺陷态下会红**）—— 本文件里已经有过"断言恒真、连过两轮都没抓到真瑕疵"的教训。
-> 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 **45/45** 通过（本地与线上均通过）。
+> 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 **45/45** 通过。
+> ⚠️ **线上跑 `smoke` 是间歇的**：约 2/3 轮次会报 2~4 条已知的 `React error #424`
+> （见 §13 未决项 / §32），本地稳定 45/45。**别把"线上 smoke 全绿"当成验收条件。**
 > 全套验证脚本与用法见 **§7.2**；本机调试浏览器起法见 **§7.1**。
 > ⚠️ **验证脚本必须串行跑**（并发会大面积假失败，见 §7.1 第 6 条 / §32）。
 > ⚠️ **改导航 / Hero / 强调色 / 容器宽度前先读 §33–§36，首页版式还要读 §36.1 / §36.2**（形态取值与实测踩坑都在那里）。
@@ -1529,7 +1531,8 @@ node scripts/diag-errors.mjs http://127.0.0.1:4321            # 期望 7 页全 
 
 # 4) 线上同一套（先确认推送成功、CF 构建完成；反向特征检查见 §7.5）
 git ls-remote origin main
-node scripts/smoke.mjs https://cloudwing.pages.dev                 # 期望 45/45
+node scripts/poll-deploy.mjs --have '--w-max:\s*1300px' --not 'hero::before'   # 通了才继续
+node scripts/smoke.mjs https://cloudwing.pages.dev                 # ⚠️ 间歇：约 2/3 轮次会报已知的 #424
 node scripts/verify-videobg.mjs https://cloudwing.pages.dev dark   # 期望 22/22（含"容器边缘无分界线"）
 
 # 5) 可选：改过 hero / 容器宽度 / 背景层时，量一遍"容器边缘逐段偏差"
