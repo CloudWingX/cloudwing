@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import sitemap from '@astrojs/sitemap';
 import cjsInlineShim from './plugins/vite-cjs-inline-shim.mjs';
+import reactSafeUnmount from './plugins/vite-react-safe-unmount.mjs';
 
 // https://astro.build/config
 export default defineConfig({
@@ -21,6 +22,8 @@ export default defineConfig({
     plugins: [
       // 修复 Astro 7.3 content sync 内联执行 CJS 依赖报 "require is not defined"
       cjsInlineShim(),
+      // 修复软导航时卸载"尚未水合"的 React 岛抛 React error #424（见插件内注释）
+      reactSafeUnmount(),
     ],
   },
 });
