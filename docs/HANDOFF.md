@@ -1231,6 +1231,9 @@ A/B 开关：`CW_DISABLE_SAFE_UNMOUNT=1` 重新构建即可关掉补丁做对照
 - 断言：`verify-hero` 新增 2 条（模糊 ≥16px 且提饱和 / 多层玻璃 = 渐变+半透明底+内侧高光），
   **基线 86 → 88**。
 - ⚠️ 有前缀的 `-webkit-backdrop-filter` 会被当前构建链剥掉（见 §22 修订）。
+- ✅ **已推送上线**（`2ee2e16..6483164`）。线上确认特征：
+  `--have 'blur\(22px\)saturate\(1\.4\)' --have 'inset 0 1px #ffffff24' --not '#12121ab3'`
+  （CF 约 56 秒完成）；线上复跑 `verify-hero` **88/88**、`smoke` **45/45**。
 
 ---
 
