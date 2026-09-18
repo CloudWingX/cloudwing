@@ -778,7 +778,15 @@ const codeSample = [
     .hero-features { justify-content: flex-start; gap: 20px; }
     .component-tags { justify-content: flex-start; }
     .feature-number { font-size: 22px; }
-    .code-card { max-width: 100%; width: 100%; }
+    /* ★手机端卡片必须"按内容展开"，不能收起/裁切★（2026-09-18）
+       基础规则里的 `flex: 1 1 0` 在**行向**布局里管的是宽度（正确）；
+       但 ≤768px 是 `flex-direction: column`，主轴变成竖直方向，
+       `flex: 1 1 0` 就把卡片的**高度基准变成 0**，只能分到剩余空间 ——
+       内容一多就被压扁，再被卡片的 `overflow:hidden` 切掉（实测 390px：
+       卡片高 230、代码体需要 355，代码被截掉一截，看起来就像"收起"了）。
+       所以这里显式改成不伸不缩、高度随内容：flex: 0 0 auto。
+       hero 是 min-height:100vh，内容变高时它会自己长高，不会切顶。 */
+    .code-card { max-width: 100%; width: 100%; flex: 0 0 auto; }
     /* 代码行宽：手机端字号按**容器实测宽度 ÷ 最长行字数**反解，保证最长那行也放得下，
        不再需要横向滚动（原来 390px 下要滚 93px、360px 下要滚 123px）。
        系数 0.55 是这套等宽字体每字符推进宽度与字号的比（实测 13px → 7.1475px）。
