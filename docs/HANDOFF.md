@@ -1168,6 +1168,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 | `diag-errors.mjs` | 逐页 JS 异常计数 | 7 页全 **0** |
 | `diag-edges.mjs` | **诊断（不断言）**：容器边缘逐段偏差 + 全屏长竖线名单 + "容器级装饰层"结构判定。支持 `EXTRA_CSS='...'` 做 A/B（把被删的层注回去看断言会不会红）、`W`/`H` 环境变量换视口 | 按需 |
 | `probe-point.mjs` | **诊断（不断言）**：`node scripts/probe-point.mjs / 1091 188` 把像素坐标翻译成 DOM（`elementsFromPoint` + 各伪元素的 `backgroundImage/inset`），用来判断某处是"视频内容"还是"CSS 层" | 按需 |
+| `poll-deploy.mjs` | **推送后确认上线**：按 `--have` / `--not` 给的内容特征轮询线上（含首页自己引用的全部 CSS chunk），通了才退出 0；`--not` 用于**删除类改动的反向特征** | 按需 |
 | `border-check.mjs` / `card-separation.mjs` | 实际生效的边框宽度/颜色；卡面与页面底色分离度 | — |
 | `imgstats.mjs` / `imgpix.mjs` | 截图亮度分位数、过曝占比、四角采点 | — |
 | `shots-theme.mjs` / `shot-*.mjs` | 强制某主题/某状态截图（无头浏览器默认 dark，必须显式 setEmulatedMedia） | — |
@@ -1262,6 +1263,18 @@ mobile-shots 15/15（零横向溢出）、diag-errors 7 页全 0。
   **不要**把"线上 smoke 全绿"写进交接结论里，它是间歇的。
 
 ### 7.5 部署确认（别用 chunk 哈希！）
+**首选：用仓库里的轮询脚本**（推送完直接跑，它每 15 秒复测一次，通了才退出 0）：
+
+```powershell
+cd 'D:\deep seek workplace\endfield-blog'
+# 特征由你自己给（脚本故意不存默认特征 —— 默认值一定会过期）。--have 正向 / --not 反向。
+node scripts/poll-deploy.mjs --have '--w-max:\s*1300px' --have 'brightness\(var\(--vid-dim' `
+                            --not 'hero::before' --not '60% 50% at 30% ?-10%'
+# 超时/失败会打印逐项结果并以退出码 1 结束（可用于脚本里卡住"确认上线"这一步）
+```
+它自己会抓**首页 HTML + 首页引用的全部 CSS chunk**，所以不会踩"只看 /works/ 的 CSS"那个坑。
+
+**备用：PowerShell 一把梭**（想手工看一眼时用）
 ```powershell
 # 用内容特征判断：把改动的样式/类名拿到线上 HTML 或 CSS 里找
 $html = (Invoke-WebRequest 'https://cloudwing.pages.dev/works/' -UseBasicParsing).Content
@@ -1269,9 +1282,9 @@ $css  = ([regex]::Matches($html,'href="(/_astro/[^"]+\.css)"') | % { $_.Groups[1
          % { (Invoke-WebRequest ("https://cloudwing.pages.dev" + $_)).Content }) -join ''
 "新样式上线: " + [bool]($css -match 'clamp\(1\.45rem')     # ← 换成你这次改动的特征
 ```
-CF 构建通常 30~90 秒；超过 5 分钟没动静就先确认推送是否真的成功（`git ls-remote origin main`）。
+CF 构建通常 30~90 秒（四轮实测 38 秒）；超过 5 分钟没动静就先确认推送是否真的成功（`git ls-remote origin main`）。
 
-**⚠️ 上面那段只抓 `/works/` 页面的 CSS。** 首页 hero 的样式在**另外的 chunk** 里，
+**⚠️ 上面那段 PowerShell 只抓 `/works/` 页面的 CSS。** 首页 hero 的样式在**另外的 chunk** 里，
 只查 `/works/` 会得出"没上线"的假结论 —— 要确认首页改动，必须抓**首页自己的** CSS：
 
 ```powershell
