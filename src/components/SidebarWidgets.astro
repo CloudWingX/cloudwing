@@ -31,15 +31,10 @@ const lastActive = [...posts, ...shots]
   .sort((a, b) => b - a)[0];
 const lastActiveStr = lastActive ? new Date(lastActive).toISOString().slice(0, 10) : '—';
 
-/* ---------- 更新热力图：把「博客 / 截图 / 站点更新」按日期聚合成事件 ---------- */
+/* ---------- 更新热力图：把「截图 / 站点更新（含文章发布）」按日期聚合成事件 ----------
+   博客文章的发布已由 changelog 的「文章」条目记录（每日日志帖不再重复计入），
+   所以这里不再单独加 postEvents。 */
 type CalEvent = { kind: string; title: string; url?: string; note?: string };
-
-const postEvents = posts.map((e) => ({
-  date: new Date(e.data.date).toISOString().slice(0, 10),
-  kind: '博客',
-  title: e.data.title ?? '未命名文章',
-  url: `/posts/${e.id}/`,
-}));
 const shotEvents = shots.map((e) => ({
   date: new Date(e.data.date).toISOString().slice(0, 10),
   kind: '截图',
@@ -59,7 +54,7 @@ const logEvents = (await getCollection('changelog')).flatMap((e) =>
 
 // 日期 → 事件列表（新事件在前）
 const byDay = new Map<string, CalEvent[]>();
-[...postEvents, ...shotEvents, ...logEvents].forEach((ev) => {
+[...shotEvents, ...logEvents].forEach((ev) => {
   const list = byDay.get(ev.date) ?? [];
   list.push({ kind: ev.kind, title: ev.title, url: (ev as { url?: string }).url, note: (ev as { note?: string }).note });
   byDay.set(ev.date, list);
@@ -129,22 +124,14 @@ start.setDate(start.getDate() - start.getDay()); // 回退到周日
 
 type HeatCell = { iso: string; day: number; count: number; future: boolean; level: number };
 const heatCells: HeatCell[] = [];
-const heatMonths: { col: number; label: string }[] = [];
-let lastMonthSeen = -1;
 
 for (let i = 0; i < WEEKS * 7; i++) {
   const d = new Date(start.getTime() + i * dayMs);
   const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const col = Math.floor(i / 7);
   const future = d.getTime() > today0.getTime();
   const count = future ? 0 : (byDay.get(key) ?? []).length;
   const level = count === 0 ? 0 : count === 1 ? 1 : count === 2 ? 2 : count === 3 ? 3 : 4;
   heatCells.push({ iso: key, day: d.getDay(), count, future, level });
-  // 月份标签：每月第一次出现的列
-  if (d.getDate() <= 7 && lastMonthSeen !== d.getMonth() && col < WEEKS) {
-    heatMonths.push({ col, label: `${d.getMonth() + 1}月` });
-    lastMonthSeen = d.getMonth();
-  }
 }
 const heatTotal = heatCells.reduce((n, c) => n + c.count, 0);
 // 网格按「列=周、行=周几」排：CSS grid 按 column 流式填充
@@ -185,7 +172,7 @@ const quote = QUOTES[dayIndex % QUOTES.length];
     <p class="sw-last">最后更新 · {lastActiveStr}</p>
   </section>
 
-  <!-- 更新热力图：GitHub contributions 风格；有记录的日子可点，展开当天「做了什么」 -->
+  <!-- 更新热力图：GitHub contributions 风格；点色块在色块上方浮出简短信息 -->
   <section class="sidecard sw-cal-card">
     <h2>ACTIVITY / 活跃热力图</h2>
     <p class="sw-month">
@@ -193,12 +180,7 @@ const quote = QUOTES[dayIndex % QUOTES.length];
       {heatTotal > 0 && <span class="sw-month-n">{heatTotal} 条更新</span>}
     </p>
 
-    <div class="sw-heat" role="group" aria-label={`近 ${WEEKS} 周活跃热力图，有记录的日期可点开查看`}>
-      <div class="heat-months" aria-hidden="true">
-        {heatMonths.map((mo) => (
-          <span class="hm" style={`grid-column:${mo.col + 1}`}>{mo.label}</span>
-        ))}
-      </div>
+    <div class="sw-heat" role="group" aria-label={`近 ${WEEKS} 周活跃热力图，有记录的日期可点看概要`}>
       <div class="heat-wrap">
         <div class="heat-wd" aria-hidden="true">
           {['', '一', '', '三', '', '五', ''].map((d, i) => (
@@ -208,18 +190,15 @@ const quote = QUOTES[dayIndex % QUOTES.length];
         <div class="heat-grid" style={`--weeks:${WEEKS}`}>
           {heatGridCells.map((c) => {
             if (!c || c.future) return <span class="hc future" />;
-            const list = byDay.get(c.iso) ?? [];
-            const names = list.map((ev) => `${ev.kind}：${ev.title}`).join('；');
             return c.count > 0 ? (
               <button
                 type="button"
                 class:list={['hc', `lv${c.level}`, { today: c.iso === todayIso }]}
                 data-cal-day={c.iso}
                 aria-label={`${c.iso} · ${c.count} 条记录`}
-                title={`${c.iso} · ${c.count} 条\n${names}`}
               />
             ) : (
-              <span class:list={['hc', `lv${c.level}`, { today: c.iso === todayIso }]} title={c.iso} />
+              <span class:list={['hc', `lv${c.level}`, { today: c.iso === todayIso }]} />
             );
           })}
         </div>
@@ -231,15 +210,8 @@ const quote = QUOTES[dayIndex % QUOTES.length];
       </p>
     </div>
 
-    <p class="sw-cal-hint" data-cal-hint>点格子看当天做了什么</p>
+    <p class="sw-cal-hint" data-cal-hint>点色块看当天做了什么</p>
 
-    <div class="sw-cal-panel" data-cal-panel hidden>
-      <p class="sw-cal-panel-head">
-        <span data-cal-title>—</span>
-        <button type="button" class="sw-cal-close" data-cal-close aria-label="收起当天记录">收起</button>
-      </p>
-      <ul class="sw-cal-list" data-cal-list></ul>
-    </div>
     <script type="application/json" data-cal-data set:html={calJson} />
   </section>
 

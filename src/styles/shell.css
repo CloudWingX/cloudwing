@@ -693,15 +693,7 @@
    列 = 周（旧 → 新），行 = 周一到周日；格子尺寸随容器自适应。
    强度用 rgba(var(--accent-rgb), α) 阶梯 —— 跟随色卡换色。 */
 .sw-heat { display: flex; flex-direction: column; gap: 0.3rem; }
-.heat-months,
 .heat-wd { display: grid; }
-.heat-months {
-  grid-template-columns: repeat(var(--weeks), minmax(0, 1fr));
-  margin-left: 1.35rem; /* 给左侧星期标签让位 */
-  font-size: 0.6rem;
-  color: var(--ink-3);
-}
-.heat-months .hm { grid-row: 1; white-space: nowrap; overflow: visible; }
 .heat-wrap { display: flex; gap: 0.25rem; }
 .heat-wd {
   grid-auto-flow: row;
@@ -729,7 +721,7 @@
   aspect-ratio: 1;
   border: 0;
   padding: 0;
-  border-radius: 2.5px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.055);
   min-width: 0;
 }
@@ -757,6 +749,29 @@
 }
 .heat-legend .hc.sm { width: 9px; height: 9px; aspect-ratio: auto; }
 .heat-legend .hl-t { margin: 0 2px; }
+/* 点色块浮出的简短信息（替代旧的下方详情面板）：
+   挂在 body 上用 fixed 定位，位置由 ui.js 按色块矩形现算（色块上方居中、钳在视口内） */
+.heat-tip {
+  position: fixed;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: #10131a;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  font-size: 0.76rem;
+  color: var(--ink-2);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.heat-tip strong {
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
 .sw-cal {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));

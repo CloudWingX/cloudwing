@@ -217,11 +217,19 @@ const main = async () => {
       return {天数:days.length, 可跳文章:withPost.length, 年份:[...document.querySelectorAll('.tl-yy')].length};})()`);
     check('归档时间线按日记录（≥5 天）', arch.天数 >= 5, `${arch.天数} 天 / ${arch.年份} 个年份`);
     check('时间线条目可跳转对应文章详情', arch.可跳文章 > 0, `${arch.可跳文章} 条可跳`);
-    // 更新日历：点有记录的日期应展开明细
+    // 热力图：点有记录的色块 → 色块上方浮出简短信息（这天有几次更新、几次修复）
     await evaluate(`document.querySelector('[data-cal-day]')?.click()`);
-    await sleep(800);    const cal = await evaluate(`(() => { const p = document.querySelector('[data-cal-panel]');
-      return p ? { open: !p.hidden, items: p.querySelectorAll('li').length } : null; })()`);
-    check('侧栏更新日历可展开当天记录', !!cal && cal.open && cal.items > 0, cal ? `${cal.items} 条` : '无日历');
+    await sleep(600);
+    const cal = await evaluate(`(() => { const t = document.querySelector('.heat-tip');
+      const cell = document.querySelector('.hc[data-cal-day][aria-expanded]');
+      return t ? { text: t.textContent, pinned: !!cell } : null; })()`);
+    check('热力图点击浮出简短信息', !!cal && /这天有/.test(cal.text) && cal.pinned,
+      cal ? cal.text.slice(0, 40) : '无浮层');
+    // 再点同格 → 收起
+    await evaluate(`document.querySelector('[data-cal-day]')?.click()`);
+    await sleep(400);
+    const calGone = await evaluate(`!document.querySelector('.heat-tip')`);
+    check('再点同格浮层收起', calGone === true);
     // 搜索悬浮窗：2026-09-18 改版后顶栏不再有搜索按钮（照 reference 的导航），
     // 只剩 ⌘/Ctrl+K 与侧栏/移动端按钮三种入口 —— 这里测键盘入口。
     await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true, bubbles: true }))`);

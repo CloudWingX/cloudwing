@@ -1285,9 +1285,11 @@ function sideSticky() {
   }
 }
 
-/* ---------- 侧栏「更新日历」：点某天看当天做了什么 ----------
+/* ---------- 侧栏「活跃热力图」：点色块浮出简短信息 ----------
    数据由组件以 <script type="application/json" data-cal-data> 内联在卡片里；
-   软导航后 DOM 重建但数据随之更新，所以这里只绑一次 document 委托，每次点击现读数据。 */
+   点色块 → 在色块上方浮出「这天有 N 次更新、N 次修复」式的简短信息；
+   再点同格 / 点击别处 / 滚动 / Esc → 收起。软导航后 DOM 重建，
+   这里只绑一次 document 委托，每次点击现读数据、现建浮层。 */
 function calPanel() {
   if (window.__cwCalWired) return;
   window.__cwCalWired = true;
@@ -1302,84 +1304,73 @@ function calPanel() {
     }
   };
 
-  const close = (panel) => {
-    if (!panel) return;
-    panel.hidden = true;
-    panel.dataset.day = '';
-    const card = panel.closest('.sw-cal-card');
-    if (card) card.querySelectorAll('[data-cal-day][aria-expanded]').forEach((b) => b.removeAttribute('aria-expanded'));
+  let tip = null;
+  let tipFor = '';
+
+  const hide = () => {
+    document.querySelectorAll('.hc[data-cal-day][aria-expanded]').forEach((b) => b.removeAttribute('aria-expanded'));
+    if (tip) { tip.remove(); tip = null; }
+    tipFor = '';
   };
 
   const open = (btn) => {
-    const card = btn.closest('.sw-cal-card');
-    if (!card) return;
-    const panel = card.querySelector('[data-cal-panel]');
-    const titleEl = card.querySelector('[data-cal-title]');
-    const listEl = card.querySelector('[data-cal-list]');
-    if (!panel || !titleEl || !listEl) return;
-
     const day = btn.dataset.calDay || '';
-    if (panel.dataset.day === day && !panel.hidden) {
-      close(panel); // 再点同一天 = 收起
-      return;
-    }
+    if (tipFor === day) { hide(); return; } // 再点同格 = 收起
+    hide();
 
     const items = readData()[day] || [];
+    // 按类型计数（保持出现顺序）：上线 2、修复 1 …
+    const order = [];
+    const counts = new Map();
+    items.forEach((it) => {
+      const k = it.kind || '更新';
+      if (!counts.has(k)) order.push(k);
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    });
+    const breakdown = order.map((k) => `${k} ${counts.get(k)} 次`).join('、');
     const parts = day.split('-');
     const wd = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date(day + 'T00:00:00').getDay()];
-    titleEl.textContent = `${Number(parts[1])} 月 ${Number(parts[2])} 日 · ${wd} · ${items.length} 条`;
+    const dateLabel = `${Number(parts[1])} 月 ${Number(parts[2])} 日 · ${wd}`;
 
-    listEl.textContent = '';
-    items.forEach((it) => {
-      const li = document.createElement('li');
-      const head = document.createElement('span');
-      head.className = 'ci-head';
-      const kind = document.createElement('span');
-      kind.className = 'ci-kind';
-      kind.textContent = it.kind || '更新';
-      head.appendChild(kind);
-      const title = it.url ? document.createElement('a') : document.createElement('span');
-      title.className = 'ci-title';
-      title.textContent = it.title || '';
-      if (it.url) title.setAttribute('href', it.url);
-      head.appendChild(title);
-      li.appendChild(head);
-      if (it.note) {
-        const note = document.createElement('span');
-        note.className = 'ci-note';
-        note.textContent = it.note;
-        li.appendChild(note);
-      }
-      listEl.appendChild(li);
-    });
+    tip = document.createElement('div');
+    tip.className = 'heat-tip';
+    tip.setAttribute('role', 'status');
+    const head = document.createElement('strong');
+    head.textContent = `${dateLabel} · ${items.length} 条`;
+    const body = document.createElement('span');
+    body.textContent = items.length ? `这天有 ${breakdown}` : '这天没有记录';
+    tip.appendChild(head);
+    tip.appendChild(body);
+    document.body.appendChild(tip);
+    tipFor = day;
 
-    card.querySelectorAll('[data-cal-day][aria-expanded]').forEach((b) => b.removeAttribute('aria-expanded'));
+    // 定位：色块上方居中，钳在视口内
+    const r = btn.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = r.left + r.width / 2 - tw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+    let top = r.top - th - 8;
+    if (top < 8) top = r.bottom + 8; // 上方放不下就放下方
+    tip.style.left = `${Math.round(left)}px`;
+    tip.style.top = `${Math.round(top)}px`;
     btn.setAttribute('aria-expanded', 'true');
-    panel.hidden = false;
-    panel.dataset.day = day;
-    // 展开后侧栏变高，重算吸顶位（ResizeObserver 也会触发，这里再保一手）
-    if (typeof window.__cwSideRefresh === 'function') window.__cwSideRefresh();
-    // 面板在视口外时把它带进来（已在视野内则不动）
-    try {
-      panel.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
-    } catch (err) {
-      /* 老浏览器忽略 */
-    }
   };
 
   document.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('[data-cal-day]');
+    const btn = ev.target.closest('.hc[data-cal-day]');
     if (btn) {
       ev.preventDefault();
       open(btn);
       return;
     }
-    const cl = ev.target.closest('[data-cal-close]');
-    if (cl) {
-      ev.preventDefault();
-      close(cl.closest('[data-cal-panel]'));
-    }
+    if (ev.target.closest('.heat-tip')) return; // 浮层内点击不收起
+    hide();
   });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') hide();
+  });
+  window.addEventListener('scroll', hide, { passive: true });
+  window.addEventListener('resize', hide);
 }
 
 /* ---------- 侧栏天气小帖 ----------

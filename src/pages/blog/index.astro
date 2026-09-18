@@ -1,11 +1,11 @@
 ---
 // 归档页：从网站创立开始的**每一条改动与更新**，按日精确记录，时间轴呈现。
-// 数据源 = changelog（改动/更新）+ posts（文章发布日）；
-// 每天一句话概括；当天发过文章的，文字可点进 /posts/[slug]/ 详情。
+// 数据源 = changelog（全量）；时间线上的文字链接到当天的站点日志文章
+// （/posts/ 里 date 相同的日志帖，优先主题文章）。
 import SidebarLayout from '../../layouts/SidebarLayout.astro';
 import { getCollection } from 'astro:content';
 
-/* ---------- 数据：changelog 全量 + 文章发布日 ---------- */
+/* ---------- 数据：changelog 全量（改动/更新）---------- */
 const logs = (await getCollection('changelog'))
   .flatMap((e) =>
     (e.data.items ?? []).map((it) => ({
@@ -18,49 +18,42 @@ const logs = (await getCollection('changelog'))
   )
   .sort((a, b) => (a.date < b.date ? 1 : -1));
 
-const posts = (await getCollection('posts')).sort(
-  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
-);
-/* 文章发布日 → 详情页链接（当天发多篇取最新一篇） */
-const postByDay = new Map(
-  posts.map((p) => [new Date(p.data.date).toISOString().slice(0, 10), p]),
-);
+/* ---------- 文章：日期 → 详情链接（优先主题文章，其次当日日志）---------- */
+const posts = (await getCollection('posts'))
+  .filter((p) => !p.data.link)
+  .sort((a, b) => {
+    const aLog = a.data.title.startsWith('站点更新日志') ? 1 : 0;
+    const bLog = b.data.title.startsWith('站点更新日志') ? 1 : 0;
+    return aLog - bLog || new Date(b.data.date).getTime() - new Date(a.data.date).getTime();
+  });
+const postByDay = new Map();
+posts.forEach((p) => {
+  const key = new Date(p.data.date).toISOString().slice(0, 10);
+  if (!postByDay.has(key)) postByDay.set(key, p);
+});
 
-/* 按日聚合（改动与更新为主，文章发布日并入同一天） */
+/* ---------- 按日聚合 + 按年份分组（新 → 旧）---------- */
 const days = new Map();
 for (const it of logs) {
   const d = days.get(it.date) ?? { date: it.date, year: it.year, items: [] };
   d.items.push(it);
   days.set(it.date, d);
 }
-for (const p of posts) {
-  const key = new Date(p.data.date).toISOString().slice(0, 10);
-  if (!days.has(key)) {
-    days.set(key, {
-      date: key,
-      year: new Date(p.data.date).getFullYear(),
-      items: [{ date: key, year: new Date(p.data.date).getFullYear(), kind: '文章', title: `发布《${p.data.title}》`, note: '' }],
-    });
-  } else {
-    const d = days.get(key);
-    if (!d.items.some((it) => it.kind === '文章')) {
-      d.items.push({ date: key, year: d.year, kind: '文章', title: `发布《${p.data.title}》`, note: '' });
-    }
-  }
-}
 
-/* 年份分组（新 → 旧）；每天一句话概括 */
 const years = new Map();
 for (const d of [...days.values()].sort((a, b) => (a.date < b.date ? 1 : -1))) {
+  const n = d.items.length;
+  const kindCount = new Map();
+  d.items.forEach((it) => kindCount.set(it.kind, (kindCount.get(it.kind) ?? 0) + 1));
   const oneLine =
-    d.items.length === 1
-      ? d.items[0].title
-      : `${d.items[0].title} 等 ${d.items.length} 条更新`;
+    n === 1
+      ? `${d.items[0].kind}：${d.items[0].title}`
+      : `${d.items[0].kind}：${d.items[0].title} 等 ${n} 条更新`;
   const post = postByDay.get(d.date);
-  years.set(d.year, [...(years.get(d.year) ?? []), { ...d, oneLine, post }]);
+  years.set(d.year, [...(years.get(d.year) ?? []), { ...d, n, oneLine, post }]);
 }
 const yearList = [...years.entries()].sort((a, b) => b[0] - a[0]);
-const totalDays = [...days.values()].length;
+const totalDays = days.size;
 ---
 <SidebarLayout title="归档" bodyClass="archive-route">
   <div class="archive-root">
@@ -69,7 +62,7 @@ const totalDays = [...days.values()].length;
         <p class="kicker"><b>ARCHIVE</b> / 归档 · 时间线</p>
         <h1>归档</h1>
         <p class="head-sub">
-          自 {2025} 年创立以来的每一条改动与更新 · 共 {totalDays} 天 · 精确到日
+          自 2025 年创立以来的每一条改动与更新 · 共 {totalDays} 天 · 精确到日 · 点文字阅读当天全文
         </p>
       </header>
 
@@ -77,33 +70,24 @@ const totalDays = [...days.values()].length;
         <section class="tl-year" data-ent aria-label={`${year} 年（${list.length} 天）`}>
           <h2 class="tl-yy">{year}</h2>
           <ol class="tl">
-            {list.map((d) => {
-              const hasPost = !!d.post;
-              const body = hasPost ? (
-                <a class="tl-text" href={`/posts/${d.post.id}/`}>{d.oneLine}</a>
-              ) : (
-                <span class="tl-text">{d.oneLine}</span>
-              );
-              return (
-                <li class="tl-day">
-                  <span class="tl-dot" aria-hidden="true"></span>
-                  <time class="tl-date" datetime={d.date}>{d.date.slice(5).replace('-', '.')}</time>
-                  <div class="tl-body">
-                    {body}
-                    {hasPost && (
-                      <a class="tl-more" href={`/posts/${d.post.id}/`}>
-                        阅读《{d.post.data.title}》 →
-                      </a>
-                    )}
-                    {!hasPost && d.items.length > 1 && (
-                      <span class="tl-kinds" aria-hidden="true">
-                        {d.items.map((it) => it.kind).filter((k, i, a) => a.indexOf(k) === i).join(' · ')}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
+            {list.map((d) => (
+              <li class="tl-day">
+                <span class="tl-dot" aria-hidden="true"></span>
+                <time class="tl-date" datetime={d.date}>{d.date.slice(5).replace('-', '.')}</time>
+                <div class="tl-body">
+                  {d.post ? (
+                    <a class="tl-text" href={`/posts/${d.post.id}/`}>{d.oneLine}</a>
+                  ) : (
+                    <span class="tl-text">{d.oneLine}</span>
+                  )}
+                  {d.post && (
+                    <span class="tl-kinds" aria-hidden="true">
+                      {d.items.map((it) => it.kind).filter((k, i, a) => a.indexOf(k) === i).join(' · ')}
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
           </ol>
         </section>
       ))}
@@ -149,8 +133,6 @@ const totalDays = [...days.values()].length;
   .tl-text { color: var(--ink-2); font-size: 0.94rem; line-height: 1.6; }
   a.tl-text { color: var(--ink); text-decoration: none; }
   a.tl-text:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-  .tl-more { font-size: 0.84rem; color: var(--accent); text-decoration: none; white-space: nowrap; }
-  .tl-more:hover { text-decoration: underline; text-underline-offset: 3px; }
   .tl-kinds { font-size: 0.72rem; color: var(--ink-3); }
 
   @media (max-width: 640px) {
