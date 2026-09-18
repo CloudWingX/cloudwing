@@ -39,10 +39,12 @@ node scripts/smoke.mjs                        # 自检入口（当前基线 45/4
    **document 级事件委托 + `window` 上的单例状态**，并在 `astro:page-load` 里重新绑定。
 3. **事件挂在 `document` 上，不是 `window`**：`astro:page-load` / `astro:after-swap`
    在 document 上派发**且不冒泡**，挂 window 永远收不到（已踩坑两次）。
-4. **常驻小岛一律 `client:idle`**：`client:visible` 与软导航的水合时机冲突，会抛
-   `React error #424`（水合不匹配，控制台无诊断信息）。不要用 `client:visible`。
-   ⚠️ **本站在"线上"仍会间歇性（约 1/3 轮次）抛 #424，本地永远复现不了**；
-   已排除缓存与代码改动，详见 `docs/HANDOFF.md` §32，别误判成自己改坏了。
+4. **常驻小岛一律 `client:idle`**：`client:visible` 会把水合推迟到更晚，与软导航的水合时机
+   冲突，会抛 `React error #424`（水合不匹配，控制台无诊断信息）。不要用 `client:visible`。
+   ✅ **#424 已于 2026-09-18 定位并修复**：软导航时 Astro 会对**尚未水合**的岛调用
+   `root.unmount()`，React 把它当成"水合前的早期更新"而抛错 —— **与本站组件代码无关**。
+   修法是构建期插件 `plugins/vite-react-safe-unmount.mjs`（见下"构建坑"第 3 条）。
+   若它再出现：`node scripts/diag-424.mjs <url> 3`（详见 `docs/HANDOFF.md` §37）。
 5. **玻璃材质走令牌，不在组件里写死数值**：`--glass-blur` / `--line-2` / `--r-s|m|l` /
    `--glass*` / `--glass-panel`。页面与组件的 `<style>` 是作用域样式，**优先级高于 global.css**，
    写死 `1px solid …` 会局部盖掉全局令牌。边框只写 `1px` 或 `2px`（Blink 把 1.5px 取整成 1px）。
@@ -69,8 +71,11 @@ node scripts/smoke.mjs                        # 自检入口（当前基线 45/4
 2. **`react` / `react-dom` 精确锁 `19.2.8`**，不要改成 `^`：浮动会解析到 19.3，与
    `@react-three/fiber@9.7` 的 peer `>=19 <19.3` 冲突 → 云端 ERESOLVE 构建失败。
    `.npmrc` 的 `legacy-peer-deps=true` 是兜底，保留。
-3. **构建 shim 勿删**：`plugins/vite-cjs-inline-shim.mjs` 修 Node 24 + Astro 7.3 的
-   `require is not defined`（picomatch CJS）。不要改 `node_modules`。
+3. **两个构建插件勿删**（都不改 `node_modules`，只是在构建期改写第三方模块）：
+   - `plugins/vite-cjs-inline-shim.mjs` 修 Node 24 + Astro 7.3 的 `require is not defined`（picomatch CJS）；
+   - `plugins/vite-react-safe-unmount.mjs` 修 React `#424`（卸载未水合的岛）。它按**精确字符串**
+     改 `@astrojs/react/dist/client.js`，**匹配不上会大声告警** —— 升级 `@astrojs/react` 后
+     如果构建日志出现那条警告，就要重新核对上游源码并更新插件。
 4. **`IMG_CDN = ''`（`src/site.ts`）**：图片走本地相对路径随 dist 分发。
    **不要改回 jsDelivr** —— 国内不稳，曾导致整站图片打不开。
 5. **`backdrop-filter` 书写顺序**：必须 `-webkit-` 在前。标准属性在前时构建压缩会把整条丢掉
@@ -176,6 +181,7 @@ public/                    ← covers / lanyard / og / shots / media(bg-loop.mp4
 | `diag-errors.mjs` | 逐页 JS 异常计数 | 7 页全 **0** |
 | `diag-edges.mjs` | 诊断：容器边缘逐段偏差 + 长竖线名单 + 容器级装饰层结构判定 | 按需（非断言） |
 | `probe-point.mjs` | 诊断：把像素坐标翻译成 DOM（判断某处是"视频内容"还是"CSS 层"） | 按需（非断言） |
+| `diag-424.mjs` | 诊断：`React error #424` 完整栈（注入 `reportError` 钩子 + 注入自检）。`STRESS=1`（`HOPS`/`GAP` 快速换页）+ `CPU=n` + `LOAD=n` 可稳定复现 | 修复后 **0 次** |
 | `poll-deploy.mjs` | 推送后确认上线：按 `--have`/`--not` 特征轮询线上（含首页自己的 CSS chunk） | 按需 |
 
 改完对应模块就跑它；`smoke.mjs` 是每次都要跑的总入口。
