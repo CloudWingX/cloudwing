@@ -94,6 +94,11 @@ node scripts/smoke.mjs                        # 自检入口（当前基线 45/4
    用编辑工具/`write`，或走 .NET 的 `ReadAllText(...,UTF8)` / `WriteAllText(...,UTF8 无 BOM)`。
 9. **git 走代理**（仓库级配置）：`http.proxy = http://127.0.0.1:33210`。git 不读 Windows 系统代理；
    代理没开时会超时，改成直连：`git config --local --unset http.proxy`。
+   ★代理没开又必须推时的兜底（实测成功）：DNS 给的那个 github.com IP 常被墙，但**其它 A 记录
+   直连可达**。起本地 TCP 隧道转发 CONNECT（TLS 端到端、不降校验）：
+   `node <工作区>/.workbuddy/gh-tunnel.mjs 39210 140.82.112.4` →
+   `http_proxy= https_proxy= HTTP_PROXY= HTTPS_PROXY= git -c http.proxy=http://127.0.0.1:39210 push origin main`。
+   详见 `docs/HANDOFF.md` §2 最后一行。
 
 ## 目录速览
 
