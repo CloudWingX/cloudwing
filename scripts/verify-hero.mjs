@@ -384,6 +384,16 @@ check('卡片占满内容宽', m.card.w > 600, String(m.card.w));
 check('代码卡片不横向滚动（字号已按最长行反解）',
   (await ev(`(()=>{const b=document.querySelector('.code-body'); return b.scrollWidth-b.clientWidth;})()`)) === 0);
 check('无横向溢出', m.overflow === 0, String(m.overflow));
+// ★手机端代码卡片必须"按内容展开"，不能被压扁后裁掉★（2026-09-18）
+// 背景：≤768px 是列向堆叠，`flex: 1 1 0` 会把卡片的**高度**基准变成 0，
+// 只能分到剩余空间 → 被压扁 + 卡片 overflow:hidden 切掉代码（实测 390px：卡高 230 / 体高 355）。
+// 判据同时看三件事：代码体底边不能超出卡片、卡片自身不能被纵向裁切、卡高 ≥ 体高。
+const fit = await ev(`(()=>{const c=document.querySelector('.code-card'), b=document.querySelector('.code-body');
+  const rc=c.getBoundingClientRect(), rb=b.getBoundingClientRect();
+  return {卡高:Math.round(rc.height), 体高:Math.round(rb.height),
+    体底超出:Math.round(rb.bottom-rc.bottom), 卡裁Y:c.scrollHeight-c.clientHeight};})()`);
+check('手机端代码卡片按内容展开（未被压扁/裁切）',
+  fit.体底超出 <= 0 && fit.卡裁Y === 0 && fit.卡高 >= fit.体高, JSON.stringify(fit));
 
 console.log('\n=== 减少动态：不应有残留动画导致的空白 ──');
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });

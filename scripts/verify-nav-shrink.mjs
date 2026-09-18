@@ -142,16 +142,37 @@ const m1 = await ev(`(()=>{const p=document.querySelector('[data-mnav-panel]'); 
   const b=p.getBoundingClientRect();
   return {打开:!p.hidden, 类:c.getPropertyValue('transform'), 透明度:c.opacity, 背景:c.backgroundColor,
     模糊:c.backdropFilter||c.webkitBackdropFilter, 顶部:Math.round(b.top), 宽:Math.round(b.width),
-    链接数:p.querySelectorAll('a').length, 汉堡叉号:document.querySelector('[data-nav]').classList.contains('mnav-open'),
+    左:Math.round(b.left), 右:Math.round(window.innerWidth - b.right),
+    圆角四角:[c.borderTopLeftRadius,c.borderTopRightRadius,c.borderBottomRightRadius,c.borderBottomLeftRadius].join('/'),
+    链接数:p.querySelectorAll('a').length,
+    一级链接数:p.querySelectorAll(':scope > a').length,
+    分类组数:p.querySelectorAll('.mm-group').length,
+    分类链接数:p.querySelectorAll('a[href*="?tag="], a[href*="?game="]').length,
+    外链组数:p.querySelectorAll('.mm-actions').length,
+    外链数:p.querySelectorAll('a[href^="http"], a[href="/rss.xml"]').length,
+    汉堡叉号:document.querySelector('[data-nav]').classList.contains('mnav-open'),
     aria:document.querySelector('[data-mnav-toggle]').getAttribute('aria-expanded')};})()`);
 console.log('  ' + JSON.stringify(m1));
 check('菜单已打开', m1.打开 === true);
 check('已到终态（opacity 1 / 无位移）', m1.透明度 === '1' && (m1.类 === 'none' || /matrix\(1, 0, 0, 1, 0, 0\)/.test(m1.类)), `${m1.透明度} ${m1.类}`);
 check('玻璃底 + 模糊', /rgba\(10, 10, 15, 0\.95\)/.test(m1.背景) && /blur\(20px\)/.test(String(m1.模糊)), `${m1.背景} | ${m1.模糊}`);
 check('贴在导航下方', m1.顶部 >= 60, String(m1.顶部));
-check('菜单占满宽度', m1.宽 === 390, String(m1.宽));
-// 5 个主导航 + 分类 chips + 底部动作按钮
-check('含导航链接与分类入口', m1.链接数 >= 5, String(m1.链接数));
+// 2026-09-18：菜单改成"四周内缩的圆角矩形浮层"（原来是占满宽度的通栏）
+check('菜单左右各内缩 12px（不再通栏）',
+  m1.左 === 12 && m1.右 === 12 && m1.宽 === 366, `左=${m1.左} 右=${m1.右} 宽=${m1.宽}`);
+// 计算值是 "16px" 这种带单位的字符串，必须 parseFloat（Number('16px') 会得到 NaN —— 踩过）
+const rr = String(m1.圆角四角).split('/').map((v) => parseFloat(v));
+check('四角圆角一致且 ≥12px（圆角矩形）',
+  rr.length === 4 && rr.every((n) => n >= 12) && rr.every((n) => Math.abs(n - rr[0]) < 0.6),
+  m1.圆角四角);
+// 抽屉内容：5 个一级导航 + 底部动作按钮。
+// 2026-09-18：「作品库分类 / 画廊分类」两组按用户要求删除，这里改为断言"确实没了"。
+check('抽屉含 5 个一级导航链接', m1.一级链接数 === 5, String(m1.一级链接数));
+check('抽屉已无分类入口（分类组与 ?tag=/?game= 链接都为 0）',
+  m1.分类组数 === 0 && m1.分类链接数 === 0, `组=${m1.分类组数} 分类链=${m1.分类链接数}`);
+// 2026-09-18：底部 GitHub / Bilibili / RSS 三个外链按钮也按用户要求删除（桌面顶栏与页脚仍在）
+check('抽屉已无外链按钮（GitHub/Bilibili/RSS）',
+  m1.外链组数 === 0 && m1.外链数 === 0, `组=${m1.外链组数} 外链=${m1.外链数}`);
 check('汉堡变叉号（mnav-open）', m1.汉堡叉号 === true);
 check('aria-expanded=true', m1.aria === 'true');
 

@@ -70,8 +70,8 @@ check('背景为半透明玻璃（非纯色）', /rgba\(/.test(String(bar.背景
 
 console.log('\n=== 分类入口（已从导航二级菜单迁到左栏导航树）===');
 // 2026-09-18 改版：导航栏不再有二级菜单（照 reference），分类链接改由左栏承担。
-// 注意：移动端下拉菜单里也有同款 ?tag= 链接（默认 hidden），所以必须显式限定在左栏内，
-// 否则 querySelector 会命中隐藏菜单里的那一份，误判成"不在左栏"。
+// 注意：2026-09-18 起移动端抽屉里**不再有**分类链接（按用户要求删除），分类只剩左栏一处；
+// 不过断言仍显式限定在左栏内，免得以后抽屉再加回同类链接时误判。
 const sub = await ev(`(()=>{const el=document.querySelector('.shell-left a[href*="?tag="]');
   if(!el) return null;
   const b=el.getBoundingClientRect();

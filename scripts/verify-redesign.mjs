@@ -1,8 +1,8 @@
 // 验证暗色电影感重构的关键点：
 //  1) 单主题：站点恒为 dark，主题开关不再切浅色
 //  2) 玻璃材质：边框 rgba(255,255,255,.2)、模糊 20px、圆角 16–24px、玻璃底色
-//  3) 暂停动态按钮可用（WCAG 2.2.2）：点了之后视频暂停、aria-pressed 同步
-//  4) prefers-reduced-motion：视频不播放
+//  3) 背景视频默认播放：导航栏的暂停按钮已删除（2026-09-18），按钮/样式/接口都不应残留
+//  4) prefers-reduced-motion：系统要求减少动态时视频不播放（删除按钮后由它兜住 WCAG 2.2.2）
 //  5) 滚动时导航栏从透明过渡到半透明暗色
 import { setTimeout as sleep } from 'node:timers/promises';
 import { writeFileSync } from 'node:fs';
@@ -75,19 +75,28 @@ check('导航胶囊半透明且可读（0.4–0.7）',
   parseFloat(String(glass.栏底).match(/[\d.]+\)$/)?.[0] || '1') <= 0.7,
   String(glass.栏底));
 
-console.log('\n=== 暂停动态（WCAG 2.2.2）===');
-const before = await ev(`document.querySelector('.video-bg__el').paused`);
-await ev(`document.querySelector('[data-motion-toggle]')?.click()`);
-await sleep(700);
-const after = await ev(`document.querySelector('.video-bg__el').paused`);
-const pressed = await ev(`document.querySelector('[data-motion-toggle]')?.getAttribute('aria-pressed')`);
-check('有暂停按钮', (await ev(`!!document.querySelector('[data-motion-toggle]')`)) === true);
-check('点击后视频暂停', before === false && after === true, `${before} → ${after}`);
-check('aria-pressed 同步为 true', pressed === 'true', String(pressed));
-// 恢复
-await ev(`document.querySelector('[data-motion-toggle]')?.click()`);
-await sleep(800);
-check('再点一次恢复播放', (await ev(`document.querySelector('.video-bg__el').paused`)) === false);
+// 2026-09-18：导航栏的「暂停背景动态」按钮按用户要求删除，背景视频**默认播放**。
+// 这一节改为断言"按钮确实没了 + 视频确实在播"，并把 WCAG 的减少动态交给系统偏好验证。
+console.log('\n=== 背景视频：默认播放（暂停按钮已删）===');
+const vPaused = await ev(`document.querySelector('.video-bg__el').paused`);
+const vPlayingCls = await ev(`document.querySelector('.video-bg').classList.contains('is-playing')`);
+check('导航已无暂停按钮', (await ev(`!document.querySelector('[data-motion-toggle]') && !document.querySelector('.motion-toggle')`)) === true);
+check('视频默认在播', vPaused === false, 'paused=' + vPaused);
+check('视频已出画（.video-bg.is-playing）', vPlayingCls === true);
+check('旧的暂停接口已移除（__cwVideoToggle / __cwVideoPaused / __cwMotion）',
+  (await ev(`typeof window.__cwVideoToggle === 'undefined' && typeof window.__cwVideoPaused === 'undefined' && typeof window.__cwMotion === 'undefined'`)) === true);
+
+// 系统级"减少动态"仍然生效（这是删除按钮后唯一的不播条件）
+await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+await s('Page.navigate', { url: BASE + '/works/' });
+await waitFor(`!!document.querySelector('.video-bg__el')`, 60000);
+await sleep(1500);
+check('prefers-reduced-motion：视频不播放', (await ev(`document.querySelector('.video-bg__el').paused`)) === true);
+await s('Emulation.setEmulatedMedia', { features: [] });
+await s('Page.navigate', { url: BASE + '/works/' });
+await waitFor(`(()=>{const v=document.querySelector('.video-bg__el');return v&&v.readyState>=2;})()`, 60000);
+await sleep(2000);
+check('恢复正常偏好后重新播放', (await ev(`document.querySelector('.video-bg__el').paused`)) === false);
 
 console.log('\n=== 导航栏滚动过渡 ===');
 // 顶部是透明贴顶 → 滚下去变玻璃胶囊（形态由 verify-nav-shrink.mjs 细测）
