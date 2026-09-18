@@ -1294,6 +1294,40 @@ A/B 开关：`CW_DISABLE_SAFE_UNMOUNT=1` 重新构建即可关掉补丁做对照
 
 ---
 
+## 41. ★极简化 + 去 AI 味 + 动效（2026-09-19 四轮）★
+
+**需求**：① 移除页脚、各子页小标题极简（删介绍行）；② 文章与关于页文案去 AI 味；
+③ 页面加载动画 + 按钮微交互。已全部上线（commit `9736241`）。
+
+- **页脚**：`Footer.astro` 已删除，Base.astro 不再引用；`.site-footer` 样式
+  （global.css / motion.css 暗色规则 / index.astro 内联隐藏规则）全部清掉。
+  `verify-brand` 的页脚断言改为「页脚已移除」。
+- **小标题**：/posts/ 与 /blog/ 的 `.head-sub` 介绍行与对应样式已删，只留 kicker + h1。
+- **去 AI 味**：12 篇文章全部重写为口语化短句（9 篇站点日志 + 3 篇主题文章）；
+  关于页、AboutMagicBento 卡片、Sidebar 引言、`SITE.tagline/notice` 同步改写。
+- **动效**：`page-enter` 入场强化（filter blur→clear）、首页三区块 `.rv` 滚动显现、
+  motion.css 末尾新增按钮/链接微交互（hover 轻抬、active 按压、箭头位移、
+  热力图色块按压），`prefers-reduced-motion` 下整体关闭。
+- **⚠️ 构建坑（shell 变量吞代码）**：用 bash 内联 node 往 CSS 插入 `$1` 引用，
+  `$1` 被 bash 展开成空串，把 motion.css 里 `@media (prefers-reduced-motion: reduce) {`
+  连同注释一起吃掉 → lightningcss "Invalid empty selector" 构建失败。
+  教训：内联脚本里不要写 `$N`，插入文本用数组 join 或转义。
+- **⚠️ 陈旧服务坑**：4321 端口挂着一个 13.5 小时前的 `astro preview`，
+  回归脚本全在测旧 dist —— 三个"失败"里两个是假象。回归前先确认
+  4321 服务的启动时间（或重启 preview）。
+- **⚠️ 构建必须用 `npm run build`**（= `astro build && pagefind --site dist`）。
+  手动只跑 astro build 不会生成 pagefind 索引，verify-search 的 3 条断言全红
+  （输入框不挂载、搜不出结果）。pagefind 单独补跑：
+  `node node_modules/pagefind/lib/runner/bin.cjs --site dist`。
+- **回归脚本新增**：`scripts/run-regress.mjs` 批跑 15 个脚本、汇总 PASS/FAIL
+  （bash 缺 tail/ls，批处理一律走 Node）。
+- 本轮基线：smoke 48、hero 88、home 24、nav-shrink 40（shell 页退化为
+  导航居中校验，3 条 wrap 对齐断言按页型二选一）、nav 14、brand 10、
+  theme 11、redesign 16、search 17、videobg 22、videobg-global 29、
+  contrast 0 处、mobile 18、diag-errors 0、diag-424 0 —— **15 个脚本全绿**。
+
+---
+
 ## 7. 验证与调试
 
 ### 7.1 无头浏览器（CDP）
