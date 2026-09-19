@@ -79,7 +79,10 @@ await ev(GUARD);
 const boxOf = (sel) => ev(`(() => {
   const el = document.querySelector(${JSON.stringify(sel)});
   if (!el) return null;
-  el.scrollIntoView({ block: 'center' });
+  // 2026-09-20：必须 behavior:'instant' —— 全局有 smooth 滚动时，scrollIntoView 的
+  // 平滑滚动还在进行中取 rect 会拿到"滚动中途"的坐标，clickAt 打在移动后的视口位置
+  // 上落空（实测稳定复现于 /nav/ 的 a.nvc：删标题描述后卡片位置变化，恰好触发滚动量）。
+  el.scrollIntoView({ block: 'center', behavior: 'instant' });
   const r = el.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, l: r.left, t: r.top, w: r.width, h: r.height };
 })()`);
@@ -111,9 +114,11 @@ console.log(`\n=== 交互策略验收：${BASE} ===`);
 console.log('\n[A] 鼠标拖选正文：应选不中（含对照组，证明拖拽本身有效）');
 // 刻意选**不在链接里**的段落：Chrome 在 <a> 上拖拽会走原生链接拖放而不是选文字，
 // 两种情况下都选不中，会掩盖真实结论（对照组必须能红，否则这条断言没有意义）。
-const para = await boxOf('.page-head .txt');
+// 2026-09-20：标题下的描述简介按站长要求全站删除（§52），拖选对照改用右栏
+// 「今日一言」的引文（.sw-quote blockquote，纯文本、够长、不在链接里）。
+const para = await boxOf('.sw-quote blockquote');
 if (!para) {
-  check('找得到一段正文（.page-head .txt）', false, '选择器没命中');
+  check('找得到一段正文（.sw-quote blockquote）', false, '选择器没命中');
 } else {
   await ev('getSelection().removeAllRanges()');
   await dragAcross(para.l + 4, para.t + para.h / 2, para.l + Math.min(para.w - 6, 220), para.t + para.h / 2);
@@ -153,6 +158,7 @@ for (const [sel, label] of [['.pf-avatar', '圆形头像'], ['a.nvc', '导航卡
   await ev('document.activeElement && document.activeElement.blur()');
   await sleep(120);
   await clickAt(b.x, b.y);
+  await sleep(150); // 2026-09-20：卡片 hover 有 3D 倾斜动效，点击后立即读焦点会偶发拿不到（稳定复现于 a.nvc）
   const o = await ev(OUTLINE);
   const noRing = !!o && (o.width === 0 || o.style === 'none');
   check(`点${label}后不出现轮廓`, noRing, o ? `${o.tag}.${o.cls} outline=${o.style} ${o.width}px` : '没拿到焦点');

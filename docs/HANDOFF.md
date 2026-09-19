@@ -10,7 +10,9 @@
 > （见 §43.1），其"简版硬规则"职责并入本文件。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-19 深夜 **顶栏新增「记录」悬停下拉——文章/归档/日志收进一个入口，见 §51**；
+> 最后更新：2026-09-20 凌晨 **壳层统一：子页面页头格式统一（kicker「EN / 中文」、删标题下描述）、
+> 内容列顶部与侧栏首卡顶边全页对齐（偏差 0），见 §52**；
+> 2026-09-19 深夜 **顶栏新增「记录」悬停下拉——文章/归档/日志收进一个入口，见 §51**；
 > 同日晚 **新增「日志」子页面 `/log/`——changelog 的完整展开版，见 §50**；
 > 同日下午 **确立全站交互策略（禁鼠标拖选 / 点击不出轮廓 / 键盘轮廓保留，见 §49；
 > 文章正文按站长裁决仍可复制，见 §49.3）**，
@@ -34,9 +36,9 @@
 > 单页/组件 → 只跑该页冒烟 e2e（`node scripts/smoke.mjs`）+ 该模块脚本；
 > 功能模块 → 相关模块脚本 + 关键路径 e2e；
 > **全量回归 `run-regress.mjs` 只在 PR 前 / 合并前 / 发布前 / 站长明确要求时跑，且优先交给 CI**。
-> 自检入口仍为 `cd endfield-blog && node scripts/run-regress.mjs`（**现为 19 个脚本**一次批跑）→
-> 最近两次全量 **19/19 全绿**（2026-09-19 深夜「记录」下拉上线前，见 §51.3；
-> 同日晚第 19 号脚本 `verify-log` 加入后的发布前全量，见 §50.4；
+> 自检入口仍为 `cd endfield-blog && node scripts/run-regress.mjs`（**现为 20 个脚本**一次批跑）→
+> 最近一次 **20/20 全绿**（2026-09-20 凌晨，壳层统一 + 第 20 号脚本 `verify-shell` 加入后的发布前全量，见 §52.4；
+> 此前 19/19 见 §51.3 / §50.4；
 > 上一轮 18 脚本时代 18/18 见 §49.4；上一轮 16 脚本时代为 15/16，唯一失败项 `verify-videobg` 经复跑证实为时序假失败，见 §46.5）。
 > （单个入口 `node scripts/smoke.mjs` 为 **53/53**）。
 > ✅ **文案漂移现在有断言了**（2026-09-19）：`scripts/verify-copy.mjs`（31 条，见 §7.2 / §42.2）——
@@ -1477,7 +1479,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 > ★**怎么选脚本：按 §47 的分层策略，不是每次都跑全套**★
 > 改一个子页面 → `smoke.mjs` + 该页对应的一条脚本；
 > 改一个功能模块 → 本表里相关的那几条；
-> **全套 `node scripts/run-regress.mjs`（19 个脚本串行 + 汇总 PASS/FAIL）只在
+> **全套 `node scripts/run-regress.mjs`（20 个脚本串行 + 汇总 PASS/FAIL）只在
 > PR 前 / 合并前 / 发布前 / 站长明确要求时跑，且优先交给 CI。**
 > `verify-copy.mjs` 与 `verify-nav-icons.mjs` 是**不需要无头浏览器**的两个
 > （只读源码 / 已构建的 `dist/`；`verify-copy` 也可直接给线上 URL 走 sitemap 枚举），
@@ -1498,7 +1500,8 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 | `verify-videobg-global.mjs` | 全站背景一致性：逐页硬刷新 + 软导航一圈，视频未被重建、旧背景仍在（含 `/nav/` 与 `/log/`） | **37/37**（2026-09-19 晚 `/log/` 加入后 33 → 37） |
 | `verify-copy.mjs` | ★**文案断言**：① 禁用词（浅色通透 / 双主题 / 主题切换 / 开灯… 等"描述已删除功能"的措辞）不得出现在任何页面的可见文案与 meta；② 占位词（TODO/待补/lorem…）不得出现；③ 文案锚点 —— `site.ts` 的 notice/tagline 非空且不含禁用词，notice 必须出现在关于页可见文案、tagline 必须出现在 meta description；④ 每页都有非空 title/description。**只扫页面固定文案与 meta，不扫文章正文**（历史文章合法会提"浅色主题/作品库"） | **31/31** |
 | `verify-nav-icons.mjs` | ★**图标静态断言**（纯 Node，不需要浏览器）：① `SITE_NAV` 每个 `icon` 路径在 `public/` 下真实存在且形如 `/nav/<slug>.png\|svg`；② `public/nav/` 无孤儿文件；③ 已构建时每个 icon 都进了 `dist/nav/`、页面引用集合与声明一致；④ **带 `--ico` 的图标位内无文本**（防 §48.6 "图标与首字圆牌重叠"复发）；⑤ **[E] SVG 最亮 `fill` 相对亮度 ≥ 0.12**（防 §48.3 "近黑 logo 在暗卡上等于没画"）。⚠️ ⑤ 只查 SVG，PNG 是已知盲区 | **9/9** |
-| `verify-interaction.mjs` | ★**交互基线断言**（§49）：A 鼠标拖过正文选不中 + **A′ 对照组**（放行 `user-select` 后同样拖拽必须能选中，证"拖拽确实生效"）；B 点击头像/导航卡/图标位后无轮廓；C Tab 聚焦必有可见轮廓且不带 `data-pointer-focus`；D 指针点文本输入框仍保留轮廓；E `body=none` / `input=text`；**F 真实文章页拖过 `.pp-md p` 必须选中**（保护 §49.3 刻意保留的例外） | **12/12** |
+| `verify-interaction.mjs` | ★**交互基线断言**（§49）：A 鼠标拖过正文选不中 + **A′ 对照组**（放行 `user-select` 后同样拖拽必须能选中，证"拖拽确实生效"；**2026-09-20 起对照文本改用右栏引文 `.sw-quote blockquote`**——标题下描述已按 §52 全站删除）；B 点击头像/导航卡/图标位后无轮廓；C Tab 聚焦必有可见轮廓且不带 `data-pointer-focus`；D 指针点文本输入框仍保留轮廓；E `body=none` / `input=text`；**F 真实文章页拖过 `.pp-md p` 必须选中**（保护 §49.3 刻意保留的例外） | **12/12** |
+| `verify-shell.mjs` | ★**壳层一致性断言**（§52）：7 个子页面逐页验 ① 内容顶与侧栏首卡顶对齐（≤1px）；② kicker 是「EN / 中文」格式（无「· 后缀」）；③ 标题下无描述简介（`.txt`/`.sub` 不许是 page-head 直接子元素）；④ h1 非空；⑤ 无横向溢出 —— 防页头格式与顶对齐再次漂移 | **43/43** |
 | `verify-log.mjs` | ★**日志页断言**（§50）：A 落在 `/log/` 且标题为「日志」；B 结构（年分组新→旧、每日期卡非空、条目徽标+标题、note 与「当天日志 →」链接在、无空态兜底）；C 导航三处注册（顶栏/左栏/当前高亮）；D 玻璃材质（backdrop-filter）+ 无横向溢出；E 运行时 0 异常。断言刻意用**相对计数**（不写死天数/条数），加 changelog 不会误报 | **15/15** |
 | `contrast-audit.mjs` | WCAG 对比度审计（逐节点"前景 vs 实际合成背景"） | 暗色 **0 处不达标** |
 | `mobile-shots.mjs` | 三机型视口 × 8 页截图 + 横向溢出统计 | **24/24 无溢出**（2026-09-19 晚 `/log/` 后 21 → 24） |
@@ -2707,6 +2710,50 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
   「抽屉含 7 个一级导航链接」——NAV 7 → 8 后**脚本里的硬编码没跟上**（页面行为正确，是断言过期）；
   修正为 8 并写明注释后 **40/40** → **全量口径 19/19 全绿**。
   ⚠️ 教训：**每次往 `NAV` 加项，`verify-nav-shrink` 的抽屉计数断言要同步 +1**。
+
+
+---
+
+## §52 壳层统一：页头格式 + 顶对齐（2026-09-20 凌晨）
+
+> 站长四条要求：**「子页面标题格式统一；标题上方的小字格式统一；不要在标题下方描述简介；
+> 中心内容部分（侧栏除外）顶部与侧栏顶部对齐，各子页面一致」**。
+
+### 52.1 改了什么
+
+- **kicker 统一为「`<b>英文</b> / 中文`」**（去掉五花八门的「· 后缀」）：
+  归档 `ARCHIVE / 归档`、日志 `LOG / 日志`、画廊 `GALLERY / 画廊`（原 `02 / GALLERY 画廊`）、
+  网站导航 `SITES / 网站导航`、关于 `PROFILE / 关于`；文章/互动/文章详情本来就是该格式，未动。
+- **删两处标题下描述**：`/log/` 的「这个站每天做了什么…」（连带清掉未用的 firstDate/totalDays/totalItems），
+  `/nav/` 的「按用途分组的常用站点…」（`.navm-stat` 统计行保留——它是数据不是简介）。
+- **顶对齐**：改前实测三种偏差并存——`/posts /blog /log` 差 **38px**（各自 root 包装 `padding-top: 2.4rem`）、
+  `/account` 差 **8px**（`.room-stage` 0.5rem）、其余 0。修法（shell.css 1200 断点一处管全部）：
+  `.shell .page-head / .work-head / .posts-root / .archive-root / .log-root / .room-stage { padding-top: 0 }`
+  （对齐由壳层统一负责，页面自身留白只服务非壳层场景）。改后 **7 页偏差全部 = 0**。
+
+### 52.2 踩到的两个坑（都有探针实证）
+
+1. **kicker 的 UA 默认 margin-top 塌陷**：`p` 在本项目没有 reset，`.kicker`（p 元素）带着
+   UA 的 `margin-top: 1em`（≈12.5px）。壳层把 page-head 的 `padding-top` 收掉后，这个 margin
+   **塌陷出标题块**把整个 `.wrap` 推下 12px —— 7 页偏差从三种值变成"统一的 12px"，反而更迷惑。
+   修法：`.kicker` 显式 `margin: 0 0 1.6rem`（`.work-head .no-big` 同理补 `margin: 0`）。
+   ⚠️ 教训：**给壳层做「padding-top: 0」这类收紧时，必须同时排查首子元素的 margin 塌陷**。
+2. **verify-interaction 连锁失败 ×2**：
+   - A 组对照文本用的就是 nav 页标题描述（`.page-head .txt`）——描述删了选择器落空。
+     改用**右栏引文** `.sw-quote blockquote`（纯文本、够长、不在链接里；`.navm-stat` 太短选不出 range，弃）。
+   - B 组「点导航卡片」稳定拿不到焦点：**`boxOf` 里 `scrollIntoView({block:'center'})` 撞上全局
+     smooth 滚动**——删描述后卡片位置变化恰好触发滚动量，rect 在滚动进行中取值 → clickAt 打在
+     漂移后的视口位置落空。修法：`scrollIntoView({ block:'center', behavior:'instant' })`。
+     ⚠️ 教训：**几何断言脚本里凡 scrollIntoView 后取 rect，必须 `behavior:'instant'`**（§7.6 同族教训）。
+
+### 52.3 验收与上线
+
+- 新第 20 号脚本 `scripts/verify-shell.mjs`（**43/43**）：7 页 × （顶对齐≤1px / kicker 格式 /
+  `<b>` 包英文 / 无描述 / h1 非空 / 无溢出）+ 全程无异常，纳入 `run-regress`（**19 → 20**）。
+- 受影响回归：verify-interaction 12/12（两次复跑稳定）、smoke 58/58、copy 31/31、log 15/15、
+  nav 21/21、nav-shrink 40/40。
+- **发布前全量 20 脚本：20/20 全绿**（§47.2 发布前触发）。
+- 对齐实况截图：`_shots/shell-aligned.png`（/blog/ 三栏，kicker 与左栏个人信息卡顶边同线）。
 - 调试环境注：本轮 CDP 无头浏览器（`cwcdp3` profile）出现"本地页面在 ~2500 字符处
   readyState 停滞"的实例级损坏  （外部站点正常）——**换回健康的 `cwcdp2` profile +
   `--disable-background-networking` 重启即恢复**。排查时先杀旧实例再换 profile，别急着改页面代码。

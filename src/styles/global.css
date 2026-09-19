@@ -292,7 +292,10 @@ body::before {
   display: flex; align-items: baseline; gap: 0.75rem;
   font-family: var(--font-mono); font-size: 0.78rem;
   letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--ink-3); margin-bottom: 1.6rem;
+  /* margin-top 必须显式归 0：p 的 UA 默认 margin-top 1em 在「壳层把 page-head 的
+     padding-top 收掉」后会成为**塌陷 margin** 把整个标题块推下 ~12px（2026-09-20 实测），
+     导致内容列与侧栏首卡顶边错位。 */
+  color: var(--ink-3); margin: 0 0 1.6rem;
 }
 .kicker b { color: var(--accent-deep); font-weight: 500; }
 .kicker::after { content: ""; flex: 1; border-bottom: 1px solid var(--line-2); transform: translateY(-0.3em); }
@@ -589,7 +592,7 @@ button.chip.on { background: var(--accent); border-color: var(--accent); color: 
 
 /* 作品详情 */
 .work-head { margin-bottom: 2.6rem; }
-.work-head .no-big { font-family: var(--font-mono); font-size: 0.84rem; letter-spacing: 0.2em; color: var(--accent-deep); font-weight: 500; font-variant-numeric: tabular-nums; }
+.work-head .no-big { font-family: var(--font-mono); font-size: 0.84rem; letter-spacing: 0.2em; color: var(--accent-deep); font-weight: 500; font-variant-numeric: tabular-nums; margin: 0; }
 .work-head h1 { font-family: var(--font-display); font-size: clamp(1.4rem, 2.7vw, 2rem); margin: 0.2em 0 0.25em; letter-spacing: -0.01em; }
 .work-head .sub { color: var(--ink-2); }
 .work-head .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0; margin-top: 1.8rem; border-radius: var(--r-m); overflow: hidden; border: 1px solid var(--line-glass); background: var(--glass); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); box-shadow: var(--shadow-sm); }

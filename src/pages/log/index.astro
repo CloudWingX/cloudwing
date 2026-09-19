@@ -51,9 +51,6 @@ for (const d of [...days.values()].sort((a, b) => (a.date < b.date ? 1 : -1))) {
   years.set(d.year, [...(years.get(d.year) ?? []), { ...d, kinds }]);
 }
 const yearList = [...years.entries()].sort((a, b) => b[0] - a[0]);
-const totalItems = logs.length;
-const totalDays = days.size;
-const firstDate = [...days.keys()].at(-1) ?? '';
 ---
 <SidebarLayout
   title="日志"
@@ -63,12 +60,8 @@ const firstDate = [...days.keys()].at(-1) ?? '';
   <div class="log-root">
     <div class="wrap">
       <header class="page-head" data-ent>
-        <p class="kicker"><b>LOG</b> / 日志 · 站点更新记录</p>
+        <p class="kicker"><b>LOG</b> / 日志</p>
         <h1>日志</h1>
-        <p class="txt">
-          这个站每天做了什么，全在这里：自 {firstDate} 起共 {totalDays} 天、
-          {totalItems} 条更新，按时间倒序逐条展开。要看压缩成一行的时间线，去「归档」。
-        </p>
       </header>
 
       {yearList.map(([year, list]) => (
@@ -105,10 +98,6 @@ const firstDate = [...days.keys()].at(-1) ?? '';
 <style>
   .log-root { padding: 2.4rem 0 3rem; }
   .page-head { margin-bottom: 2rem; }
-  .page-head .txt {
-    margin-top: 0.45rem; max-width: 46em;
-    color: var(--ink-2); font-size: 0.95rem; line-height: 1.7;
-  }
 
   .lg-year { margin-bottom: 2.4rem; }
   .lg-yy {

@@ -12,6 +12,7 @@ const scripts = [
   // smoke 先证明"页面本身是好的"，再验"操作姿势"这一层。
   'verify-interaction',
   'verify-log',
+  'verify-shell',
   'verify-hero', 'verify-home', 'verify-nav-shrink', 'verify-nav',
   'verify-brand', 'verify-theme', 'verify-redesign', 'verify-search',
   'verify-videobg', 'verify-videobg-global', 'contrast-audit',
