@@ -75,6 +75,16 @@
   .shell .room-stage {
     padding-top: 0;
   }
+  /* about 的 16.8 与 account 的 19.2 是两种成因：
+     about = .who 里首个 p.txt 的 UA margin-top(1em=16.8px) **塌出 section** —— 用
+     padding-top 阻断塌陷（margin-top 会与塌陷值取 max 而无效），8.8+16.8=25.6 ✓；
+     account 直接 margin-top 补齐。 */
+  .shell .who {
+    padding-top: 0.55rem;
+  }
+  .shell .room-card {
+    margin-top: 0.4rem;
+  }
   /* kicker 与标题、标题与下方内容之间的间距一并收紧（标题变小后原来的间距显得空） */
   .shell .page-head .kicker,
   .shell .work-head .no-big {

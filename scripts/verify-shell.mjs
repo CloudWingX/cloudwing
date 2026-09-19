@@ -68,6 +68,20 @@ const ev = async (expr) => {
 await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
 
 const KICKER_RE = /^[A-Z]+ \/ .+$/; // 「EN / 中文」，无「· 后缀」
+/* 标题块底 → 首块内容的视觉间距统一为 1.6rem（25.6px，§53）。两种页面形态两种口径：
+   - 卡片/区块边界型（posts/blog/log 卡片列表、account 玻璃卡）：**盒间距**即视觉间距 → 25.6；
+     gallery/nav 的间距在 section 自身 padding-top 里（盒间距为 0）→ 量 0。
+   - 平文型（about 首段 .txt）：量「首个文本元素顶 − head 底」→ 25.6
+     （.who padding-top 0.55rem 阻断 p 的 UA margin 塌陷，8.8+16.8=25.6）。 */
+const GAP_CHECK = {
+  '/posts/': { kind: 'box', target: 25.6 },
+  '/blog/': { kind: 'box', target: 25.6 },
+  '/log/': { kind: 'box', target: 25.6 },
+  '/gallery/': { kind: 'box', target: 0 },
+  '/nav/': { kind: 'box', target: 0 },
+  '/about/': { kind: 'visual', target: 25.6 },
+  '/account/': { kind: 'box', target: 25.6 },
+};
 for (const path of PAGES) {
   console.log(`\n── ${path} ──`);
   await ev(`location.replace(${JSON.stringify(BASE + path)})`);
@@ -80,6 +94,8 @@ for (const path of PAGES) {
     const kicker = head.querySelector('.kicker, .no-big');
     const desc = [...head.children].filter(el => el.classList.contains('txt') || el.classList.contains('sub')).length;
     const h1 = head.querySelector('h1');
+    const next = head.nextElementSibling;
+    const gapBox = next ? Math.round((next.getBoundingClientRect().top - head.getBoundingClientRect().bottom) * 10) / 10 : null;
     return {
       偏差: Math.round(dev * 10) / 10,
       kicker: kicker ? kicker.textContent.replace(/\\s+/g, ' ').trim() : null,
@@ -87,11 +103,31 @@ for (const path of PAGES) {
       kickerText: kicker ? [...kicker.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).filter(Boolean).join(' ') : null,
       描述数: desc,
       h1: h1 ? h1.textContent.trim() : '',
+      下块间距: gapBox,
       溢出: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     };
   })()`);
   if (r.err) { check(`${path} 壳层结构完整`, false, JSON.stringify(r)); continue; }
   check(`${path} 内容顶与侧栏首卡顶对齐（≤1px）`, Math.abs(r.偏差) <= 1, `偏差=${r.偏差}px`);
+  const gc = GAP_CHECK[path];
+  const gapValue = gc.kind === 'visual'
+    ? await ev(`(() => {
+        const head = document.querySelector('.page-head');
+        const next = head.nextElementSibling;
+        const walker = document.createTreeWalker(next, NodeFilter.SHOW_ELEMENT);
+        while (walker.nextNode()) {
+          const el = walker.currentNode;
+          const own = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+          const cs = getComputedStyle(el);
+          if (own && cs.visibility !== 'hidden' && cs.display !== 'none' && parseFloat(cs.opacity) > 0.5) {
+            return +( (el.getBoundingClientRect().top - head.getBoundingClientRect().bottom).toFixed(1) );
+          }
+        }
+        return null;
+      })()`)
+    : r.下块间距;
+  check(`${path} 标题到内容的间距符合全站节奏（1.6rem）`, gapValue !== null && Math.abs(gapValue - gc.target) <= 1.5,
+    `间距=${gapValue} 目标=${gc.target}（${gc.kind}口径）`);
   check(`${path} kicker 是「EN / 中文」格式`, !!r.kicker && KICKER_RE.test(r.kicker) && !r.kicker.includes('·'), JSON.stringify(r.kicker));
   check(`${path} kicker 英文词在 <b> 里`, !!r.kickerBold && /^[A-Z]+$/.test(r.kickerBold), String(r.kickerBold));
   check(`${path} 标题下无描述简介`, r.描述数 === 0);
