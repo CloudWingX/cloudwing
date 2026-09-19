@@ -9,8 +9,9 @@
 //      不自己调一套颜色，这样强调色预设、浅色/深色兜底都能自动跟随。
 //   2. 图标不用第三方 favicon 服务（站点刻意不依赖外部请求，见 site.ts 的 IMG_CDN 注释），
 //      默认按站名首字现算一个圆牌；站长要真实图标就填 item.icon 指向站内图片。
-//   3. href 以 '#' 开头 = 该位仍空着 → 渲染成**不可点击**的虚线占位卡。
+//   3. href 以 '#' 开头 = 只占位、地址还没定 → 渲染成**不可点击**的虚线卡。
 //      这样"骨架态"不会把假地址带上线，也不会让访客点到死链。
+//      2026-09-19 起条目已全部填实，这条分支作为将来加新条目时的兜底保留。
 import SidebarLayout from '../../layouts/SidebarLayout.astro';
 import { SITE_NAV } from '../../site';
 
@@ -41,14 +42,14 @@ const stat = live
   : `骨架已就位：共 ${empty} 个空位，填上站点名与地址即可`;
 
 const META_DESC =
-  'CloudWing 的网站导航 —— 按用途整理的常用站点收藏，覆盖技术文档、在线工具、素材资源与友情链接。';
+  'CloudWing 的网站导航 —— 按用途整理的常用站点收藏，覆盖 AI 与云服务、开发工具、学习刷题、设计素材，以及游戏与游戏开发。';
 ---
 <SidebarLayout title="网站导航" description={META_DESC} center>
   <div class="wrap">
     <header class="page-head" data-ent>
       <p class="kicker"><b>SITES</b> / 网站导航 · 收藏夹</p>
       <h1>网站导航</h1>
-      <p class="txt">按用途分组的常用站点。分组与版式已经就位，条目陆续往里填。</p>
+      <p class="txt">按用途分组的常用站点。点卡片在新标签页打开；游戏相关收在最后一组。</p>
       <p class="navm-stat" data-ent style="--ad:.1s">
         <span class="ns-dot" aria-hidden="true"></span>{stat}
       </p>

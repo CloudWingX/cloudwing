@@ -147,11 +147,12 @@ export const NAV = [
 ];
 
 /* ▍网站导航页（/nav/）的条目 —— 按用途分组的站点收藏夹。
-   现在是**骨架数据**：分组与版式已就位，具体站点等站长补齐。
-   - 上线一个站点：把 href 改成完整地址（http/https 开头），name / desc / tag 一并改写。
-   - href 以 '#' 开头 = 该位仍空着。页面会把它渲染成**不可点击**的虚线占位卡，
-     这样既不会把假地址带上线，也不会让访客点到死链。
-   - 不需要的条目直接删行；某个分组被删空则该组整块不渲染。
+   2026-09-19：条目已按站长给的清单正式填入；分组名/说明/标签都在这里改。
+   - 加一个站点：往对应分组的 items 里加一行（http/https 开头的完整地址），
+     name / desc / tag 一并写；不需要的条目直接删行，某组删空则该组整块不渲染。
+   - ✓ 顺序即页面顺序：**游戏相关刻意排在最下面**（站长要求）。
+   - 若临时想先占个位又没定地址，可把 href 写成 '#' 开头的字符串：
+     页面会渲染成**不可点击**的虚线卡，不会把假地址带上线，也不会让访客点到死链。
    - 可选 icon：给一个站内图片路径（如 '/nav/cloudflare.png'）即可替换默认的首字母圆牌；
      不给就按 name 首字生成，全程不发外部请求（本站刻意不依赖第三方 favicon 服务）。 */
 export const SITE_NAV: {
@@ -160,39 +161,62 @@ export const SITE_NAV: {
   items: { name: string; href: string; desc?: string; tag?: string; icon?: string }[];
 }[] = [
   {
-    group: '技术站点',
-    hint: '查文档、泡社区、翻源码',
+    group: 'AI 与云服务',
+    hint: '模型接口与站点后台',
     items: [
-      { name: '官方文档', href: '#slot-docs', desc: '把常用框架的文档站地址填这里', tag: '文档' },
-      { name: '技术社区', href: '#slot-community', desc: '问答或论坛地址填这里', tag: '社区' },
-      { name: '源码托管', href: '#slot-git', desc: '代码仓库地址填这里', tag: '源码' },
+      { name: 'DeepSeek 对话', href: 'https://chat.deepseek.com/', desc: '官方网页对话入口，写作与代码问答', tag: '对话' },
+      { name: 'Kimi 开放平台', href: 'https://platform.kimi.com/console/api-keys', desc: '大模型 API 控制台，管理密钥与用量', tag: 'API' },
+      { name: 'APINebula', href: 'https://apinebula.ai/', desc: '第三方模型中转，一个密钥接多家；需充值', tag: '中转' },
+      // ⚠️ 原来的地址带账户 ID（dash.cloudflare.com/<32 位 hash>/...），那是账号凭据的一部分，
+      //    公开页面上不放；要直达项目就自己在浏览器里存书签。
+      { name: 'Cloudflare Pages', href: 'https://dash.cloudflare.com/', desc: '本站的托管控制台，登录后进入', tag: '部署' },
     ],
   },
   {
-    group: '工具与效率',
-    hint: '日常会反复打开的那几个',
+    group: '开发与工具',
+    hint: '写代码时会打开的那几个',
     items: [
-      { name: '在线工具', href: '#slot-tool', desc: '编解码 / 正则 / 格式化之类', tag: '工具' },
-      { name: '效率服务', href: '#slot-utility', desc: '剪贴板、图床、短链之类', tag: '效率' },
-      { name: '部署与托管', href: '#slot-deploy', desc: '站点托管或云服务控制台', tag: '部署' },
+      { name: 'React Bits', href: 'https://www.reactbits.dev/', desc: '200+ 可直接复制的 React 动效与背景组件', tag: '组件' },
+      { name: 'GitHub Proxy', href: 'https://github.akams.cn/', desc: 'GitHub 下载加速，支持 Clone / Releases / Raw', tag: '加速' },
     ],
   },
   {
-    group: '素材与资源',
-    hint: '图标、字体、图片',
+    group: '学习与刷题',
+    hint: '练手与补基础',
     items: [
-      { name: '图标库', href: '#slot-icon', desc: '图标集或矢量素材站', tag: '图标' },
-      { name: '字体', href: '#slot-font', desc: '免费可商用字体站', tag: '字体' },
-      { name: '图库', href: '#slot-photo', desc: '免费图片或纹理站', tag: '图片' },
+      { name: '力扣 LeetCode', href: 'https://leetcode.cn/', desc: '中文算法题库，周赛与题解社区', tag: '算法' },
+      { name: '柏码', href: 'https://www.itbaima.cn/zh-CN', desc: '计算机系列视频课程，基础资源免费', tag: '课程' },
     ],
   },
   {
-    group: '友情链接',
-    hint: '互相交换过的朋友站点',
+    group: '设计与素材',
+    hint: '字体、模型、可商用资源',
     items: [
-      { name: '友链一', href: '#slot-friend-1', desc: '朋友站点的名字与地址', tag: '友链' },
-      { name: '友链二', href: '#slot-friend-2', desc: '朋友站点的名字与地址', tag: '友链' },
-      { name: '友链三', href: '#slot-friend-3', desc: '朋友站点的名字与地址', tag: '友链' },
+      { name: '找字体网 ZFONT', href: 'https://www.zfont.cn/', desc: '免费可商用中文字体下载，更新频繁', tag: '字体' },
+      { name: '模之屋 PlayBox', href: 'https://www.aplaybox.com/', desc: '3D 模型、动作与插画创作分享社区', tag: '模型' },
+    ],
+  },
+  {
+    group: '效率与阅读',
+    hint: '顺手会用到的',
+    items: [
+      { name: '打字鸭', href: 'https://daziya.com/', desc: '盲打指法、拼音与代码打字练习', tag: '练习' },
+      { name: '星辰云博客', href: 'https://blog.xingchencloud.top/p/19901205.html', desc: '《Github 镜像加速站点收集》，汇总可用镜像', tag: '文章' },
+    ],
+  },
+  {
+    group: '游戏与游戏开发',
+    hint: '平时逛得最多的那一类',
+    items: [
+      { name: 'Godot 引擎', href: 'https://godotengine.org/zh-cn/', desc: '免费开源 2D / 3D 游戏引擎与文档', tag: '引擎' },
+      { name: '中文 Minecraft Wiki', href: 'https://zh.minecraft.wiki/', desc: '官方授权中文百科，方块 / 生物 / 红石 / 版本', tag: '百科' },
+      { name: 'MC 百科', href: 'https://www.mcmod.cn/', desc: '国内最大的 MC 模组中文百科与教程', tag: '百科' },
+      { name: 'CurseForge', href: 'https://www.curseforge.com/minecraft', desc: '全球最大的 MC 模组与整合包托管平台', tag: '模组' },
+      { name: 'MinecraftShader', href: 'https://minecraftshader.com/', desc: 'MC 光影、材质包与模组资源，附安装教程', tag: '光影' },
+      { name: 'NameMC', href: 'https://zh-cn.namemc.com/minecraft-skins', desc: 'MC 皮肤库与玩家 ID 查询', tag: '皮肤' },
+      { name: '地形师茶馆', href: 'https://terratea.cc/', desc: 'MC 地形创作社区，WorldMachine / WorldPainter 教程', tag: '地形' },
+      { name: '方块小镇 Yuushya', href: 'https://yuushya.com/townscape/', desc: 'MC 建筑向模组，1000+ 建材与方块建模系统', tag: '建筑' },
+      { name: 'Mooncell', href: 'https://fgo.wiki/w/%E8%8B%B1%E7%81%B5%E5%9B%BE%E9%89%B4', desc: 'FGO 中文 Wiki，英灵图鉴与数值检索', tag: '图鉴' },
     ],
   },
 ];
