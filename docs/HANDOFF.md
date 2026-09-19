@@ -2539,6 +2539,20 @@ CDP 逐张 `new Image()` ✅ 19/19 载入、0 破图；末组放大截图确认*
 | `verify-search.mjs` | ✅ **17/17** |
 | **`run-regress.mjs` 全量（18 个脚本串行，7m53s）** | ✅ **18/18 通过** |
 
+**推送后线上确认（按 §7.5 / §43.2：不能用 chunk 哈希，必须用内容特征穿透边缘缓存）**：
+
+```bash
+node scripts/poll-deploy.mjs --have 'data-pointer-focus' \
+     --have 'tap-highlight-color' --have 'user-select:none' --timeout 600
+# ✅ 线上已是本次构建（前两轮 1s / 17s 仍报"未通过 3 项" —— 判据在旧构建下会红，
+#    34s 那轮翻绿，即真实的构建切换，不是恒真断言）
+node scripts/verify-interaction.mjs https://cloudwing.pages.dev
+# ✅ 11/11 —— 线上端到端复现同一组结论（不是只看 CSS 字符串在不在）
+```
+
+> 两轮 poll 的"未通过 → 通过"过渡，本身就是 §7.6 第 3 条要的**对照组**：
+> 若判据恒真，第一轮就该绿。
+
 **`verify-interaction.mjs` 的五组断言（关键：带对照组）**：
 
 | 组 | 断言 | 实测 |
