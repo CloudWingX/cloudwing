@@ -177,9 +177,10 @@ export const SITE_NAV: {
     hint: '写代码时会打开的那几个',
     items: [
       { name: 'React Bits', href: 'https://www.reactbits.dev/', desc: '200+ 可直接复制的 React 动效与背景组件', tag: '组件', icon: '/nav/reactbits.png' },
-      // ⚠️ 本站图标取不到：其 TLS 证书已过期（Node 与浏览器两侧一致报 CERT_HAS_EXPIRED），
-      //    http 路径 404、备用路径同样证书失败 —— 不填 icon，卡片退回按站名首字生成的圆牌。
-      { name: 'GitHub Proxy', href: 'https://github.akams.cn/', desc: 'GitHub 下载加速，支持 Clone / Releases / Raw', tag: '加速' },
+      // 该站自身图标取不到：其 TLS 证书已过期（Node 与浏览器两侧一致报 CERT_HAS_EXPIRED），
+      //    http 路径 404、备用路径同样证书失败。已按站长意见改用**通用 logo**：
+      //    GitHub 官方 mark（simple-icons CC0 矢量，取白色版 —— 默认 #181717 在暗色卡上不可见）。
+      { name: 'GitHub Proxy', href: 'https://github.akams.cn/', desc: 'GitHub 下载加速，支持 Clone / Releases / Raw', tag: '加速', icon: '/nav/github.svg' },
     ],
   },
   {
@@ -213,9 +214,10 @@ export const SITE_NAV: {
       { name: 'Godot 引擎', href: 'https://godotengine.org/zh-cn/', desc: '免费开源 2D / 3D 游戏引擎与文档', tag: '引擎', icon: '/nav/godot.svg' },
       { name: '中文 Minecraft Wiki', href: 'https://zh.minecraft.wiki/', desc: '官方授权中文百科，方块 / 生物 / 红石 / 版本', tag: '百科', icon: '/nav/mcwiki.png' },
       { name: 'MC 百科', href: 'https://www.mcmod.cn/', desc: '国内最大的 MC 模组中文百科与教程', tag: '百科', icon: '/nav/mcmod.png' },
-      // ⚠️ 该站图标取不到：Cloudflare 机器人防护对非浏览器请求一律 403，CDP 真实浏览器
-      //    等 12s 仍未过 JS 挑战（页面标题停在"请稍候…"）—— 不填 icon，退回首字圆牌。
-      { name: 'CurseForge', href: 'https://www.curseforge.com/minecraft', desc: '全球最大的 MC 模组与整合包托管平台', tag: '模组' },
+      // 该站自身图标取不到：Cloudflare 机器人防护对非浏览器请求一律 403，CDP 真实浏览器
+      //    等 12s 仍未过 JS 挑战（标题停在"请稍候…"）。已按站长意见改用**通用 logo**：
+      //    CurseForge 官方 mark（simple-icons CC0 矢量，保留其品牌橙 #F16436）。
+      { name: 'CurseForge', href: 'https://www.curseforge.com/minecraft', desc: '全球最大的 MC 模组与整合包托管平台', tag: '模组', icon: '/nav/curseforge.svg' },
       { name: 'MinecraftShader', href: 'https://minecraftshader.com/', desc: 'MC 光影、材质包与模组资源，附安装教程', tag: '光影', icon: '/nav/minecraftshader.png' },
       { name: 'NameMC', href: 'https://zh-cn.namemc.com/minecraft-skins', desc: 'MC 皮肤库与玩家 ID 查询', tag: '皮肤', icon: '/nav/namemc.png' },
       { name: '地形师茶馆', href: 'https://terratea.cc/', desc: 'MC 地形创作社区，WorldMachine / WorldPainter 教程', tag: '地形', icon: '/nav/terratea.png' },

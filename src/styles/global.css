@@ -178,8 +178,12 @@ a { color: inherit; }
       另有一条 data-pointer-focus 兜底规则，配合 scripts/ui.js 的输入方式追踪，
       解决 Safari / Android Chrome 把**点击**也判成 :focus-visible 的情况。
 
-   ⚠️ 代价（明确记下）：文章正文与代码块从此无法选中复制。若要放行，加一条即可，例如
-      .pp-md, .pp-md pre, .pp-md code { -webkit-user-select: text; user-select: text; } */
+   D. ★例外的例外：文章正文与代码块仍可选中★（2026-09-19 站长裁决）
+      `user-select:none` 是整站生效的，若一刀切，**文章正文与代码块就无法复制**
+      （且该区域下 Ctrl/Cmd+A 也失效，键盘复制一并断掉）—— 而本站是**博客**，
+      正文与代码可复制属于核心用途；"防拖选"真正要挡的是**误选 UI 文字**
+      （导航 / 卡片 / 按钮标签）。故对文章正文容器 .pp-md 显式放行。
+      断言见 scripts/verify-interaction.mjs 的 [F] 组（防止这条例外被静默改掉）。 */
 body {
   -webkit-user-select: none;
   user-select: none;
@@ -191,6 +195,15 @@ select,
 [contenteditable='true'],
 [contenteditable='plaintext-only'],
 [contenteditable=''] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* D：文章正文与代码块放行选中（理由见上方注释）——
+   .pp-md 是文章详情页的 Markdown 渲染容器（见 pages/posts/[slug].astro）。
+   子元素一并列出：user-select 会被继承，但显式声明可避免将来某层覆盖后失效。 */
+.pp-md,
+.pp-md pre,
+.pp-md code {
   -webkit-user-select: text;
   user-select: text;
 }

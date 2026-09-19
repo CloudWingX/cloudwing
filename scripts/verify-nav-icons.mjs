@@ -126,6 +126,34 @@ if (existsSync(DIST)) {
   console.log('\n[C][D] 跳过：没有 dist/（先 npm run build）');
 }
 
+/* ── E. SVG 图标的"暗底可读性"下限 ──
+   动机（HANDOFF §48.3）：换图标时抓到过一张**近黑的咖啡杯**当 yuushya 的 logo，
+   在深色卡上几乎不可见 —— 当时是靠"亮度量化"才发现的。
+   本站图标位底色是深色，所以"近黑 fill" = 等于没画。
+   判据：SVG 里所有硬编码 fill 中**最亮的那个**，相对亮度必须 ≥ 0.12。
+   （参考：既有的 apinebula 0.24 / deepseek 0.19；#181717 只有 0.0086 → 必红）
+   ⚠️ 只查 .svg：PNG 需要解码像素才能算亮度（§48 的抓取脚本里有个一次性 DIB 解码器），
+      这里不重复实现，留作已知盲区（PNG 的亮度靠换图时的深浅底对照截图核验）。 */
+console.log('\n[E] SVG 图标在深色卡上必须可见（最亮 fill 的相对亮度 ≥ 0.12）');
+const relLum = (r, g, b) => {
+  const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+};
+const dimIcons = [];
+for (const it of withIcon.filter((i) => /\.svg$/i.test(i.icon))) {
+  const s = readFileSync(join(PUB, it.icon.replace(/^\//, '')), 'utf8');
+  const cols = [...s.matchAll(/fill="(#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3}))"/g)].map((m) => m[1]);
+  if (!cols.length) { dimIcons.push(`${it.icon}（无硬编码 fill，用 currentColor → 跳过）`); continue; }
+  const L = cols.map((c) => {
+    let x = c.slice(1);
+    if (x.length === 3) x = x.split('').map((ch) => ch + ch).join('');
+    return relLum(parseInt(x.slice(0, 2), 16), parseInt(x.slice(2, 4), 16), parseInt(x.slice(4, 6), 16));
+  });
+  if (Math.max(...L) < 0.12) dimIcons.push(`${it.icon}（最亮 ${Math.max(...L).toFixed(4)}）`);
+}
+const dim = dimIcons.filter((d) => !d.includes('跳过'));
+check('所有 SVG 图标都有足够亮的填充色', dim.length === 0, dim.join('、'));
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n=== 结果：${results.length - failed.length}/${results.length} 通过 ===`);
 if (failed.length) failed.forEach((f) => console.log('  ❌ ' + f.n));

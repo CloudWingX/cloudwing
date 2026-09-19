@@ -63,8 +63,8 @@ await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, dev
 await ev(`location.replace(${JSON.stringify(BASE + '/nav/')})`);
 await sleep(3000);
 
-// 拦住导航，免得测试把页面点走
-await ev(`(() => {
+// 拦住导航，免得测试把页面点走（每次 location.replace 后是全新文档，必须重装）
+const GUARD = `(() => {
   if (window.__viGuard) return 1;
   window.__viGuard = 1;
   document.addEventListener('click', (e) => {
@@ -72,7 +72,8 @@ await ev(`(() => {
     if (a) { e.preventDefault(); e.stopPropagation(); }
   }, true);
   return 1;
-})()`);
+})()`;
+await ev(GUARD);
 
 /* ── 工具：真实指针事件 ── */
 const boxOf = (sel) => ev(`(() => {
@@ -206,6 +207,32 @@ const ues = await ev(`(() => {
 })()`);
 check('body 关闭了拖选（user-select: none）', ues.body === 'none', `body=${ues.body}`);
 check('输入框放行了选中（user-select: text）', ues.input === 'text', `input=${ues.input}`);
+
+/* ── F. 文章正文必须**仍可选中**（§49 刻意保留的"例外的例外"） ──
+   动机：`body{user-select:none}` 一刀切会把**文章正文与代码块**一起锁住。
+   本站是博客，正文与代码可复制属核心用途 → 对 .pp-md 显式放行。
+   这条断言的价值在于：**防止那条例外将来被谁顺手删掉**（删了 F 会红）。
+   注意它**必须能红**（§7.6 第 3 条）：把 global.css 里 .pp-md 那条注释掉，这里就该失败。 */
+console.log('\n[F] 文章正文：必须仍能选中复制（刻意保留的例外）');
+try {
+  const idx = await (await fetch(`${BASE}/posts/`)).text();
+  const slug = (idx.match(/href="\/posts\/([^"/]+)\/"/) || [])[1];
+  if (!slug) throw new Error('从 /posts/ 里没解析到文章链接');
+  await ev(`location.replace(${JSON.stringify(`${BASE}/posts/${slug}/`)})`);
+  await sleep(2500);
+  await ev(GUARD); // 导航后是全新文档，守卫要重装
+  const para2 = await boxOf('.pp-md p');
+  if (!para2) {
+    check('找得到一段文章正文（.pp-md p）', false, '选择器没命中');
+  } else {
+    await ev('getSelection().removeAllRanges()');
+    await dragAcross(para2.l + 4, para2.t + para2.h / 2, para2.l + Math.min(para2.w - 6, 240), para2.t + para2.h / 2);
+    const got2 = await selectionLen();
+    check('拖过文章正文后能选中文字（例外生效）', got2 > 0, `选中 ${got2} 字`);
+  }
+} catch (e) {
+  check('文章正文可选中（例外生效）', false, String(e.message || e).slice(0, 80));
+}
 
 check('全程无 JS 异常', errors.length === 0, errors[0] || '');
 
