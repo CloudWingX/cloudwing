@@ -165,6 +165,54 @@ body {
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 img, svg, video { display: block; max-width: 100%; height: auto; }
 a { color: inherit; }
+
+/* ============ 交互策略：不可拖选 + 点击不出轮廓 + 键盘仍出轮廓 ============
+   2026-09-19 站长要求三条：① 文字不可用鼠标拖选 ② 点按钮后不出现轮廓 ③ 键盘可访问性不能丢。
+   实现分三层，互不冲突：
+
+   A. 不可拖选 —— user-select 关在 body 上（整站生效，连组件岛里的也吃这套）。
+      ⚠️ 表单/可编辑区必须**显式放行**：否则输入框里的内容连自己都选不中，没法改。
+   B. 点击不出轮廓 —— 规范上 :focus-visible 只该在**键盘**操作时命中；这里再补一条
+      :focus:not(:focus-visible) 把"非键盘来源"的轮廓清干净。
+   C. 键盘仍出轮廓 —— 全站的 :focus-visible 规则（上一行）原样保留，不做任何削弱。
+      另有一条 data-pointer-focus 兜底规则，配合 scripts/ui.js 的输入方式追踪，
+      解决 Safari / Android Chrome 把**点击**也判成 :focus-visible 的情况。
+
+   ⚠️ 代价（明确记下）：文章正文与代码块从此无法选中复制。若要放行，加一条即可，例如
+      .pp-md, .pp-md pre, .pp-md code { -webkit-user-select: text; user-select: text; } */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* 表单与可编辑区放行（B/A 两条都不得影响"能编辑"这件事） */
+input,
+textarea,
+select,
+[contenteditable='true'],
+[contenteditable='plaintext-only'],
+[contenteditable=''] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* 图片默认是 HTML5 可拖拽的：按住一拖就浮出半透明"幽灵图"，并连带把邻近文字选中 */
+img { -webkit-user-drag: none; }
+/* B：指针来源的焦点不画轮廓（与 :focus-visible 互斥，不会削弱键盘） */
+:focus:not(:focus-visible) { outline: none; }
+/* C 的兜底：浏览器若把点击也判成 :focus-visible，则由 ui.js 打上这个属性。
+   这里必须 !important —— 页面级 .xxx:focus-visible 与它同权重且后加载，
+   不加就会被那些规则盖回去（键盘用户不会被加这个属性，所以对他们没有影响）。 */
+[data-pointer-focus]:focus { outline: none !important; }
+/* 触摸端点按的默认高亮块（Chrome Android 的淡蓝块 / iOS 的灰块），一并去掉 */
+button,
+[role='button'],
+[role='tab'],
+[role='slider'],
+[role='menuitem'],
+summary,
+label,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
 h1, h2, h3, h4 { margin: 0 0 0.5em; line-height: 1.25; color: var(--ink); }
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }

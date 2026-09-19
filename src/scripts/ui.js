@@ -22,6 +22,49 @@ if (!window.__cwDarkReplayBound) {
   document.addEventListener('astro:page-load', lockDarkTheme);
 }
 
+/* ---------- 焦点来源：指针 vs 键盘（配合 global.css 的 [data-pointer-focus]） ----------
+   要解决的问题：点一下按钮就留下一圈强调色轮廓（站长反馈的"蓝色轮廓"）。
+   规范上 :focus-visible 只在**键盘**操作时命中，Chromium 桌面实测也确实如此；
+   但 Safari 与 Android Chrome 会把「点击 / 触摸」也判成 :focus-visible，
+   于是纯 CSS 兜不住 —— 这里按"最后一次输入方式"给焦点元素打标：
+     · 指针按下（mouse / touch / pen）→ 打 data-pointer-focus → 不画轮廓
+     · 键盘按下（Tab / Enter / 方向键…）→ 撤标 → 照常画轮廓
+   ⚠️ 文本输入类控件（input / textarea / select / contenteditable）**永远不打标**：
+      光标的落点必须看得见，否则"在哪儿打字"就没法判断了 —— 这是 a11y 的底线，
+      也正是"保留键盘可访问性"里最不能省的一条。 */
+function focusModality() {
+  if (window.__cwFocusModality) return;
+  window.__cwFocusModality = true;
+
+  let fromKeyboard = false;
+  document.addEventListener('pointerdown', () => { fromKeyboard = false; }, true);
+  document.addEventListener('keydown', () => { fromKeyboard = true; }, true);
+  // 极老触摸机型不派发 pointerdown 时的兜底
+  document.addEventListener('touchstart', () => { fromKeyboard = false; }, { capture: true, passive: true });
+
+  // 文本输入类：光标的落点需要一直可见，不计输入方式
+  const needsSteadyRing = (el) => {
+    const tag = el.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (el.isContentEditable) return true;
+    if (tag !== 'INPUT') return false;
+    const type = (el.getAttribute('type') || 'text').toLowerCase();
+    return !['button', 'submit', 'reset', 'checkbox', 'radio', 'range', 'color', 'file', 'image', 'hidden'].includes(type);
+  };
+
+  document.addEventListener('focusin', (ev) => {
+    const el = ev.target;
+    if (!(el instanceof Element)) return;
+    if (fromKeyboard || needsSteadyRing(el)) el.removeAttribute('data-pointer-focus');
+    else el.setAttribute('data-pointer-focus', '');
+  }, true);
+  // 失焦即清标：软导航会换 DOM，别让复用的节点带着上一次的来源
+  document.addEventListener('focusout', (ev) => {
+    const el = ev.target;
+    if (el instanceof Element) el.removeAttribute('data-pointer-focus');
+  }, true);
+}
+
 /* ---------- 首页大标题 3D 光标跟随（vanilla-tilt 思路） ---------- */
 let _tt = null;
 let _ttRaf = 0;
@@ -103,6 +146,7 @@ function boot() {
     startElegantTrails, // 优雅星轨：浅色玻璃下克制的细轨迹
     startTitleTilt,     // 首页大标题 3D 光标跟随
     lockDarkTheme,      // 主题：单套暗色（软导航后保持 data-theme=dark）
+    focusModality,      // 焦点来源（指针/键盘）→ 点击不出轮廓、键盘照出（配 global.css）
     typedEffects,       // 打字机（TextType 移植）
     startDriftWall,     // 影集页漂移墙背景
     tocSpy,             // 右侧栏「本页目录」滚动高亮（子页面三栏壳层）

@@ -10,7 +10,9 @@
 > （见 §43.1），其"简版硬规则"职责并入本文件。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-19 下午 **确立测试分层策略（见 §47：全量回归不再每次跑）**；
+> 最后更新：2026-09-19 下午 **确立全站交互策略（禁鼠标拖选 / 点击不出轮廓 / 键盘轮廓保留，见 §49）**，
+> 并**修掉导航卡"真实图标与首字圆牌重叠"（见 §48.6）**；
+> 同日 **确立测试分层策略（见 §47：全量回归不再每次跑）**；
 > 同日 **新增「网站导航」子页面 `/nav/`（毛玻璃卡片网格，见 §44）**，
 > 并把站点条目**填实为 6 组 21 个**（见 §46）；同日完成**线上终检 27/27**（见 §45）；
 > 稍早 **删除 `CODEX.md`；纠正"删除类改动是否上线"的确认手法（见 §43）**；
@@ -28,9 +30,10 @@
 > 单页/组件 → 只跑该页冒烟 e2e（`node scripts/smoke.mjs`）+ 该模块脚本；
 > 功能模块 → 相关模块脚本 + 关键路径 e2e；
 > **全量回归 `run-regress.mjs` 只在 PR 前 / 合并前 / 发布前 / 站长明确要求时跑，且优先交给 CI**。
-> 自检入口仍为 `cd endfield-blog && node scripts/run-regress.mjs`（16 个脚本一次批跑）→
-> 最近一次 **15/16**（唯一失败项 `verify-videobg` 经复跑证实为时序假失败，见 §46.5；
-> 实质全绿）（单个入口 `node scripts/smoke.mjs` 为 **53/53**）。
+> 自检入口仍为 `cd endfield-blog && node scripts/run-regress.mjs`（**现为 18 个脚本**一次批跑）→
+> 最近一次 **18/18 全绿**（2026-09-19 晚，第 18 号脚本 `verify-interaction` 加入后首次全量，见 §49.4；
+> 上一轮 16 脚本时代为 15/16，唯一失败项 `verify-videobg` 经复跑证实为时序假失败，见 §46.5）。
+> （单个入口 `node scripts/smoke.mjs` 为 **53/53**）。
 > ✅ **文案漂移现在有断言了**（2026-09-19）：`scripts/verify-copy.mjs`（31 条，见 §7.2 / §42.2）——
 > §32 那种"几何全绿却带着错文案上线"的缺陷类已被堵住。
 > ✅ **`React error #424` 已于 2026-09-18 定位并修掉**（见 §37）：根因是软导航时
@@ -49,10 +52,12 @@
 个人博客与档案站「云翼 / CloudWing」，**Astro 7 静态站 + React 岛 + 暗色电影感玻璃 UI**，源码在 `endfield-blog/`，
 线上 <https://cloudwing.pages.dev>，仓库 <https://github.com/CloudWingX/cloudwing>（公开），
 推 `main` 即由 Cloudflare Pages 自动构建部署。**站点处于可用且已验证的状态**：
-16 个验证脚本全绿、可读性 0 处不达标、8 个页面 0 JS 异常、手机端 0 横向溢出（三机型 × 7 页）。
+18 个验证脚本全绿（2026-09-19 晚首次 18/18，见 §49.4）、可读性 0 处不达标、
+8 个页面 0 JS 异常、手机端 0 横向溢出（三机型 × 7 页）。
 （另有 3 个工具脚本：诊断 2 —— `diag-edges` / `probe-point`；部署轮询 1 —— `poll-deploy`，
 以及事件诊断 `diag-424`。）
-**2026-09-19 起验证脚本为 16 个**（含新加的 `verify-copy` 文案断言），可用
+**2026-09-19 起验证脚本为 18 个**（在 `verify-copy` 之外，新增 `verify-nav-icons` 图标静态断言
+与 `verify-interaction` 交互基线断言，两者均已接入批跑），可用
 `node scripts/run-regress.mjs` 一键批跑全部并汇总 PASS/FAIL。
 ⚠️ **但"一键批跑"不等于"每次改动都要跑"** —— 测试按 §47 分层，全量只在 PR/合并/发布/明确要求时跑。
 
@@ -1467,10 +1472,11 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 > ★**怎么选脚本：按 §47 的分层策略，不是每次都跑全套**★
 > 改一个子页面 → `smoke.mjs` + 该页对应的一条脚本；
 > 改一个功能模块 → 本表里相关的那几条；
-> **全套 `node scripts/run-regress.mjs`（16 个脚本串行 + 汇总 PASS/FAIL）只在
+> **全套 `node scripts/run-regress.mjs`（18 个脚本串行 + 汇总 PASS/FAIL）只在
 > PR 前 / 合并前 / 发布前 / 站长明确要求时跑，且优先交给 CI。**
-> `verify-copy.mjs` 是唯一**不需要无头浏览器**的一个（只读已构建的 `dist/`，
-> 也可直接给线上 URL 走 sitemap 枚举），所以它能独立于 9222 跑。
+> `verify-copy.mjs` 与 `verify-nav-icons.mjs` 是**不需要无头浏览器**的两个
+> （只读源码 / 已构建的 `dist/`；`verify-copy` 也可直接给线上 URL 走 sitemap 枚举），
+> 所以它们能独立于 9222 跑 —— 也因此被排在批跑队列最前。
 
 | 脚本 | 覆盖什么 | 当前基线 |
 |---|---|---|
@@ -2326,8 +2332,9 @@ node ./node_modules/astro/bin/astro.mjs build \
 其余相关现状：
 - **没有 CI**（无 `.github/workflows`）。线上部署是 Cloudflare Pages 自动构建，
   **只 build、不跑任何测试** —— 所以 §47.2 第 1 条目前**无处可交**。
-- 现有 16 个验证脚本**依赖本机 Edge + CDP 9222 + 已起的 4321 预览**，且必须**串行**（§7.1 第 6 条），
-  **不适合直接搬进 CI**。唯一例外是 `verify-copy.mjs`（纯 Node、只读 `dist/`），**它能上 CI**。
+- 现有 18 个验证脚本里，多数**依赖本机 Edge + CDP 9222 + 已起的 4321 预览**，且必须**串行**（§7.1 第 6 条），
+  **不适合直接搬进 CI**。例外是纯 Node 的 `verify-copy.mjs` 与 `verify-nav-icons.mjs`（只读
+  源码 / `dist/`），**这两个能上 CI**。
 - `package.json` 只有 `dev` / `build` / `build:fast` / `og` / `preview` 五个脚本，
   没有 `lint` / `test` / `check` 入口。
 
@@ -2338,3 +2345,229 @@ node ./node_modules/astro/bin/astro.mjs build \
 > ③ GitHub Actions 跑 `build` + `verify-copy`（这两个在 CI 里能跑），
 >    浏览器类脚本先留在本地按 L2 手动跑。
 > ⚠️ 以上都属于**构建配置改动**，按 §47.2 第 3 条**要先问站长**。
+
+---
+
+## 48. `/nav/` 卡片图标改为各站真实图标（2026-09-19 站长要求）
+
+**需求**：把网站导航每张卡左侧的「首字圆牌」换成**该网站自己的图标**。
+
+### 48.1 实现方式（自托管，不发外部请求）
+
+沿用 §46 已立的设计约束 —— **不依赖任何第三方 favicon 服务**（避免第三方挂掉 / 被墙 / 泄露访客 IP）：
+
+| 环节 | 做法 |
+|---|---|
+| 图标存放 | `public/nav/<slug>.png\|svg`（构建时原样拷进 `dist/nav/`，由 Cloudflare Pages 自带 CDN 服务） |
+| 数据绑定 | `src/site.ts` 的 `SITE_NAV` 条目加可选字段 `icon: '/nav/xxx.png'`；页面**零硬编码** |
+| 渲染 | `nav/index.astro` 用 `<span class="nvc-ico" style="--ico:url(...)">` 把路径塞进 CSS 变量 |
+| 兜底 | 图标走 **CSS `::before` 背景图**（`background-image: var(--ico, none)`），**不是 `<img>`** |
+
+**为什么用背景图而不是 `<img>`**：背景图**加载失败时什么都不画** —— 底下的首字圆牌自然露出，
+不会像 `<img>` 那样留一个破图标记，因此**不需要 `onerror` 之类的 JS 兜底**。
+尺寸用 `content-box` + `contain`，非正方形的 logo（横排字标）也不会被拉伸。
+→ 于是"没填 `icon`"和"填了但文件挂了"收敛成**同一种降级行为**，只有一条代码路径。
+
+### 48.2 抓取结果：19/21 成功，2 个取不到
+
+图标由一次性脚本抓取（`_shots/_fetch-icons*.mjs`，含**手工 DIB→RGBA 解码器**，
+因为 `sharp`/libvips **不支持 ICO 与 BMP 输入**，而多数站点只给 `/favicon.ico`）。
+
+**两个失败的站点，均保留首字圆牌（代码里已写注释说明原因）**：
+
+| 站点 | 症状 | 根因 |
+|---|---|---|
+| `github.akams.cn`（GitHub Proxy） | `CERT_HAS_EXPIRED` | **该站 TLS 证书确已过期** —— Node 与浏览器两侧一致报错，`http` 路径返回 404，备用路径同样证书失败。**无解** |
+| `www.curseforge.com`（CurseForge） | `HTTP 403` | Cloudflare **机器人防护**：非浏览器请求一律 403；用 CDP 真实浏览器等 12s 仍未过 JS 挑战（页面标题停在"请稍候…"）。可用其通用 CDN 资产替代，或放弃 |
+
+另有 `zh.minecraft.wiki` / `zh-cn.namemc.com` 同样被 Cloudflare 挡（403），
+**改走 CDP 真实浏览器在页面上下文里 fetch** 才拿到 → 它们**成功了**。
+
+### 48.3 ★来源核验：发现并修掉一个"取错图"★（重要教训）
+
+图标抓完后做了一次**来源审计**（把每张图与站点自己声明的 `<link rel="icon">` 对比），
+结果：
+
+- **4 个 SVG 与站点声明逐字节一致**（`deepseek` / `daziya` / `apinebula` / `godot`）。
+- `minecraftshader` / `reactbits` / `fgo` 与声明**同一 logo**（我们的是更高分辨率版本）。
+- ⚠️ **`yuushya.png` 是错的** —— 抓到的是一张**黑咖啡杯**，而该站声明的是
+  `images/icon.png`（官方吉祥物）。黑杯在深色卡上**几乎不可见**（亮度 L=25.9，区间 15–30）。
+  → 已替换为其官方 240×240 资源 `images/yuushya_icon.png`（该站无白色版 logo）。
+
+> **教训**：favicon 抓取**不能只看"抓到了"**，必须回头核对"抓到的是不是这个站的"。
+> 本次是靠**亮度量化 + 深浅底对照截图**才暴露的（黑 logo 在深卡上等于没画）。
+> 抓取脚本以后要落一条：**对每个站声明的 `<link rel="icon">` 做一次比对**。
+
+### 48.4 验证（严格按 §47 分层，**未跑全量回归**）
+
+本次改动 = **模板 + CSS + 静态资源**，属"子页面/组件"级；**不涉及**路由 / 全局状态 / 鉴权 / 依赖 / 构建配置，
+故按 §47 第 1 条只跑该页相关项：
+
+| 检查 | 结果 |
+|---|---|
+| `astro build` | ✅ 20 页，exit 0（产物自动清理，临时对照页已消失） |
+| `smoke.mjs`（本地 4321 + CDP 9222） | ✅ **53/53**，无 JS 异常 |
+| `verify-copy.mjs`（只读 `dist/`） | ✅ **31/31** |
+| 图标**真实加载**（CDP 逐张 `new Image()`） | ✅ **19/19 载入成功，0 破图**；2 张首字圆牌（预期内） |
+| 亮度/对比量化 + 深浅底对照截图 | ✅ 唯一告警 `yuushya` 已修（见 §48.3） |
+
+**未做**：全量回归（§47.2 第 1/3 条）；lint / typecheck / 单测（§47.3 已记：本项目**没有**这三样）。
+本轮**未触碰**路由、全局状态、鉴权、依赖、构建配置 → **无 §47.2 第 3 条触发项**。
+
+### 48.5 交付物
+
+- `src/site.ts` — `SITE_NAV` 21 条中 **19 条**加 `icon` 字段；两条失败的**写在注释里说明原因**。
+- `src/pages/nav/index.astro` — `.nvc-ico` 改 CSS 变量传图 + `::before` 背景图兜底（替换原 `.nvc-ico img` 规则）。
+- `public/nav/` — **19 个**自托管图标（5 SVG + 14 PNG），文件名 = `SITE_NAV` 的 slug，一一对应。
+
+### 48.6 ★修复：真实图标与首字圆牌重叠★（站长 2026-09-19 指出）
+
+**症状**：卡片上"两个图标叠在一起"——真实图标有透明区域时，底下那个首字会透出来。
+
+**根因**：原实现把首字当"背景图加载失败的兜底"，让它**与图标同时渲染**。
+但 **CSS 无法感知 `background-image` 是否真的加载成功** —— 兜底永远生效，于是变成叠加。
+
+**修法**：两者改为**互斥**，纯静态判断，不需要任何 JS：
+
+```astro
+<span class="nvc-ico" style={it.icon ? `--ico:url("${it.icon}")` : undefined}>
+  {!it.icon && mono(it.name)}   {/* ← 原为 {mono(it.name)}：无条件渲染 */}
+</span>
+```
+
+**代价与新失效面**：填了 `icon` 但**路径写错 / 文件没提交** → 图标区会**空着**
+（以前会露出首字兜底）。为把这件事挡在上线前，新增了
+**`scripts/verify-nav-icons.mjs`**（纯 Node、只读源码 + 文件系统 + `dist/`，**能上 CI**，与 `verify-copy.mjs` 同类），
+断言四件事：
+
+| 组 | 断言 |
+|---|---|
+| A | `SITE_NAV` 里每个 `icon` 路径在 `public/` 下**真实存在**，且形如 `/nav/<slug>.png\|svg` |
+| B | `public/nav/` **没有孤儿文件**（防早期按完整 host 命名的旧副本残留） |
+| C | 已构建时：每个 icon 都被拷进 `dist/nav/`；`/nav/` 页引用的集合与声明**完全一致** |
+| D | 已构建时：带 `--ico` 的图标位**内无任何文本**（即首字确实没再渲染 → 不会重叠）；未带 icon 的条目仍保留首字 |
+
+**验证**：`verify-nav-icons` ✅ **8/8**；`smoke` ✅ **53/53**；`verify-copy` ✅ **31/31**；
+CDP 逐张 `new Image()` ✅ 19/19 载入、0 破图；末组放大截图确认**无首字透出**。
+仍**未跑全量回归**（§47）。
+
+> **环境提示（供接手者）**：本机 9222 上的无头 Edge 会**僵死**——CID 端口仍在听，
+> 但页面导航一律落到 `chrome-error://chromewebdata/`（连外网也是 `about:blank`）。
+> 判据：先看 `/json/version` 是否回**真实 Browser 版本**，再随便开一页看是否 `chrome-error`。
+> 处理：`taskkill /PID <9222 的 LISTENING pid> /T /F` 后按 `smoke.mjs` 头部注释重启；
+> ⚠️ **必须用会话后台任务方式启动**（普通 `subprocess.Popen` 启的子进程会随父进程被回收）。
+> 重启前先用 `Get-CimInstance Win32_Process` 看一眼命令行，确认是
+> `--headless=new --user-data-dir=…\Temp\cwcdp*`（**别误杀用户自己的 Edge**）。
+
+---
+
+## 49. 全站交互策略：禁拖选 / 点击不出轮廓 / 键盘轮廓保留（2026-09-19 站长要求）
+
+**需求（站长原话 + 追问澄清）**：
+> 「网页的文字不可通过鼠标拖选；点击按钮时避免鼠标点击后出现蓝色轮廓；同时保留键盘可访问性。」
+
+追问时站长明确**不限定某个具体元素**（"圆形按钮"只是举例）→ 按**全站通用策略**实现，不做逐元素特判。
+
+### 49.1 三条要求 → 三层实现（互不冲突）
+
+| # | 要求 | 实现 | 文件 |
+|---|---|---|---|
+| A | 文字不可鼠标拖选 | `body { user-select: none }`（含 `-webkit-` 前缀）；**表单/可编辑区显式放行** `user-select: text` | `src/styles/global.css` |
+| B | 点击不出轮廓 | `:focus:not(:focus-visible) { outline: none }` + **JS 兜底** `[data-pointer-focus]:focus { outline: none !important }` | `global.css` + `src/scripts/ui.js` |
+| C | 键盘可访问性不丢 | 全站原有 `:focus-visible { outline: 2px solid var(--accent) }` **原样保留**，不做任何削弱 | `global.css`（未改） |
+
+配套细节：
+- `img { -webkit-user-drag: none }` —— 图片默认是 HTML5 可拖拽的，按住一拖会浮出半透明"幽灵图"并**连带把邻近文字选中**，等于绕过 A。
+- `-webkit-tap-highlight-color: transparent` —— 去掉触摸端点按的默认高亮块（Chrome Android 淡蓝 / iOS 灰块）。
+
+### 49.2 ★为什么光靠 CSS 不够：必须加 JS 兜底★
+
+站长说的"蓝色轮廓"实测就是本站 `:focus-visible` 的强调色（`#9fd3e8`，实测 `outline: solid 2px rgb(159,211,232)`）。
+
+规范上 `:focus-visible` **只在键盘操作时命中**，Chromium 桌面实测确实如此
+（点击 → `focusVisible=false`；Tab → `focusVisible=true`）。
+**但 Safari 与 Android Chrome 会把「点击 / 触摸」也判成 `:focus-visible`** —— 纯 CSS 兜不住。
+
+故在 `ui.js` 加 `focusModality()`，按"**最后一次输入方式**"给焦点元素打标：
+
+| 事件 | 动作 |
+|---|---|
+| `pointerdown` / `touchstart` | `fromKeyboard = false` |
+| `keydown` | `fromKeyboard = true` |
+| `focusin` | `fromKeyboard \|\| needsSteadyRing(el)` → **撤**标；否则 **打** `data-pointer-focus` |
+| `focusout` | 清标（软导航会换 DOM，别让复用节点带着上次的来源） |
+
+> ⚠️ **`needsSteadyRing()` 是 a11y 底线**：`input[text]` / `textarea` / `select` / `contenteditable`
+> **永远不打标** —— 光标的落点必须看得见，否则"在哪儿打字"就没法判断。
+> 少了这条，"去掉轮廓"就会顺手把可用性一起削掉（这正是最容易被"看起来改了"糊弄过去的地方）。
+
+### 49.3 ⚠️ 代价（明确记下，等站长裁决）
+
+`user-select: none` 是**整站**生效的，因此：
+
+- **文章正文、代码块从此无法用鼠标选中复制**；
+- 且 `user-select: none` 下 **`Ctrl/Cmd+A` 也选不中**该区域 → **键盘复制路径同样失效**（不只是鼠标）。
+
+若要放行，**只需加一条**（`global.css` 第 181–182 行注释里已写现成的一行）：
+
+```css
+.pp-md, .pp-md pre, .pp-md code { -webkit-user-select: text; user-select: text; }
+```
+
+> **判断依据**：本站是**博客**，正文与代码块的可复制性属于核心用途；
+> 而"防拖选"的常见诉求是**防误选 UI 文字**（导航 / 卡片 / 按钮标签）。
+> 两者交集未必覆盖正文。**已向站长提出，等其决定是否放行正文/代码块。**
+
+### 49.4 验证（按 §47 分层，**未跑全量回归**）
+
+本次改动 = **全局 CSS + 全局脚本**。虽不涉及路由 / 鉴权 / 依赖 / 构建配置，
+但 `user-select` 与 `:focus-visible` 属**全站视觉与交互基线**，可能影响每一页的可操作性，
+故**单独新增了一个断言脚本**（`scripts/verify-interaction.mjs`）。
+
+> ★**本轮跑了全量**★ —— 与 §48 不同。依据 §47.2：**"发布前"是跑全量的触发条件之一**，
+> 而本次改动**随即推送 `main` → 触发 Cloudflare 自动构建上线**（即等同于发布）。
+> 故按 §47 第 3 条跑了 `run-regress.mjs` 全量，并**顺带把新增的两个脚本接进批跑队列**
+> （`verify-nav-icons` + `verify-interaction` → 脚本数 **16 → 18**）。
+
+| 检查 | 结果 |
+|---|---|
+| `astro build` + `pagefind` | ✅ 20 页，索引 1355 词 |
+| **`verify-interaction.mjs`（新增）** | ✅ **11/11** |
+| `smoke.mjs` | ✅ **53/53**，无 JS 异常 |
+| `verify-copy.mjs` | ✅ **31/31** |
+| `verify-nav-icons.mjs`（§48 产物，顺带回归） | ✅ **8/8** |
+| `verify-search.mjs` | ✅ **17/17** |
+| **`run-regress.mjs` 全量（18 个脚本串行，7m53s）** | ✅ **18/18 通过** |
+
+**`verify-interaction.mjs` 的五组断言（关键：带对照组）**：
+
+| 组 | 断言 | 实测 |
+|---|---|---|
+| A | 鼠标拖过正文**选不中** | 选中 **0** 字 |
+| A′ | **对照组**：临时注入 `*{user-select:text}` 后同样拖拽**必须能选中** | 选中 **13** 字 ✅ |
+| B | 点击 `.pf-avatar` / `a.nvc` / `.nvc-ico` 后**无轮廓** | `outline=none` |
+| C | Tab 聚焦 4 个元素**必须有可见轮廓**，且**不带** `data-pointer-focus` | 4 个 `a.nvc:2px`，标记 0 个 |
+| D | 指针点击**文本输入框**后**仍有**轮廓 | `outline=solid 2px` |
+| E | `body` = `none` / `input` = `text` | 一致 |
+
+> ★**为什么要 A′ 对照组**★：只测"没选中文字"是**假绿风险最高**的一类断言 ——
+> 拖拽本身没生效（坐标错、元素被遮、事件没派发）时，"没选中"同样成立。
+> 对照组把"拖拽有效"这件事独立证出来，A 才有意义。
+> （同理，A 组刻意选了**不在 `<a>` 里**的段落：Chrome 在链接上拖拽会走**原生链接拖放**
+> 而不是选文字，两种情况下都选不中，会掩盖真实结论。）
+
+**未做**：lint / typecheck / 单测（§47.3：本项目**没有**这三样，故 §47.2 第 1 条的下层仍缺）。
+
+> ⚠️ **构建口径坑（本轮又踩了一次）**：`npm run build` = **`astro build && pagefind --site dist`**。
+> 只跑 `astro build`（= `build:fast`）**不会生成 pagefind 索引**，`verify-search` 会**全红**
+> （本轮首轮验证就发生在"缺索引的 dist"上，虽侥幸只有 search 相关项未覆盖，但属**假绿风险**）。
+> 本机 bash 跑不了 `npm`（§7.1），补跑索引直接用：
+> `node node_modules/pagefind/lib/runner/bin.cjs --site dist`。
+
+### 49.5 交付物
+
+- `src/styles/global.css` — 新增交互策略块（A/B 两条 + 拖图 + tap-highlight），并写明**代价与放行写法**。
+- `src/scripts/ui.js` — 新增 `focusModality()`（输入方式追踪 + `needsSteadyRing` 白名单），注册进 `boot()`。
+- `scripts/verify-interaction.mjs` — **新增**，纯 CDP 断言（A/A′/B/C/D/E 五组），已纳入 L1。
+- `scripts/run-regress.mjs` — 批跑队列加入 `verify-nav-icons` 与 `verify-interaction`（**16 → 18**）；
+  队列注释写明"纯 Node 的两个排最前"的理由。
