@@ -36,8 +36,13 @@
 推 `main` 即由 Cloudflare Pages 自动构建部署。**站点处于可用且已验证的状态**：
 13 个验证脚本 + 3 个工具脚本（诊断 2：`diag-edges` / `probe-point`；部署轮询 1：`poll-deploy`）全绿、
 可读性 0 处不达标、7 个页面 0 JS 异常、手机端 0 横向溢出。
+**2026-09-19 起验证脚本为 15 个**（新增 mobile-shots / diag-424），可用
+`node scripts/run-regress.mjs` 一键批跑全部并汇总 PASS/FAIL。
 
-> **接手第一件事**：`cd endfield-blog && npm run build && node scripts/smoke.mjs`（期望 **45/45**）。
+> **接手第一件事**：`cd endfield-blog && npm run build && node scripts/smoke.mjs`（期望 **48/48**）。
+> ⚠️ 必须用 `npm run build`（= `astro build && pagefind --site dist`）——只跑 astro build
+> 不会生成 pagefind 索引，verify-search 会全红。⚠️ 回归前确认 4321 服务是**新起的**
+> （陈旧的 preview 会让你测一小时的旧 dist，见 §41）。
 > 改导航 / 首页 Hero / 强调色 / 容器宽度之前，**先读 §33–§36**（这四块在 2026-09-18 被连续重做过，
 > 里面的"形态取值、被删的旧结构、踩过的坑"都是实测结论，不看会重复踩）。
 
@@ -95,6 +100,26 @@
 4. **文案和"是否还在用"要人工核**：脚本能保证几何与对比度，但保证不了"文案是否过期"
    和"这个结构是否还被引用"（本轮删掉的旧类名/令牌就有几处是脚本管不到的）。
 
+### 0.3 本轮（2026-09-19 凌晨）做了什么 —— 交接摘要
+
+> 代码提交 `9736241`（文档 `2fedbef`），全部已提交、已推送、线上已验证。详细见 §41。
+
+| 主题 | 结果 | 关键位置 |
+|---|---|---|
+| **移除页脚** | `Footer.astro` 组件与全部 `.site-footer` 样式（global/motion/首页内联）删除；`verify-brand` 断言改为「页脚已移除」 | §41 |
+| **小标题极简化** | /posts/ 与 /blog/ 删 `.head-sub` 介绍行，只留 kicker + 标题 | §41 |
+| **文章与关于页去 AI 味** | 12 篇文章全部口语化重写（9 篇站点日志由 changelog 生成对应日）；关于页、Bento 卡、Sidebar 引言、`SITE.tagline/notice` 同步改写 | §41 |
+| **加载动画** | `page-enter` 入场强化（淡入上浮＋模糊转清晰）；首页三区块 `.rv` 滚动显现 | §41 |
+| **按钮微交互** | hover 轻抬 / active 按压 / 箭头位移 / 热力图色块按压；`prefers-reduced-motion` 下整体关闭 | §41 |
+
+**本轮的三条环境教训**（下次接手先看）：
+1. **bash 内联 node 脚本里不要写 `$1`**：会被 bash 展开成空串，静默吃掉替换文本
+   （本轮把 motion.css 的 `@media` 行吞了，构建报 Invalid empty selector）。
+2. **回归前先确认 4321 服务的新旧**：挂着旧 `astro preview` 时 15 个脚本测的是旧 dist，
+   本轮 3 个"失败"里 2 个是假象。查启动时间或直接重启。
+3. **构建必须 `npm run build`**：漏掉 pagefind 索引时 verify-search 的 3 条断言全红
+   （症状是"输入框不挂载"，像前端坏了，其实是索引没生成）。
+
 ---
 
 ## 1. 五分钟上手
@@ -140,7 +165,7 @@ endfield-blog/
 ├─ package.json              # build = astro build && pagefind --site dist├─ src/site.ts               # 站点全站配置：站点名/作者/链接/GISCUS/IMG_CDN/WEATHER_CITY
 ├─ src/content.config.ts     # 三个内容集合：works / shots / changelog
 ├─ src/layouts/
-│   ├─ Base.astro            # 全站骨架：head meta、主题早应用脚本、头部、粒子背景、页脚；
+│   ├─ Base.astro            # 全站骨架：head meta、主题早应用脚本、头部、粒子背景；
 │   │                        #   属性 sidebar=true 时渲染三栏壳层（侧栏在 <main> 之外）
 │   ├─ SidebarLayout.astro   # 薄封装：<Base sidebar>，子页面用它
 │   └─ WorkLayout.astro      # 作品详情：标题/元信息表/封面/正文目录/上下篇/giscus
@@ -1626,7 +1651,9 @@ $css  = ([regex]::Matches($html,'href="(/_astro/[^"]+\.css)"') | % { $_.Groups[1
   （`Header.astro` 的 `.mm-group` 与相关 `.mm-*` 样式一并移除），所以**手机端目前没有分类入口**
   —— 分类只剩桌面左栏导航树一处。要补的话，建议在 `/works/` 与 `/gallery/` 页面内各加一排
   筛选 chip（这两个页面现在只有"当前分类回显条"，本身没有选择器）。
-  同理，手机端抽屉里的 **GitHub / Bilibili / RSS 也已删除**，手机端只能从页脚到达这些外链。
+  同理，手机端抽屉里的 **GitHub / Bilibili / RSS 也已删除**；⚠️ 页脚也在 2026-09-19
+  被移除（§41），所以**这三个外链目前手机端没有任何入口**，桌面端只剩左栏。
+  要补回移动端入口需另加（如抽屉底部一排图标）。
 - **画廊在 ≤620px 改两列**（原来单列 40 张 → 整页 1.3 万像素高，约 16 屏；两列后约 4600）。
   `.gal-cover` 的 `aspect-ratio` 是**行内样式**（来自每条内容的 `aspect` 字段），
   窄屏规则只收紧间距与文案，不覆盖比例。
