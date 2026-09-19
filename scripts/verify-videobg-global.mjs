@@ -39,7 +39,7 @@ const snap = () => ev(`(()=>{
     particles:!!part, grid:!!grid,
     cls:document.body.className, bgAnim:getComputedStyle(document.body).animationName};})()`);
 
-const PAGES = ['/', '/posts/', '/blog/', '/gallery/', '/nav/', '/about/', '/account/', '/404.html'];
+const PAGES = ['/', '/posts/', '/blog/', '/log/', '/gallery/', '/nav/', '/about/', '/account/', '/404.html'];
 console.log(`=== 逐个硬刷新访问（主题 ${THEME}）===`);
 const seqs = new Set();
 for (const path of PAGES) {

@@ -1,0 +1,171 @@
+---
+// 站点日志页：changelog 的**完整展开版** —— 每天的每一条更新（类型徽标 + 标题 + 说明全文）。
+//
+// 与 /blog/（归档）的分工，别把两者做成同一页的两个名字：
+//   · 归档（/blog/）把一天**压缩成一行**，点文字跳转当天的日志文章 —— 是"目录"；
+//   · 日志（本页）把一天**逐条平铺**：类型徽标 + 标题 + note 全文，
+//     且**不依赖"当天有没有写文章"** —— changelog 里有多少条就展示多少条，是"正文"。
+// 数据源 = src/content/changelog/*.md（一天一个文件，schema 见 content.config.ts）。
+// 页面零硬编码条目：加日志只需往 changelog 集合里加文件，本页自动长出来。
+import SidebarLayout from '../../layouts/SidebarLayout.astro';
+import { getCollection } from 'astro:content';
+
+/* ---------- 数据：changelog 全量（保留 note 全文 —— 这与归档页的取舍不同） ---------- */
+const logs = (await getCollection('changelog'))
+  .flatMap((e) =>
+    (e.data.items ?? []).map((it) => ({
+      date: new Date(e.data.date).toISOString().slice(0, 10),
+      year: new Date(e.data.date).getFullYear(),
+      kind: it.kind || '更新',
+      title: it.title,
+      note: it.note || '',
+    })),
+  )
+  .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+/* ---------- 当天若有文章，给一个跳转（优先主题文章，其次当日日志帖；口径与归档页一致） ---------- */
+const posts = (await getCollection('posts'))
+  .filter((p) => !p.data.link)
+  .sort((a, b) => {
+    const aLog = a.data.title.startsWith('站点更新日志') ? 1 : 0;
+    const bLog = b.data.title.startsWith('站点更新日志') ? 1 : 0;
+    return aLog - bLog || new Date(b.data.date).getTime() - new Date(a.data.date).getTime();
+  });
+const postByDay = new Map();
+posts.forEach((p) => {
+  const key = new Date(p.data.date).toISOString().slice(0, 10);
+  if (!postByDay.has(key)) postByDay.set(key, p);
+});
+
+/* ---------- 按日聚合 + 按年分组（新 → 旧）---------- */
+const days = new Map();
+for (const it of logs) {
+  const d = days.get(it.date) ?? { date: it.date, year: it.year, items: [], post: postByDay.get(it.date) };
+  d.items.push(it);
+  days.set(it.date, d);
+}
+
+const years = new Map();
+for (const d of [...days.values()].sort((a, b) => (a.date < b.date ? 1 : -1))) {
+  const kinds = [...new Set(d.items.map((it) => it.kind))];
+  years.set(d.year, [...(years.get(d.year) ?? []), { ...d, kinds }]);
+}
+const yearList = [...years.entries()].sort((a, b) => b[0] - a[0]);
+const totalItems = logs.length;
+const totalDays = days.size;
+const firstDate = [...days.keys()].at(-1) ?? '';
+---
+<SidebarLayout
+  title="日志"
+  description="CloudWing 站点更新日志：每一天的新增、优化与修复，逐条完整记录。"
+  bodyClass="log-route"
+>
+  <div class="log-root">
+    <div class="wrap">
+      <header class="page-head" data-ent>
+        <p class="kicker"><b>LOG</b> / 日志 · 站点更新记录</p>
+        <h1>日志</h1>
+        <p class="txt">
+          这个站每天做了什么，全在这里：自 {firstDate} 起共 {totalDays} 天、
+          {totalItems} 条更新，按时间倒序逐条展开。要看压缩成一行的时间线，去「归档」。
+        </p>
+      </header>
+
+      {yearList.map(([year, list]) => (
+        <section class="lg-year" data-ent aria-label={`${year} 年（${list.length} 天）`}>
+          <h2 class="lg-yy">{year}<span>{list.length} 天</span></h2>
+          <div class="lg-days">
+            {list.map((d) => (
+              <article class="lg-day" aria-label={`${d.date}（${d.items.length} 条更新）`}>
+                <header class="lg-head">
+                  <time class="lg-date" datetime={d.date}>{d.date}</time>
+                  <span class="lg-kinds">{d.kinds.join(' · ')}</span>
+                  {d.post && <a class="lg-post" href={`/posts/${d.post.id}/`}>当天日志 →</a>}
+                </header>
+                <ul class="lg-items">
+                  {d.items.map((it) => (
+                    <li class="lg-item">
+                      <span class="lg-kind">{it.kind}</span>
+                      <div class="lg-body">
+                        <p class="lg-title">{it.title}</p>
+                        {it.note && <p class="lg-note">{it.note}</p>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  </div>
+</SidebarLayout>
+
+<style>
+  .log-root { padding: 2.4rem 0 3rem; }
+  .page-head { margin-bottom: 2rem; }
+  .page-head .txt {
+    margin-top: 0.45rem; max-width: 46em;
+    color: var(--ink-2); font-size: 0.95rem; line-height: 1.7;
+  }
+
+  .lg-year { margin-bottom: 2.4rem; }
+  .lg-yy {
+    display: flex; align-items: baseline; gap: 0.7rem;
+    margin: 0 0 1rem;
+    font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 600;
+    color: var(--accent); letter-spacing: 0.02em; font-variant-numeric: tabular-nums;
+  }
+  .lg-yy span {
+    font-family: var(--font-mono); font-size: 0.78rem; font-weight: 400;
+    color: var(--ink-3);
+  }
+
+  /* 日卡：材质与全站一致（玻璃 + 细边框），内容才是主角 */
+  .lg-days { display: grid; gap: 1rem; }
+  .lg-day {
+    padding: 1rem 1.15rem;
+    border: var(--line-w) solid var(--line-2);
+    border-radius: var(--r-l);
+    background: var(--glass);
+    /* ⚠️ -webkit- 必须写在标准属性之前（构建压缩会整条丢掉，见 HANDOFF §22） */
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .lg-head {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.4rem 0.9rem;
+    padding-bottom: 0.6rem; margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .lg-date {
+    font-family: var(--font-mono); font-size: 0.86rem; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .lg-kinds { font-size: 0.72rem; color: var(--ink-3); }
+  .lg-post {
+    margin-left: auto;
+    font-size: 0.78rem; color: var(--accent-deep); text-decoration: none;
+  }
+  .lg-post:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .lg-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+  .lg-item { display: flex; align-items: flex-start; gap: 0.7rem; }
+  .lg-kind {
+    flex: none; margin-top: 0.12rem;
+    font-size: 0.7rem; line-height: 1; white-space: nowrap;
+    padding: 0.3em 0.62em; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent-deep);
+    border: 1px solid rgba(var(--accent-rgb), 0.25);
+  }
+  .lg-body { min-width: 0; }
+  .lg-title { margin: 0; color: var(--ink); font-size: 0.94rem; line-height: 1.55; }
+  .lg-note { margin: 0.14rem 0 0; color: var(--ink-2); font-size: 0.85rem; line-height: 1.62; }
+
+  @media (max-width: 640px) {
+    .lg-day { padding: 0.85rem 0.9rem; }
+    .lg-post { margin-left: 0; }
+  }
+</style>

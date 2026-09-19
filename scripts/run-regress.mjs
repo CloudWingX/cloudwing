@@ -11,6 +11,7 @@ const scripts = [
   // 交互基线（禁拖选 / 点击不出轮廓 / 键盘轮廓保留，HANDOFF §49）——放在 smoke 之后：
   // smoke 先证明"页面本身是好的"，再验"操作姿势"这一层。
   'verify-interaction',
+  'verify-log',
   'verify-hero', 'verify-home', 'verify-nav-shrink', 'verify-nav',
   'verify-brand', 'verify-theme', 'verify-redesign', 'verify-search',
   'verify-videobg', 'verify-videobg-global', 'contrast-audit',

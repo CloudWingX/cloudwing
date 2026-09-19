@@ -140,10 +140,11 @@ export const NAV = [
   { href: '/', label: '首页', no: '00' },
   { href: '/posts/', label: '文章', no: '01' },
   { href: '/blog/', label: '归档', no: '02' },
-  { href: '/gallery/', label: '画廊', no: '03' },
-  { href: '/nav/', label: '导航', no: '04' },
-  { href: '/about/', label: '关于', no: '05' },
-  { href: '/account/', label: '互动', no: '06' },
+  { href: '/log/', label: '日志', no: '03' },
+  { href: '/gallery/', label: '画廊', no: '04' },
+  { href: '/nav/', label: '导航', no: '05' },
+  { href: '/about/', label: '关于', no: '06' },
+  { href: '/account/', label: '互动', no: '07' },
 ];
 
 /* ▍网站导航页（/nav/）的条目 —— 按用途分组的站点收藏夹。

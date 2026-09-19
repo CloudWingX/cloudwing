@@ -16,7 +16,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 
-const SHELL_PAGES = ['/posts/', '/blog/', '/gallery/', '/nav/', '/about/', '/account/'];
+const SHELL_PAGES = ['/posts/', '/blog/', '/log/', '/gallery/', '/nav/', '/about/', '/account/'];
 const ALL_PAGES = [ '/', ...SHELL_PAGES, '/404.html'];
 
 const results = [];
