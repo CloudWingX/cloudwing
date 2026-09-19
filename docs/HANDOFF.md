@@ -6,11 +6,12 @@
 > - 仓库内（随项目走、GitHub 可见）：`endfield-blog/docs/HANDOFF.md` ← 你正在看的这份
 > - 开发机工作区根目录：`<工作区>/HANDOFF.md`（不随仓库发布）
 >
-> 相关文档：`CODEX.md`（仓库内简版硬规则 —— 已按当前实现重写，与旧的"双主题"说法无关）、
-> `README.md`（面向访客的项目说明）。
+> 相关文档：`README.md`（面向访客的项目说明）。原仓库根的 `CODEX.md` 已于 2026-09-19 删除
+> （见 §43.1），其"简版硬规则"职责并入本文件。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-19 下午 **清死资产 + 文案自动化断言 + 文档纠偏（见 §42）**；
+> 最后更新：2026-09-19 下午 **删除 `CODEX.md`；纠正"删除类改动是否上线"的确认手法（见 §43）**；
+> 同日下午稍早 **清死资产 + 文案自动化断言 + 文档纠偏（见 §42）**；
 > 同日凌晨（移除页脚 / 去 AI 味文案 / 加载与按钮动效，见 §41）。
 > 前一日的五轮：**定位并修掉间歇出现的 `React error #424`**（见 §37）；
 > 同日四轮（删掉首页最后一层"只铺在容器盒里"的装饰薄膜，
@@ -1969,7 +1970,7 @@ Remove-Item Env:\EXTRA_CSS
 | 候选 | 性质 |
 |---|---|
 | `src/scripts/hero-anim.js` | 首页 Hero 改静态版式后 `index.astro` 已不再加载它（§33 有注释说明），文件留在盘上 |
-| `src/components/DriftWallBackground.astro` | 零引用（CODEX 里也标为死代码） |
+| `src/components/DriftWallBackground.astro` | 零引用 |
 | `src/components/HomeShapeGrid.jsx` | 同上 |
 | `src/components/TextType.astro` / `Ticker.astro` | 零引用 |
 | `src/components/ReactBits/` 里未被宿主使用的原码 | `CardSwap` / `CardNav` / `DomeGallery` / `ShapeGrid` / `GridScan` / `GradientWaves` / `AccordionGallery` / `ProfileCard` / `StrokeText` / `Dither` —— 属"官方组件库"，删了以后想用要重新拉，建议保留 |
@@ -1978,3 +1979,59 @@ Remove-Item Env:\EXTRA_CSS
 > `imgstats` / `imgpix` / `shots-theme` / `shot-*` / `sweep-light` / `verify-countup` /
 > `verify-music` / `seed-changelog`），它们不在批跑清单里，但**不是死代码**（是手工诊断工具），
 > 删之前先确认没有文档引用它们。
+
+---
+
+## 43. ★删除 `CODEX.md` + 纠正"删除类改动是否上线"的确认手法（2026-09-19 下午）★
+
+**本轮的需求**：删除仓库根的 `CODEX.md`。
+
+### 43.1 删除 `CODEX.md`（仓库根）
+
+- **做了什么**：删掉 `endfield-blog/CODEX.md`。它原本是"仓库内简版硬规则"，与 `docs/HANDOFF.md`
+  职责重叠，且内容已整体偏旧（§32 起它的口径就要靠 HANDOFF 兜底）。**内容不丢**：
+  `git show e21d3e0:CODEX.md` 可取回原文。
+- **同步清理的引用**（不清理就会留下指不到文件的指针）：
+  - `README.md`：删掉"简版硬规则见 `CODEX.md`"那一行，改成一句说明。
+  - 本文件开头"相关文档"一行：去掉 `CODEX.md`。
+  - 本文件 §42.5 表格里 `DriftWallBackground.astro` 行的"（CODEX 里也标为死代码）"。
+  - `scripts/poll-deploy.mjs` 头注释："见 CODEX「构建 / 部署坑」第 6 条 / HANDOFF §7.5"
+    → 只留 HANDOFF；顺带修掉同一段里已失效的 `/works/`（该页 §40 已下线）。
+- **刻意不动的历史提及**（它们是"当时发生过什么"的记录，不是活的指针；改掉反而是篡改历史）：
+  `src/content/posts/2026-09-08-log.md`、`src/content/changelog/2026-09-08.md`、
+  `scripts/seed-changelog.mjs` 的 2026-09-08 条目，以及本文件 §32 / §41 等处的叙述。
+- **影响面**：`CODEX.md` 位于仓库根，既不在 `src/` 也不在 `public/`，构建产物里从来没有它 ——
+  删除**不可能改变任何页面**（沿用 §42 的"页面零变化"约束）。
+
+### 43.2 【重要】"删除类改动是否上线"被边缘缓存骗过一次 —— 判据纠正
+
+§42 删掉 `public/covers/*.svg` 之后，用 `HEAD /covers/w001.svg` 轮询了约 **10 分钟始终是 200**，
+一度判断为"CF 没有触发构建"。**这个判断是错的 —— 新部署其实已经上线。**
+
+**根因**：这些路径命中了 **Cloudflare 边缘缓存**，返回的是**旧部署时期的陈旧副本**：
+
+| 请求 | 状态 | `cf-cache-status` | `age` |
+|---|---|---|---|
+| `HEAD /covers/w001.svg` | 200 | HIT | 1192s |
+| `HEAD /covers/w001-lib.svg` | 200 | HIT | 81141s |
+| `HEAD /covers/w004-mobile.svg` | 200 | HIT | **133854s（≈37 小时）** |
+
+缓存条目在被淘汰之前，会持续以 200 供给**源站已经删掉**的资源。更要命的是
+`fetch(..., { cache: 'no-store' })` **完全挡不住它** —— 那只是本进程的缓存开关，与 CF 边缘缓存无关。
+（`scripts/poll-deploy.mjs` 原来的 `probe()` 踩的是同一个坑。）
+
+**正确判据 —— 加随机 query 强制回源**（query 改变缓存键，绕过边缘缓存）：
+
+| 请求 | 原样 | 加随机 query |
+|---|---|---|
+| `/covers/w001.svg` | 200（缓存副本） | **404** ← 源站确实已删 |
+| `/favicon.svg` | 200 | 200 ← 对照组：证明"带 query 不会误伤存在的资源" |
+| `/index.html` | 200 | 200 |
+| `/robots.txt` | 200 | 200 |
+
+**结论（判据本身也必须带对照组）**：确认"删除类改动是否上线"，只看**加随机 query 回源**的结果；
+`cf-cache-status: HIT` + 大 `age` 就是"这个 200 不是源站给的"的直接证据。
+`scripts/poll-deploy.mjs` 已按此加固：页面请求自动带 cache-buster。
+
+> 归类：与 §7.6 铁律二（扫描覆盖边界）同族 —— **你以为在问源站，其实在问缓存**。
+> 本文件 §6.8 / §7.5 里"靠轮询某路径变 404 来确认删除上线"的写法，自本轮起按本节修正。

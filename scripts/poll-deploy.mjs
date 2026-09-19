@@ -5,12 +5,15 @@
 //   node scripts/poll-deploy.mjs --url https://cloudwing.pages.dev --timeout 480 \
 //        --have 'brightness\(var\(--vid-dim' --not '--scrim-top' --not '60% 50% at 30% ?-10%'
 //
-// 为什么必须这么确认（两条踩过的坑，见 CODEX「构建 / 部署坑」第 6 条 / HANDOFF §7.5）：
+// 为什么必须这么确认（四条踩过的坑，见 HANDOFF §7.5 / §43.2）：
 //   1. **不要用 chunk 哈希判断部署** —— 本地与线上哈希可能不同（npm install 解析差异）。
-//   2. **检查范围必须含"首页自己引用的 CSS"** —— 首页样式和 /works/ 不在同一个 chunk，
-//      只看 /works/ 会得出"没上线"的假结论。
+//   2. **检查范围必须含"首页自己引用的 CSS"** —— 首页样式和文章页不在同一个 chunk，
+//      只看文章页会得出"没上线"的假结论。
 //   3. **删除类的改动只有反向特征**（"线上找不到某字符串"），正向特征一个都没有 ——
 //      用 --not 表达。四轮删掉 .hero::before 那次就是这样确认的。
+//   4. **必须穿透 Cloudflare 边缘缓存** —— 它会以 200 持续供给"源站已删除/已变更"的旧副本，
+//      而 fetch 的 cache:'no-store' 只管本进程、挡不住边缘缓存。本脚本已对页面请求自动加
+//      cache-buster；手动探单个静态资源时同样要加随机 query（判据 + 对照组见 HANDOFF §43.2）。
 //
 // 退出码：0 = 全部成立；1 = 超时（会打印最后一次的逐项结果）。
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -34,7 +37,10 @@ if (!opt.have.length && !opt.not.length) {
 const base = opt.url.replace(/\/$/, '');
 
 async function probe() {
-  const html = await (await fetch(base + opt.page, { cache: 'no-store' })).text();
+  // 页面请求必须带 cache-buster：CF 边缘缓存会以 200 供给已删除/已变更的旧副本，
+  // 而 cache:'no-store' 只管本进程、挡不住边缘缓存（详见 HANDOFF §43.2）。
+  const bust = `${opt.page.includes('?') ? '&' : '?'}cb=${Date.now().toString(36)}`;
+  const html = await (await fetch(base + opt.page + bust, { cache: 'no-store' })).text();
   const links = [...new Set([...html.matchAll(/href="(\/_astro\/[^"]+\.css)"/g)].map((m) => m[1]))];
   const parts = [];
   for (const l of links) parts.push(await (await fetch(base + l, { cache: 'no-store' })).text());
