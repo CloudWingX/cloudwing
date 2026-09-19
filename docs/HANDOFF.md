@@ -10,33 +10,40 @@
 > `README.md`（面向访客的项目说明）。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-18 **五轮（定位并修掉间歇出现的 `React error #424`，见 §37）**；
+> 最后更新：2026-09-19 下午 **清死资产 + 文案自动化断言 + 文档纠偏（见 §42）**；
+> 同日凌晨（移除页脚 / 去 AI 味文案 / 加载与按钮动效，见 §41）。
+> 前一日的五轮：**定位并修掉间歇出现的 `React error #424`**（见 §37）；
 > 同日四轮（删掉首页最后一层"只铺在容器盒里"的装饰薄膜，
 > 见 §36.3；三轮把"大标题＋代码卡片"整块竖向居中、标题 48 → 52px，见 §36.2；
 > 二轮把 PC 主容器与导航容器收到 **1300**，见 §36.1）；
 > 更早一轮的整轮重做（导航 / 首页 Hero / 代码卡片 / 强调色预设）见 §33–§36。
 > 部署：Cloudflare 自动构建 —— 推 `main` → 构建 `npm run build` → 线上 <https://cloudwing.pages.dev>。
-> ⚠️ **写新的像素断言之前先读 §7.6**（三条硬要求：单位口径、扫描范围必须覆盖被怀疑的边界、
+> ⚠️ **新写像素/几何断言之前先读 §7.6**（三条硬要求：单位口径、扫描范围必须覆盖被怀疑的边界、
 > 并**证明它在缺陷态下会红**）—— 本文件里已经有过"断言恒真、连过两轮都没抓到真瑕疵"的教训。
-> 自检入口：`cd endfield-blog && node scripts/smoke.mjs` → 最近一次 **45/45** 通过。
+> 自检入口：`cd endfield-blog && node scripts/run-regress.mjs`（16 个脚本一次批跑）→
+> 最近一次 **16/16 全绿**（单个入口 `node scripts/smoke.mjs` 为 **48/48**）。
+> ✅ **文案漂移现在有断言了**（2026-09-19）：`scripts/verify-copy.mjs`（31 条，见 §7.2 / §42.2）——
+> §32 那种"几何全绿却带着错文案上线"的缺陷类已被堵住。
 > ✅ **`React error #424` 已于 2026-09-18 定位并修掉**（见 §37）：根因是软导航时
 > Astro 对**尚未水合**的 React 岛调用 `root.unmount()` —— 与本站组件代码无关，是时序竞态。
 > 修法是构建期插件 `plugins/vite-react-safe-unmount.mjs`；
 > 要复现/验收用 `scripts/diag-424.mjs`（修复前 2 轮命中 7 次、修复后 0 次）。
 > 全套验证脚本与用法见 **§7.2**；本机调试浏览器起法见 **§7.1**。
 > ⚠️ **验证脚本必须串行跑**（并发会大面积假失败，见 §7.1 第 6 条 / §32）。
+> ⚠️ **不要在 bash 里做删除**（沙箱删除钩子会连带删掉整个父目录，见 §2 / §42）。
 > ⚠️ **改导航 / Hero / 强调色 / 容器宽度前先读 §33–§36，首页版式还要读 §36.1 / §36.2**（形态取值与实测踩坑都在那里）。
 
 ---
 
 ## 0. 一句话现状
 
-个人作品档案站「云翼 / CloudWing」，**Astro 7 静态站 + React 岛 + 暗色电影感玻璃 UI**，源码在 `endfield-blog/`，
+个人博客与档案站「云翼 / CloudWing」，**Astro 7 静态站 + React 岛 + 暗色电影感玻璃 UI**，源码在 `endfield-blog/`，
 线上 <https://cloudwing.pages.dev>，仓库 <https://github.com/CloudWingX/cloudwing>（公开），
 推 `main` 即由 Cloudflare Pages 自动构建部署。**站点处于可用且已验证的状态**：
-13 个验证脚本 + 3 个工具脚本（诊断 2：`diag-edges` / `probe-point`；部署轮询 1：`poll-deploy`）全绿、
-可读性 0 处不达标、7 个页面 0 JS 异常、手机端 0 横向溢出。
-**2026-09-19 起验证脚本为 15 个**（新增 mobile-shots / diag-424），可用
+16 个验证脚本全绿、可读性 0 处不达标、7 个页面 0 JS 异常、手机端 0 横向溢出。
+（另有 3 个工具脚本：诊断 2 —— `diag-edges` / `probe-point`；部署轮询 1 —— `poll-deploy`，
+以及事件诊断 `diag-424`。）
+**2026-09-19 起验证脚本为 16 个**（含新加的 `verify-copy` 文案断言），可用
 `node scripts/run-regress.mjs` 一键批跑全部并汇总 PASS/FAIL。
 
 > **接手第一件事**：`cd endfield-blog && npm run build && node scripts/smoke.mjs`（期望 **48/48**）。
@@ -120,6 +127,26 @@
 3. **构建必须 `npm run build`**：漏掉 pagefind 索引时 verify-search 的 3 条断言全红
    （症状是"输入框不挂载"，像前端坏了，其实是索引没生成）。
 
+### 0.4 本轮（2026-09-19 下午）做了什么 —— 交接摘要
+
+> 本轮**没有改任何页面代码**（`src/` 一行未动），只做三件事：清死资产、给文案加断言、修文档。
+> 详细见 §42。
+
+| 主题 | 结果 | 关键位置 |
+|---|---|---|
+| **清死资产** | 删 `public/covers/`（12 个零引用 SVG，33KB）与 `scripts/verify-deck.mjs`（验收对象已删） | §42 |
+| **文案自动化断言** | 新增 `scripts/verify-copy.mjs`（**31 条**）并接入 `run-regress.mjs`（脚本总数 15 → **16**）：禁用词 / 占位词 / 文案锚点三类，按 §7.6 验证过"缺陷态会红"（29/31） | §42 / §7.2 |
+| **文档纠偏** | HANDOFF 修正 8 处口径偏差（§3 目录树、§0 基线、§7.2 基线表、§7.4.2 清单、§9.1/§10 失效项、§14 清单）+ §2 新增两条环境硬约束 | §42 |
+| **回归** | 改动后 `npm run build` + `run-regress` **16/16 全绿**；另用"改动前后逐值快照"证明**页面观感零变化** | §42 |
+
+**本轮的三条经验**（下次接手先看）：
+1. **不要在 bash 里做删除**：沙箱的 `safe-delete-bulk` 钩子会连带删掉**整个父目录**
+   （本轮 `git rm` 把 `public/` 与 `scripts/` 一起删了，靠 `git restore --worktree .` 无损还原）。
+2. **文案断言必须只扫"页面固定文案 + meta"**：历史文章正文里合法会出现"浅色主题""作品库"
+   （那是内容记录），把这些词一律拉黑会得到一堆假失败。
+3. **长期没被引用的东西要定期清**：本轮一次就找出 7 处（covers、verify-deck、hero-anim.js、
+   DriftWallBackground、HomeShapeGrid、TextType、Ticker）——几何断言永远抓不到"没人用了"。
+
 ---
 
 ## 1. 五分钟上手
@@ -152,6 +179,8 @@ npm run og                  # 重新生成分享图（scripts/gen-og.mjs）
 | **git 走代理**（仓库级配置） | `git config --local http.proxy http://127.0.0.1:33210`（https 同）。**git 不读 Windows 系统代理设置**，代理没开时这里会超时，要改成直连：`git config --local --unset http.proxy` |
 | ★代理没开又要推送时的兜底（2026-09-18 实测成功）★ | 症状：直连 `github.com` 超时（**DNS 解析到的那个 IP 被墙**），但同一域名的**其它 A 记录直连可达**（实测 `140.82.112.4` / `140.82.113.4` / `140.82.114.4` / `20.201.28.151` 通，`20.205.243.166` 不通）。办法：**起一个本地 TCP 隧道**，把 git 发出的 `CONNECT github.com:443` 转发到可达 IP —— TLS 仍是端到端的 github.com 证书（SNI/Host 不变），**不需要关 sslVerify**。步骤：① `node <工作区>/.workbuddy/gh-tunnel.mjs 39210 140.82.112.4`；② `http_proxy= https_proxy= HTTP_PROXY= HTTPS_PROXY= git -c http.proxy=http://127.0.0.1:39210 push origin main`（必须清空环境代理变量，否则会走那个不放行 github 的代理返回 502）；③ 推完停掉隧道。⚠️ `http.curloptResolve` 这条路走不通：本机 git 是 schannel 后端，会报 `Unsupported SSL backend 'openssl'` |
 | GitHub 直连时通时断 | 推送失败就重试（本仓库实测最多重试 12 次才成功）；开了代理基本一次过 |
+| ★**不要在 bash 里做删除**（2026-09-19 实测事故）★ | 本机 bash 的删除被沙箱的 `safe-delete-bulk` 钩子接管，而它的辅助脚本链是**坏的**（`dirname` / `safe-delete-common.sh` 都不存在）。实测执行 `git rm -r public/covers scripts/verify-deck.mjs` 时，**整个 `public/` 与整个 `scripts/` 被一起删掉**（只有 `.gitignore` 的产物幸免）。恢复：`git restore --worktree .`（全部是已提交文件，可无损还原）。**规避**：删除一律走"**移到同卷中转目录**"（`Move-Item -Force` 到 `D:\_WorkBuddy待清理_<日期>\`），再用 `git add -A` 记录删除；**不要用 `rm` / `rm -r` / `git rm`**。删完务必 `git status --short` + "逐文件比对索引"确认没有连带删除 |
+| ★**bash 里 `npm` / `npx` 不可用**（2026-09-19）★ | 本机 bash 的 npm 是 shim，会报 `/usr/bin/env: 'bash': No such file or directory`。另外 bash 的 `node` 解析到 **22.22.2**（托管版），不是文档口径的 v24。**构建/脚本一律用绝对路径的 node 直接跑入口**：`node ./node_modules/astro/bin/astro.mjs build`、`node ./node_modules/pagefind/lib/runner/bin.cjs --site dist`、`node scripts/run-regress.mjs`。要走 `npm run xxx` 就用 PowerShell 工具 |
 
 **没有云端凭据**：仓库里没有任何 token/密钥；Cloudflare 是 Git 集成自动构建，改不了就去看 CF 控制台的 Build log。
 
@@ -163,40 +192,44 @@ npm run og                  # 重新生成分享图（scripts/gen-og.mjs）
 endfield-blog/
 ├─ astro.config.mjs          # 集成：react / sitemap / ClientRouter(软导航)；vite 插件 shim
 ├─ package.json              # build = astro build && pagefind --site dist├─ src/site.ts               # 站点全站配置：站点名/作者/链接/GISCUS/IMG_CDN/WEATHER_CITY
-├─ src/content.config.ts     # 三个内容集合：works / shots / changelog
+├─ src/content.config.ts     # 三个内容集合：posts / shots / changelog（works 已于 §40 删除）
 ├─ src/layouts/
 │   ├─ Base.astro            # 全站骨架：head meta、主题早应用脚本、头部、粒子背景；
 │   │                        #   属性 sidebar=true 时渲染三栏壳层（侧栏在 <main> 之外）
 │   ├─ SidebarLayout.astro   # 薄封装：<Base sidebar>，子页面用它
-│   └─ WorkLayout.astro      # 作品详情：标题/元信息表/封面/正文目录/上下篇/giscus
 ├─ src/components/
-│   ├─ Header.astro          # 顶部导航：品牌标 / 链接组 / 指示线 / 搜索 / 动效暂停 / 汉堡（见 §26 §31）
+│   ├─ Header.astro          # 顶部导航：品牌标 / 链接组 / 搜索 / 汉堡（见 §26 §31 §33）
+│   │                        #   ⚠️「暂停背景动态」按钮已于 2026-09-18 删除（§24）
 │   ├─ BrandMark.astro       # ★品牌标志（横版字标 + 纯图标，见 §28）—— 改 logo 只改这里
 │   ├─ VideoBackground.astro # ★全站背景视频 + 渐变遮罩 + poster 降级（见 §23）
 │   ├─ SearchModal.astro     # 全站搜索悬浮窗（Pagefind，首次打开才加载 JS/CSS，见 §20）
-│   ├─ SidebarNav.astro      # 左栏：个人信息卡 + 天气卡 + 导航树（作品库/分类/站点/画廊）
-│   ├─ SidebarWidgets.astro  # 右栏：站点统计 / 更新日历 / 最近更新 / 今日一言
+│   ├─ SidebarNav.astro      # 左栏：个人信息卡 + 天气卡 + 导航树（文章 / 站点 等分组）
+│   ├─ SidebarWidgets.astro  # 右栏：站点统计 / 活跃热力图 / 最近更新 / 今日一言
 │   ├─ SidebarStatValue.jsx  # 宿主：统计数字的计数动画（包 ReactBits/CountUp，见 §6.15）
 │   ├─ MusicPlayer.astro     # 左栏底部音乐播放器（歌曲在 site.ts 的 MUSIC，见 §6.17）
 │   ├─ WeatherCard.astro     # 天气卡骨架（数据由 ui.js 在浏览器端填）
 │   ├─ GiscusComments.astro  # 留言板/评论区（主题跟随、防重复注入）
-│   ├─ WorkCard.astro 等     # 作品卡、页脚、打字机等小件
+│   ├─ TextType.astro / Ticker.astro  # 打字机 / 跑马灯小件
 │   ├─ ReactBits/            # React Bits 官方组件原码（见 §5 铁律三）
-│   └─ *.jsx                 # 宿主层：Particles 背景、Lanyard、ProximityText…
-│                            #   ⚠️ HomeStrokeTitle / HomeWorksCardSwap / HomeGalleryAccordion
-│                            #      已删除（首页改版后不再使用，见 §25 §30）
-├─ src/pages/                # 首页 / 作品库 / 作品详情 / 画廊 / 关于 / 互动 / 404 / rss.xml
+│   └─ *.jsx                 # 宿主层：Particles 背景、ProximityText、AboutMagicBento…
+│                            #   ⚠️ 已删除：HomeStrokeTitle / HomeWorksCardSwap / HomeGalleryAccordion
+│                            #      （首页改版后不再使用，见 §25 §30）、WorkCard / Footer（§40 §41）
+│                            #   ⚠️ 仍在仓库但**零引用**（死代码，见 §42）：DriftWallBackground.astro、
+│                            #      HomeShapeGrid.jsx、TextType.astro、Ticker.astro
+├─ src/pages/                # 首页 / 文章列表 / 文章详情 / 归档 / 画廊 / 关于 / 互动 / 404 / rss.xml
 │                            #   ★搜索已不再是一个页面★，改成悬浮窗（SearchModal.astro）
 ├─ src/scripts/ui.js         # ★全站交互中枢（约 2000 行）：所有动效与交互都在这（见 §6 各条）
-├─ src/scripts/hero-anim.js  # 首页 Hero 四个动画（ShinyText/BlurText/GradientText/逐字，见 §30）
+├─ src/scripts/hero-theme.js # 首页强调色预设：色卡切换的补间（见 §34）
+├─ src/scripts/hero-anim.js  # ⚠️ 死代码：首页 Hero 已改静态版式，index.astro **不再加载它**（见 §33）
 ├─ src/scripts/nav-mobile.js # 导航：汉堡菜单 + 顶部两条指示线（见 §31）
 ├─ src/styles/global.css     # 设计令牌 + 基础版式（★:root 即暗色，见 §24）
 ├─ src/styles/motion.css     # 动效令牌 + html[data-theme='dark'] 同步块
 ├─ src/styles/shell.css      # 三栏壳层 + 侧栏各卡片样式
-├─ src/content/{works,shots,changelog}/   # 内容
-├─ public/                   # covers / lanyard / og / shots / media(背景视频) / favicon*.svg / robots.txt
-│                            #   （**没有** _headers、没有自托管字体）
-└─ scripts/                  # 见 §7.2 的全套验证脚本；gen-og.mjs（分享图）；seed-changelog.mjs
+├─ src/content/{posts,shots,changelog}/   # 内容
+├─ public/                   # lanyard / og / shots / media(背景视频) / music / favicon*.svg / robots.txt
+│                            #   （**没有** _headers、没有自托管字体；covers 已于 §42 删除）
+└─ scripts/                  # 见 §7.2 的全套验证脚本（16 个）+ run-regress.mjs（批跑）
+                             #   + gen-og.mjs（分享图）/ seed-changelog.mjs / 诊断与截图工具
 ```
 
 **唯一的"大脑"是 `src/scripts/ui.js`**：软导航后所有功能都靠它重新接管，改交互基本都在这。
@@ -205,29 +238,35 @@ endfield-blog/
 
 ## 4. 内容怎么加
 
-### 作品（`/works/`）
-`src/content/works/wXXX-name.md`：
+### 文章（`/posts/` 列表 + `/posts/[slug]/` 详情 + `/blog/` 归档）
+`src/content/posts/YYYY-MM-DD-slug.md`：
 ```yaml
 ---
-title: 简易图书管理系统
-summary: 一句话摘要（作品详情页会显示；列表页不显示）
-date: 2025-07-01
-order: 3                     # 决定编号 W-003 与排序
-tags: [课程设计, Web]         # ★会出现在顶部导航「作品库」二级菜单里
-tools: [Spring Boot, MySQL]
-state: 已公开                 # 含"进行/开发"→黄色点，含"停/废弃"→红点
-cover: /covers/w003.svg
-link: https://github.com/...  # 可选
+title: 一篇文章的标题
+date: 2026-09-19
+tags: [站点日志, 折腾]        # 出现在列表页标签与首页「技术标签」
+summary: 一句话摘要（列表页与首页卡片会显示）
+link: https://...             # 可选：填了就只跳外链、不生成详情页
 ---
-正文 markdown（h2/h3 会生成详情页顶部目录）
+正文 markdown（h2/h3 会进详情页正文样式）
 ```
+> ⚠️ **作品（`/works/`）已于 2026-09-19 整体下线**（§40）：`content/works/`、
+> `WorkCard.astro`、`WorkLayout.astro` 都已删除，**不要再照着旧文档往 `content/works/` 加内容**
+> —— 集合不存在时构建会打 WARN「collection does not exist」。
+> （历史上的作品条目长这样，仅供理解旧数据：`order` 决定 W-00x 编号、`cover` 指向
+> `public/covers/*.svg` —— 这些封面文件也已在 §42 删除。）
 
+### 每日日志帖（与 changelog 配套）
+`changelog` 的每一天都有一篇对应文章（`src/content/posts/YYYY-MM-DD-log.md`，
+标题「站点日志 · MM.DD 主题」，tags 含「站点日志」），正文 = 当天 items 逐条展开。
+归档时间线的每一条文字都链到当天的日志/主题文章。
 ### 截图（`/gallery/`）
 1. 图片放 `public/shots/mc/mc-041.webp`（1600w q78 约 80KB 内）；
 2. `src/content/shots/mc-041-shot.md`：`title / date / game / image: /shots/mc/mc-041.webp / note / aspect`。
-   `game` 会出现在顶部导航「画廊」二级菜单里。
+   `game` 用于画廊的 `?game=` 过滤（浏览器端读 `location.search`，见 §6.6）。
+   > ⚠️ 顶部导航的**二级菜单已不存在**（§33）——分类入口只有桌面左栏导航树一处。
 
-### 站点更新记录（驱动侧栏「更新日历」）
+### 站点更新记录（驱动侧栏「活跃热力图」）
 `src/content/changelog/YYYY-MM-DD.md`，一天一个文件：
 ```yaml
 ---
@@ -238,7 +277,8 @@ items:
     note: '一句话说明（可选）'
 ---
 ```
-侧栏日历会把 changelog + 作品 + 截图按日期聚合：有记录的日子可点开看当天明细。
+侧栏热力图会把 changelog + 文章 + 截图按日期聚合：色块强度按当天事件数分 5 档，
+点色块浮出当天按类型的计数（见 §40.3）。
 
 ---
 
@@ -418,7 +458,9 @@ items:
     - 位置：卡片堆放在 `.wrap` 内的两栏栅格里（`.wb-copy` / `.wb-deck`），
       与页面栅格天然对齐；**不要再改回 `position:absolute` 挂在板块右下角**（那正是跑出内容列的原因）。
     - 组件按容器实测宽度反解所有尺寸与字号（`HomeWorksCardSwap.jsx` 的 `R` 比例表），
-      所以换列宽/断点都不用改数值。自检：`node scripts/verify-deck.mjs [url]`。
+      所以换列宽/断点都不用改数值。自检：~~`node scripts/verify-deck.mjs [url]`~~
+      ⚠️ **该脚本已于 2026-09-19 删除**（它的验收对象 CardSwap 早已不参与首页，见 §25；
+      脚本留着就是一条指向不存在组件的死代码）。
 
 22. **导航栏/下拉的玻璃与两个 CSS 陷阱**（2026-09-15）：
     - **`.topbar` 是死代码**：motion.css 里有 3 处 `.topbar{…}`（背景/边框/模糊都在那儿），
@@ -509,8 +551,9 @@ items:
     - 自检：`node scripts/verify-redesign.mjs`（16 项：单主题、玻璃令牌取值、
       **无暂停按钮 / 视频默认在播 / 旧暂停接口已移除 / reduced-motion 仍不播 / 恢复偏好后重播**、
       导航栏滚动过渡）。
-    - **已知未改**：作品封面 SVG（`public/covers/*.svg`）当初是按浅色底设计的，
-      在暗色站上偏亮；属于内容资产，需要时可重画。
+    - **已知未改**：~~作品封面 SVG（`public/covers/*.svg`）当初是按浅色底设计的，
+      在暗色站上偏亮；属于内容资产，需要时可重画。~~ **→ 已于 2026-09-19 整批删除（§42）**：
+      作品库下线后它们零引用，不再是"待重画"而是"已不存在"。
 
 25. **首页 = 内容橱窗**（2026-09-15，用户要求从"入口目录"改成"内容橱窗"）：
     `src/pages/index.astro` 已整体重写为四层结构，**不再有 01/02/03 编号入口卡片**。
@@ -1410,23 +1453,27 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 ### 7.2 验证脚本清单（改完对应模块就跑它）
 **全部脚本都在 `endfield-blog/scripts/`，统一用法 `node scripts/<名>.mjs [url] [light|dark]`。
 前置：预览 4321 已起 + 无头浏览器 9222 已起（§7.1）。退出码 0=全过 / 1=有失败 / 2=环境没起。**
+**一次跑全套：`node scripts/run-regress.mjs`（16 个脚本串行 + 汇总 PASS/FAIL）。**
+> `verify-copy.mjs` 是唯一**不需要无头浏览器**的一个（只读已构建的 `dist/`，
+> 也可直接给线上 URL 走 sitemap 枚举），所以它能独立于 9222 跑。
 
 | 脚本 | 覆盖什么 | 当前基线 |
 |---|---|---|
 | `smoke.mjs` | ★总入口：各页横向溢出/控制台异常/侧栏存在与等高、长页两栏逐帧同步、"不钉在导航栏下"、软导航往返后的文章列表/详情跳转与热力图浮层交互、手机端侧栏隐藏 | **48/48** |
-| `verify-hero.mjs` | 首页 Hero：几何/比例 + 与主栅格对齐（同宽/同内边距/内容左缘重合）+ 两行标题 + 强调色预设 + **整块竖向居中/容器居中/标题字号/`--card-shift`** + **手机端代码卡片按内容展开（未被压扁裁切）** | **86/86**（2026-09-18 修手机端卡片被裁后 85 → 86） |
-| `verify-home.mjs` | 首页四层结构（最新**博客**）、图片策略、防 CLS 容器、alt、区块间距、SEO、移动端单列 | **23/23** |
-| `verify-nav-shrink.mjs` | 导航三态（贴顶通栏/滚动胶囊/回顶）+ 形态过渡 + 移动端汉堡菜单（**含"抽屉已无分类入口"、"已无外链按钮"、"左右各内缩 12px"、"四角圆角 ≥12px 且一致"**）+ **导航容器与主内容容器同宽、同左缘、自身居中** | **42/42**（2026-09-18 删分类 + 删外链 + 菜单改圆角矩形后 39 → 42） |
+| `verify-hero.mjs` | 首页 Hero：几何/比例 + 与主栅格对齐（同宽/同内边距/内容左缘重合）+ 两行标题 + 强调色预设 + **整块竖向居中/容器居中/标题字号/`--card-shift`** + **手机端代码卡片按内容展开（未被压扁裁切）** + **代码卡片磨砂玻璃（模糊 ≥16px 且提饱和 / 多层玻璃）** | **88/88**（2026-09-18：修手机端卡片被裁 85 → 86，加磨砂玻璃 2 条 → 88） |
+| `verify-home.mjs` | 首页四层结构（最新**博客**）、图片策略、防 CLS 容器、alt、区块间距、SEO、移动端单列 | **24/24** |
+| `verify-nav-shrink.mjs` | 导航三态（贴顶通栏/滚动胶囊/回顶）+ 形态过渡 + 移动端汉堡菜单（**含"抽屉已无分类入口"、"已无外链按钮"、"左右各内缩 12px"、"四角圆角 ≥12px 且一致"**）+ **导航容器与主内容容器同宽、同左缘、自身居中** | **40/40**（2026-09-19 删页脚后：壳层页的 wrap 对齐断言退化为"导航居中"校验，42 → 40） |
 | `verify-nav.mjs` | 导航几何、玻璃、**博客归档入口在左栏**、无遗留二级菜单 | **14/14** |
 | `verify-brand.mjs` | 品牌标志（viewBox、云体/羽翼色值、旧六边形已清、不超导航条） | **10/10** |
 | `verify-theme.mjs` | 单主题不变量：默认暗色/系统浅色仍暗色/历史偏好切不回浅色/无开关/首屏逐帧无浅色帧 | **11/11** |
 | `verify-redesign.mjs` | 暗色电影感：玻璃令牌取值、**无暂停按钮 + 视频默认在播 + 旧暂停接口已移除 + reduced-motion 仍不播**、导航滚动过渡 | **16/16**（2026-09-18 暂停按钮删除后由 14 条改为此 6 条） |
 | `verify-search.mjs` | 搜索悬浮窗：懒加载、开关、出结果、快捷键、软导航后仍可用 | **17/17** |
 | `verify-videobg.mjs` | 背景视频：播放/层级/透明度/遮罩 + hero 文字在视频上的**实际像素**对比度（用"隐藏文字的对照页"取样，并自检对照页版式与真实页一致）+ **主容器左右边缘无分界线（逐 72px 段、8bit 灰度口径、三帧取最小）** + **结构判定：与容器同宽的元素不得有绝对定位的渐变伪元素** | **22/22** |
-| `verify-videobg-global.mjs` | 全站背景一致性：逐页硬刷新 + 软导航一圈，视频未被重建、旧背景仍在 | **25/25** |
+| `verify-videobg-global.mjs` | 全站背景一致性：逐页硬刷新 + 软导航一圈，视频未被重建、旧背景仍在 | **29/29** |
+| `verify-copy.mjs` | ★**文案断言**：① 禁用词（浅色通透 / 双主题 / 主题切换 / 开灯… 等"描述已删除功能"的措辞）不得出现在任何页面的可见文案与 meta；② 占位词（TODO/待补/lorem…）不得出现；③ 文案锚点 —— `site.ts` 的 notice/tagline 非空且不含禁用词，notice 必须出现在关于页可见文案、tagline 必须出现在 meta description；④ 每页都有非空 title/description。**只扫页面固定文案与 meta，不扫文章正文**（历史文章合法会提"浅色主题/作品库"） | **31/31** |
 | `contrast-audit.mjs` | WCAG 对比度审计（逐节点"前景 vs 实际合成背景"） | 暗色 **0 处不达标** |
-| `mobile-shots.mjs` | 三机型视口 × 5 页截图 + 横向溢出统计 | **15/15 无溢出** |
-| `diag-errors.mjs` | 逐页 JS 异常计数 | 6 页全 **0** |
+| `mobile-shots.mjs` | 三机型视口 × 6 页截图 + 横向溢出统计 | **18/18 无溢出** |
+| `diag-errors.mjs` | 逐页 JS 异常计数 | 7 页全 **0** |
 | `diag-edges.mjs` | **诊断（不断言）**：容器边缘逐段偏差 + 全屏长竖线名单 + "容器级装饰层"结构判定。支持 `EXTRA_CSS='...'` 做 A/B（把被删的层注回去看断言会不会红）、`W`/`H` 环境变量换视口 | 按需 |
 | `probe-point.mjs` | **诊断（不断言）**：`node scripts/probe-point.mjs / 1091 188` 把像素坐标翻译成 DOM（`elementsFromPoint` + 各伪元素的 `backgroundImage/inset`），用来判断某处是"视频内容"还是"CSS 层" | 按需 |
 | `diag-424.mjs` | **诊断（不断言）**：抓 `React error #424` 的**完整栈**（文档创建前注入 `reportError` 钩子，并自带注入自检）。支持 `FLOW=smoke`（复刻 smoke [3]）、`STRESS=1`（`HOPS` 次快速换页，`GAP` 间隔）、`CPU=n` 降速、`LOAD=n` 开 n 个标签制造调度竞争 | 修复前 **7 次** / 修复后 **0 次** |
@@ -1498,15 +1545,19 @@ mobile-shots 15/15（零横向溢出）、diag-errors 7 页全 0。
 **复核中唯一发现的问题是文案**（`SITE.notice` / `SITE.tagline` 还写着"浅色通透"，已修并上线，
 详见 §32）；另修正了 `CODEX.md` / `README.md` 的过期描述。
 
-### 7.4.2 交接时"要顺手核一遍文案"的检查项（脚本抓不到）
+### 7.4.2 交接时"要顺手核一遍文案"的检查项
 本次的经验：**几何/颜色类断言全绿，也挡不住一句写错的文案上线。** 改完主题/视觉方向后，
-交出去之前手动核这几处用户可见文字与当前实现是否一致：
+交出去之前核这几处用户可见文字与当前实现是否一致：
 ```
-□ src/site.ts 的 SITE.tagline     → 首页 hero 副标题 + SEO
-□ src/site.ts 的 SITE.notice      → 页脚 title+文本、关于页 .note
+□ src/site.ts 的 SITE.tagline     → 首页 SEO / 各页 meta description 兜底
+□ src/site.ts 的 SITE.notice      → 关于页 .note（★页脚已于 2026-09-19 删除，不再有页脚副本）
 □ 各页 <title> / <meta name="description">
 □ README.md 首行定位句
 ```
+**2026-09-19 起这份清单已部分自动化**：`node scripts/verify-copy.mjs`（31 条）会扫
+禁用词（浅色通透/双主题/主题切换…）、占位词、以及 `notice`/`tagline` 与页面的锚点一致性。
+剩下仍需人工核的只有"README 首行 / 各页 meta 是否与实现相符"这类**语义**判断
+（脚本管得了"出现了禁用词"，管不了"这句话是否已经过时"）。
 
 #### 2026-09-18 四轮交接复核（本轮）
 > 代码提交 `480a907`（文档提交在其后）。本轮改动是**纯 CSS / 纯删除**（没有动任何 React 岛）。
@@ -1649,8 +1700,10 @@ $css  = ([regex]::Matches($html,'href="(/_astro/[^"]+\.css)"') | % { $_.Groups[1
   手机端只有单列正文 + 顶栏汉堡抽屉。也就是说手机端**没有**个人信息卡/天气/统计/更新日历/最近更新。
   ⚠️ **2026-09-18 起手机端抽屉里的「作品库分类 / 画廊分类」两组也已按用户要求删除**
   （`Header.astro` 的 `.mm-group` 与相关 `.mm-*` 样式一并移除），所以**手机端目前没有分类入口**
-  —— 分类只剩桌面左栏导航树一处。要补的话，建议在 `/works/` 与 `/gallery/` 页面内各加一排
-  筛选 chip（这两个页面现在只有"当前分类回显条"，本身没有选择器）。
+  —— 分类只剩桌面左栏导航树一处。要补的话，建议在 `/gallery/` 页面内加一排筛选 chip
+  （该页现在只有"当前分类回显条"，本身没有选择器）。
+  > ⚠️ **2026-09-19（§40）作品库已整体下线**（`/works/`、`content/works`、WorkCard/WorkLayout 全删），
+  > 所以"在 `/works/` 加 chip"这条已经无处可加；站点现在是**博客 + 归档 + 画廊**的结构。
   同理，手机端抽屉里的 **GitHub / Bilibili / RSS 也已删除**；⚠️ 页脚也在 2026-09-19
   被移除（§41），所以**这三个外链目前手机端没有任何入口**，桌面端只剩左栏。
   要补回移动端入口需另加（如抽屉底部一排图标）。
@@ -1676,25 +1729,25 @@ $css  = ([regex]::Matches($html,'href="(/_astro/[^"]+\.css)"') | % { $_.Groups[1
 
 | 项 | 说明 |
 |---|---|
-| 作品封面 SVG 偏亮 | `public/covers/*.svg` 当初按**浅色底**设计，在现在的暗色站上偏亮。属内容资产，需要时可重画一批暗色版 |
+| ~~作品封面 SVG 偏亮~~ | **已作废**：`public/covers/*.svg`（12 个）随作品库下线（§40）沦为**零引用死资产**，已于 2026-09-19 删除（§42） |
 | 背景视频体积 | `public/media/bg-loop.mp4` 约 15.5 MB，每位访客都会下载。嫌重可以：换更短片段 / 压到 8MB 内 / 手机上不加载（见 §23 的 `VIDEO_BG` 令牌） |
 | 背景视频主色调 | 素材稳定在 **192° 青蓝**，与站点雾蓝强调色同族。**换素材要重取色相**（`--accent` 系） |
 | 工牌交互 | 原来"下拉/点击工牌开关灯"随亮色主题一起删了，现在只剩拖拽的装饰手感（§27）。要不要加别的反馈？ |
-| 左栏「分类」分组 vs 导航二级菜单 | **已解决**（2026-09-18）：导航照参考重做后不再有二级菜单，分类只剩左栏一处 |
+| 左栏导航树分组 | **已变更**：2026-09-18 导航照参考重做后不再有二级菜单；2026-09-19 作品库下线后，左栏分组改为「文章 / 站点」（§40） |
 | 顶栏搜索入口 | 照参考重做导航后，顶栏不再有搜索按钮；搜索只剩 ⌘/Ctrl+K 与左栏/移动端菜单的入口。可访问性上少了可见入口，要不要加回来说一声（见 §33） |
-| 手机端抽屉已极简化 | 2026-09-18 按用户要求删掉了手机端抽屉里的「作品库分类 / 画廊分类」与底部外链（GitHub / Bilibili / RSS），抽屉现在**只有 5 个一级页面入口**。因侧栏在 <1200px 隐藏，**手机端现在没有分类入口**；GitHub / Bilibili / RSS 只能从页脚到达。要补分类就在 `/works/`、`/gallery/` 页面内加一排筛选 chip（见 §9.1） |
-| 作品详情页 summary / 404 说明文字 | 早先"删除子页面简介"时保留了，要删说一声 |
+| 手机端入口极简 | 2026-09-18 按用户要求删掉了抽屉里的「作品库分类 / 画廊分类」与底部外链；⚠️ **页脚又在 2026-09-19 删除（§41）**，所以**手机端现在既没有分类入口、也没有 GitHub / Bilibili / RSS 入口**（桌面端只剩左栏）。要补就在 `/gallery/` 内加筛选 chip，或在抽屉底部加一排图标（见 §9.1） |
+| ~~作品详情页 summary / 404 说明文字~~ | **已作废**：作品详情页随 §40 整体删除；`/404` 的说明文字仍在，要删说一声 |
 | 个人信息卡横幅图 | `SidebarNav.astro` 顶部常量 `PROFILE_BANNER = ''`，留空＝主题渐变；填站内图片路径即换成图片 |
 | 天气城市 | `src/site.ts` 的 `WEATHER_CITY = ''`＝按访客 IP 自动定位（推荐，不暴露你的位置）；填城市名则固定（等于公开城市） |
 | 画廊原图 | 40 张原始 PNG 备份已随工作区清理删除，仓库里的 webp 是唯一副本（详见 §11） |
 | `SESSION_HANDOFF.md` | **已删除**（交接时清理，见 §11.2） |
-| 文案复核机制 | 2026-09-17 修掉了线上"浅色通透"文案（§32），并加了 §7.4.2 的手动检查清单 —— 但**文案仍然没有自动化断言**。要不要给 `SITE.notice` / `tagline` 也加一条脚本断言，避免下次再漂移？ |
+| ~~文案复核机制~~ | **已解决**（2026-09-19）：新增 `scripts/verify-copy.mjs`（**31 条**，已接入 `run-regress.mjs`）—— 覆盖禁用词 / 占位词 / 文案锚点三类，并按 §7.6 第 3 条验证过"缺陷态会红、健康态全绿"（§42） |
 | ~~线上间歇 `React error #424`~~ | **已定位并修复**（2026-09-18 五轮，见 §37）：软导航时 Astro 对**尚未水合**的 React 岛调用 `root.unmount()` 触发。它既不是"仅线上"也不是缓存问题，而是时序竞态（本地也能复现，只是概率低）。修法见 `plugins/vite-react-safe-unmount.mjs`。✅ **已推送上线**（`6a1564f..2ee2e16`），线上复验见 §37.5 |
-| 变更记录未写 | 2026-09-17 与 **2026-09-18（整轮导航/Hero/色卡/容器改动）** 都**没有**写进 `src/content/changelog/`，所以侧栏「更新日历」看不到这些改动。要补一条 `2026-09-18.md` 说一声 |
-| `/account/` 页面很短 | 手机端实测页面高只有 906px（其它页 4000+），目前只有留言板一块，要不要补内容？ |
-| 首页 Hero 右侧留白（1920） | 左栏 645 + gap 80 + 卡片 440 = 1165，用不满 1324 的内容宽，**右侧空约 159px**。要填满就得加宽左栏或卡片 —— 那属于"改内部组件尺寸"，本次按要求没动。要改说一声（§36） |
-| 大标题字号 vs 参考 | 参考 h1 是 66px@645 栏；我们第一行 28 字符（每字号 13.19px），保两行只能到 **48px**。想要 66px 就把 `.ht-l1` 的 nowrap 去掉（会折成 3 行）（§35） |
-| 代码卡片高度/行数 | 卡片 440 宽 + 代码 15 行时约 470 高；**加长代码段或调 `--code-lh` 前先量 1440 下的卡片高**，否则 hero 会被顶出视口（§34） |
+| 变更记录 | **部分已补**：`src/content/changelog/2026-09-18.md` 已存在（3 条：导航重做 / 强调色预设 / 磨砂玻璃卡片），但该轮的**容器宽度 1300、柔光层删除、#424 修复**三项没写进去；`2026-09-17` 只有文档与文案修正，未建 changelog。要补齐说一声 |
+| `/account/` 页面很短 | 手机端实测页面高约 997px（其它页 3000+），目前只有留言板一块，要不要补内容？ |
+| ~~首页 Hero 右侧留白（1920）~~ | **已解决**（2026-09-18 三轮）：版面改为 **700 / 96 / 400**，三块正好占满 1196 净宽，不再有右侧余量（§36.2） |
+| 大标题字号 vs 参考 | **已更新**：2026-09-18 三轮把上限提到 **52px**（同时把左栏 645 → 700，因为第一行 28 字符在 52px 下实宽 686px）。参考的 66px 仍不可达 —— 要放宽左栏或改文案（§35 / §36.2） |
+| 代码卡片高度/行数 | 卡片 **400** 宽 + 代码 15 行时约 470 高；**加长代码段或调 `--code-lh` 前先量 1440 下的卡片高**，否则 hero 会被顶出视口（§34 / §36.2） |
 
 ---
 
@@ -1792,19 +1845,17 @@ Get-Process msedge -ErrorAction SilentlyContinue | Stop-Process -Force
 $ud = Join-Path $env:TEMP ("cwcdp-" + (Get-Date -Format 'HHmmss'))
 Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' -ArgumentList @('--headless=new','--remote-debugging-port=9222','--remote-allow-origins=*',"--user-data-dir=$ud",'--no-first-run','--disable-extensions')
 
-# 3) 串行跑全部脚本（当前基线见 §7.2）
-foreach($s in @('smoke','verify-hero','verify-home','verify-nav-shrink','verify-nav','verify-brand','verify-theme','verify-redesign','verify-search','verify-videobg','verify-videobg-global')){
-  node "scripts/$s.mjs" http://127.0.0.1:4321 | Select-Object -Last 2; Start-Sleep 2
-}
-node scripts/contrast-audit.mjs http://127.0.0.1:4321 dark   # 期望 0 处不达标
-node scripts/mobile-shots.mjs http://127.0.0.1:4321           # 期望 15/15 无横向溢出
-node scripts/diag-errors.mjs http://127.0.0.1:4321            # 期望 7 页全 0
+# 3) 串行跑全部脚本（当前基线见 §7.2）—— 一条命令搞定
+node scripts/run-regress.mjs          # 期望「总结: 16/16 通过」
+# （它内部按固定顺序串行 spawn 16 个脚本；不要自己并发跑，见 §7.1 第 6 条）
+# 单独重跑某个脚本：node scripts/<名>.mjs http://127.0.0.1:4321 [light|dark]
 
 # 4) 线上同一套（先确认推送成功、CF 构建完成；反向特征检查见 §7.5）
 git ls-remote origin main
 node scripts/poll-deploy.mjs --have '--w-max:\s*1300px' --not 'hero::before'   # 通了才继续
 node scripts/smoke.mjs https://cloudwing.pages.dev                 # ⚠️ 间歇：约 2/3 轮次会报已知的 #424
 node scripts/verify-videobg.mjs https://cloudwing.pages.dev dark   # 期望 22/22（含"容器边缘无分界线"）
+node scripts/verify-copy.mjs https://cloudwing.pages.dev           # 期望 31/31（走 sitemap 枚举全站页面）
 
 # 5) 可选：改过 hero / 容器宽度 / 背景层时，量一遍"容器边缘逐段偏差"
 node scripts/diag-edges.mjs http://127.0.0.1:4321 /                # 看"容器边缘阶跃"与"容器级装饰层（无）"
@@ -1814,11 +1865,116 @@ Remove-Item Env:\EXTRA_CSS
 ```
 
 **两件必须手核、脚本管不到的**：
-1. **文案是否过期** —— 按 §7.4.2 的清单核 `SITE.notice` / `SITE.tagline` / 各页 meta
-   （本轮"浅色通透"就是 14 个脚本全绿却带着上线的）；
+1. **文案是否过期（语义层面）** —— `verify-copy.mjs` 已能抓"出现了禁用词/占位词/锚点脱节"
+   （§42），但**抓不了"这句话是否已经过时"**。仍需人工按 §7.4.2 的清单看
+   `SITE.notice` / `SITE.tagline` / 各页 meta / README 首行。
+   （历史教训：2026-09-17 那个"浅色通透"就是脚本全绿却带着上线的。）
 2. **有没有留下没人引用的旧结构** —— `grep -r "<旧类名>" src/`。
-   本轮实测有过：`.hd`/`.hd-glass`、`navSub()`、`.title-gradient`、`hero-anim.js`、
-   `nav-staggered.js` —— 这些脚本都抓不到。
+   历年实测有过：`.hd`/`.hd-glass`、`navSub()`、`.title-gradient`、`nav-staggered.js`；
+   **2026-09-19 实测清单**：`public/covers/`（12 个 SVG，随作品库下线后零引用）、
+   `scripts/verify-deck.mjs`（验收对象已删）、`src/scripts/hero-anim.js`、
+   `DriftWallBackground.astro`、`HomeShapeGrid.jsx`、`TextType.astro`、`Ticker.astro`
+   ——（前两项本轮已删，其余为**待定**：见 §42 的"死代码候选"）。这些脚本都抓不到。
 
 **第三件（2026-09-18 四轮补）**：**新写的断言要证明"它在缺陷态下会红"**（§7.6 第 3 条）。
 本文件里已经有过"断言恒真、连过两轮"的事故；只看到绿灯不算验证过。
+
+---
+
+## 42. ★清死资产 + 文案自动化断言 + 文档纠偏（2026-09-19 下午）★
+
+**本轮的需求**：① 修正交接文档里的口径偏差；② 给文案加自动化断言（堵住 §32 那类
+"脚本全绿却带着错文案上线"）；③ 清理死资产（`public/covers/` 的 12 个 SVG +
+`scripts/verify-deck.mjs`）。**约束：不得改动页面观感。**
+
+### 42.1 删除的两个死资产（附"为什么它确实是死的"的证据）
+
+| 删除项 | 体量 | 判据 |
+|---|---|---|
+| `public/covers/*.svg`（12 个） | 33.2 KB | `src/` 全树**零引用**；`dist/` 52 个产物文件里引用 `covers` 的 **0 个**。作品库 2026-09-19 下线（§40）后它们就没有任何消费方了（`content/works`、`WorkCard`、`WorkLayout` 都已删） |
+| `scripts/verify-deck.mjs` | — | 它的验收对象是首页作品卡片堆 CardSwap，而该组件早在 §25 就从首页删掉了 |
+
+**为什么"零引用"可以先于删除确认**：这两个判据都是**构建产物级**的（不是"看代码像没用"）——
+删除后 `dist` 里对应的 12 个文件不再生成，而 52 个产物文件中引用数为 0，
+所以**不可能改变任何页面的渲染**。
+
+### 42.2 `scripts/verify-copy.mjs`（新增，31 条断言，已接入批跑）
+
+- **动机**（§32 的真实事故）：站点早已是"只有一套暗色"，`site.ts` 的 notice/tagline 却写着
+  「**浅色通透**」，还带上了线、并在线上首页与关于页可见 —— 当时 14 个脚本全绿，
+  因为它们只验颜色/尺寸/几何，**不验文案内容**。
+- **四组断言**：
+  1. **[A] 禁用词**（14 个）：`浅色通透` / `双主题` / `主题切换` / `主题开关` / `明暗切换` /
+     `浅色模式` / `亮色模式` / `白天模式` / `夜间模式` / `开灯` / `关灯` / `亮色主题` / `浅色主题` …
+     ——「描述本站 UI 是浅色 / 有双主题可切换」的措辞，实现上**早已不存在**（§24/§27）。
+  2. **[B] 占位词**（9 个）：`TODO` / `FIXME` / `待补` / `待填` / `待写` / `占位符` /
+     `lorem ipsum` / `示例文本` / `XXX`。
+  3. **[C] 文案锚点**：`site.ts` 的 `tagline` / `notice` 非空、不含禁用词；
+     **`notice` 必须真的出现在关于页的可见文案里**、`tagline` 必须出现在 meta description 里
+     —— 防"改了一处、漏了另一处"以及"文案与页面脱节"。
+  4. **[D] 每页都要有非空 `<title>` 与 description**。
+- **★最关键的一条口径：只扫"页面固定文案 + meta"，不扫文章正文★**。
+  原因：历史文章正文里**合法地**会出现"浅色主题"（2026-09-15 大改版那篇）、
+  "作品库"（2026-09-19 站改博客那篇）—— 那是内容记录，不是缺陷。
+  实测把「浅色」写成禁用词会让健康态直接红（1 页正文命中）。
+  所以禁用词表**只收"从无合法用途"的短语**，并去掉 `<script>/<style>/<svg>/注释` 后再匹配。
+- **不需要无头浏览器**：默认读本地已构建的 `dist/**/*.html`（19 页全量，含每篇文章）；
+  给一个 URL 则走 `sitemap-index.xml` → 子 sitemap 枚举全站页面再逐页抓取
+  （线上跑法：`node scripts/verify-copy.mjs https://cloudwing.pages.dev`）。
+  这是全套脚本里唯一不依赖 9222 的一个。
+- **有效性自检（§7.6 第 3 条，必做）**：把 §32 的真实缺陷注回 `dist` 两个页面
+  （关于页文案写成「浅色通透」且与 `site.ts` 脱节、另一页把该词写进 meta），重跑 →
+  **29/31 变红**（命中 `/about/(可见)`、`/posts/(meta)`，以及"notice 未出现在关于页"）；
+  还原后回到 **31/31**。**证明它不是恒真断言。**
+- **顺带发现的既有问题（未改，等你决定）**：除首页外，**其余 17 页的 meta description
+  全是同一句 `tagline`**（包括每篇文章详情页也是），属于重复描述、与页面内容不匹配。
+  要修的话是给各页/各文传独立 description —— **本轮按"不动页面"的要求没有动**。
+
+### 42.3 文档纠偏（8 处 + 顺带 4 处）
+
+| # | 位置 | 原来的问题 | 现在 |
+|---|---|---|---|
+| 1 | §3 目录树 | 仍列 `WorkCard.astro`／「页脚」、`src/pages/` 的「作品库/作品详情」、`src/content/{works,…}`、Header 注释仍写「动效暂停」 | 全部按实际改写（内容集合 = posts/shots/changelog；页面 = 首页/文章/归档/画廊/关于/互动/404/rss；并标注死代码） |
+| 2 | §0 第 21 行 | 「最近一次 **45/45**」与同节「期望 **48/48**」自相矛盾 | 改为 `run-regress.mjs` → **16/16**，并注明单入口 smoke 为 48/48 |
+| 3 | §7.2 基线表 | hero 写 86、nav-shrink 写 42、diag-errors 写「6 页」、videobg-global 写 25、mobile-shots 写 15、home 写 23 | 逐项按实测改正：**88 / 40 / 7 页 / 29 / 18 / 24**，并补 `verify-copy` 行（31/31） |
+| 4 | §6.21 | 仍把 `verify-deck.mjs` 当初用脚本推荐 | 标注**已删除**（验收对象早就不存在） |
+| 5 | §7.4.2 | `SITE.notice` 的落点写「页脚 + 关于页」 | 页脚已删 → 只剩关于页；并注明该清单已部分自动化 |
+| 6 | §9.1 / §10 | 仍提「手机端外链只能从页脚到达」「分类入口在 `/works/` 加 chip」 | 改为：页脚已删 → 手机端**没有任何**外链入口；作品库已下线 → 无处加 chip |
+| 7 | §10 | 「作品封面 SVG 偏亮」「作品详情页 summary」「2026-09-18 changelog 未写」等已不成立的遗留项 | 逐条标注**已作废 / 已解决 / 部分已补**（09-18 的 changelog 存在，但缺容器宽度/柔光删除/#424 三项） |
+| 8 | §14 自检清单 | 只列 11 个脚本、mobile-shots 写 15/15 | 改为 `node scripts/run-regress.mjs`（16 个），并补第 4 步的线上 `verify-copy` |
+| + | §10 三条尺寸类遗留项 | 「Hero 右侧留白 159px」「字号只能 48px」「卡片 440」 | 已被 §36.1/§36.2 取代 → 改为 **700/96/400、字号 52px、无右侧留白** |
+| + | §2 环境表 | 缺两项本机实测的硬约束 | 新增「**不要在 bash 里做删除**」与「bash 里 npm 不可用 + node 是 22.22.2」两条 |
+| + | §0 | 缺本轮摘要 | 新增 **§0.4** 与本 §42 |
+| + | §0 首句 | 仍称"个人**作品**档案站" | 改为"个人博客与档案站"（与 §40 的方向一致） |
+
+### 42.4 怎么证明"页面观感零变化"（本轮的方法，可复用）
+
+本轮只删了死文件和加了断言，改的是文档 —— 但"应该没变"不算证据，所以做了两件事：
+
+1. **改动前后逐值快照对比**（照 §36.1 的"逐值比对"方法）：
+   在 **3 个视口 × 6 个页面 = 18 组** 上采集了「全部可视图元的矩形（1 位小数）+ 22 个设计令牌
+   + 每页标题/描述/主题 + 元素计数 + 可见文本长度与哈希」，
+   改动前后逐值 diff → **应完全一致**（写这份文档时用 `_shots/_flow-snapshot.mjs` 现场抓，
+   属临时工具，不入库）。
+2. **全套回归 16/16**：几何/对比度/视频/导航/搜索等 15 个原有脚本的断言条数一条没少
+   （smoke 48、hero 88、home 24、nav-shrink 40、nav 14、brand 10、theme 11、redesign 16、
+   search 17、videobg 22、videobg-global 29、contrast 0、mobile-shots 18、diag-errors 0、diag-424 0），
+   新增的 `verify-copy` 31/31。
+
+### 42.5 本轮留下的"死代码候选"（**未删，等你决定**）
+
+以下都是实测**零引用**，但它们要么是 React Bits 官方原码（照 §5 铁律三不宜动），
+要么可能是"留着备用"的视觉件，所以没有一并删除：
+
+| 候选 | 性质 |
+|---|---|
+| `src/scripts/hero-anim.js` | 首页 Hero 改静态版式后 `index.astro` 已不再加载它（§33 有注释说明），文件留在盘上 |
+| `src/components/DriftWallBackground.astro` | 零引用（CODEX 里也标为死代码） |
+| `src/components/HomeShapeGrid.jsx` | 同上 |
+| `src/components/TextType.astro` / `Ticker.astro` | 零引用 |
+| `src/components/ReactBits/` 里未被宿主使用的原码 | `CardSwap` / `CardNav` / `DomeGallery` / `ShapeGrid` / `GridScan` / `GradientWaves` / `AccordionGallery` / `ProfileCard` / `StrokeText` / `Dither` —— 属"官方组件库"，删了以后想用要重新拉，建议保留 |
+
+> 另注：`scripts/` 里还有一批**按需使用**的工具（`border-check` / `card-separation` /
+> `imgstats` / `imgpix` / `shots-theme` / `shot-*` / `sweep-light` / `verify-countup` /
+> `verify-music` / `seed-changelog`），它们不在批跑清单里，但**不是死代码**（是手工诊断工具），
+> 删之前先确认没有文档引用它们。

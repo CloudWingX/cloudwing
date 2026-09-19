@@ -18,7 +18,8 @@ npm install                                   # 依赖已装好（node_modules �
 npm run build                                 # astro build && pagefind --site dist
 npm run build:fast                            # 只 astro build（改样式时更快）
 npm run preview -- --port 4321 --host 127.0.0.1
-node scripts/smoke.mjs                        # 自检入口（当前基线 45/45）
+node scripts/smoke.mjs                        # 自检入口（当前基线 48/48）
+node scripts/run-regress.mjs                  # 一次跑全套 16 个脚本（期望 16/16）
 ```
 
 > 导航栏与首页 Hero 在 2026-09-18 照用户给的参考文件整体重做过
@@ -85,7 +86,7 @@ node scripts/smoke.mjs                        # 自检入口（当前基线 45/4
    直接用仓库脚本：`node scripts/poll-deploy.mjs --have '<正则>' --not '<正则>'`
    （它会把首页引用的**全部** CSS chunk 都抓下来）。
    ⚠️ **删除类的改动要查"反向特征"**（某选择器/数值在线上**找不到**），否则你会以为没上线；
-   ⚠️ 首页样式在**另一个 chunk** 里，只抓 `/works/` 的 CSS 会得出"没上线"的假结论。
+   ⚠️ 首页样式在**另一个 chunk** 里，只抓某一个子页面（如 `/blog/`）的 CSS 会得出"没上线"的假结论。
    完整命令见 HANDOFF §7.5。
 7. **新写像素/几何断言前读 HANDOFF §7.6**（三条硬要求）。本项目已经出过两次
    "瑕疵明明在、断言却全绿"：`lum()` 配阈值 `3.0` 的单位错（恒真），
@@ -105,54 +106,63 @@ node scripts/smoke.mjs                        # 自检入口（当前基线 45/4
 ```text
 src/
   site.ts                  ← 站点信息 / NAV / IMG_CDN / GISCUS / MUSIC / VIDEO_BG / WEATHER_CITY
-  content.config.ts        ← 三个集合 schema：works / shots / changelog
-  content/works/*.md       ← 作品（每件 1 个 md → 卡片 + 详情页）
+  content.config.ts        ← 三个集合 schema：posts / shots / changelog
+                             （★works 集合已随作品库下线删除，见 HANDOFF §40）
+  content/posts/*.md       ← 文章（title/date/tags/summary/link?）→ /posts/ 列表 + /posts/[slug]/
   content/shots/*.md       ← 影集条目（40 个，对应 public/shots/mc/*.webp）
-  content/changelog/*.md   ← 一天一个文件，驱动侧栏「更新日历」
-  layouts/Base.astro       ← 全站壳：暗色引导 / Header / Footer / 背景视频 / Particles
-  layouts/WorkLayout.astro ← 作品详情页布局（含上下篇导航）
-  pages/                   ← index / works / gallery / about / account / 404 / rss.xml
+  content/changelog/*.md   ← 一天一个文件，驱动侧栏「活跃热力图」
+  layouts/Base.astro       ← 全站壳：暗色引导 / Header / 背景视频 / Particles
+  layouts/SidebarLayout.astro ← 三栏壳层薄封装
+                             （★WorkLayout.astro 已随作品库删除）
+  pages/                   ← index / posts[/slug] / blog / gallery / about / account / 404 / rss.xml
                              （★搜索不是页面★，是 components/SearchModal.astro 悬浮窗）
   components/ReactBits/    ← React Bits 官方原码，勿改核心
   components/*.jsx         ← 宿主层（Particles / Lanyard / ProximityText 的适配）
   scripts/ui.js            ← ★全站交互中枢（软导航后一切功能都靠它重新接管）
-  scripts/hero-anim.js     ← 首页 Hero 四个动画
+  scripts/hero-theme.js    ← 首页强调色预设的补间（色卡切换）
   scripts/nav-mobile.js    ← 汉堡菜单 + 顶部指示线
   styles/global.css        ← 设计 token + 玻璃基础（★:root 即暗色）
   styles/motion.css        ← 动效 token + html[data-theme='dark'] 镜像块
   styles/shell.css         ← 三栏壳层 + 侧栏卡片
-public/                    ← covers / lanyard / og / shots / media(bg-loop.mp4) / favicon
+public/                    ← lanyard / og / shots / media(bg-loop.mp4) / music / favicon
+                             （★covers 已于 2026-09-19 删除：作品库下线后零引用）
 ```
 
-**死代码 / 易误记**：`DriftWallBackground.astro`、`HomeShapeGrid.jsx` 已无引用；
+**死代码 / 易误记**：`src/scripts/hero-anim.js`、`DriftWallBackground.astro`、
+`HomeShapeGrid.jsx`、`TextType.astro`、`Ticker.astro` 目前**零引用**（首页改静态版式 / 组件换代后留下的）；
 `motion.css` 里的 `.topbar{…}` 是死代码（顶栏真实类名是 `.hd` / `.hd-glass`）。
+清死代码前先按「改完必须做的三件事」跑一遍回归（HANDOFF §14 第 2 条）。
 
 ## 页面
 
 | 路由 | 文件 | 说明 |
 |---|---|---|
-| `/` | `pages/index.astro` | Hero（徽标 + 两行大字 + 副标题 + 两个统计 + 技术标签 ｜ 右侧展示卡片，照参考复刻）+ 最新作品 / 精选影像 / 关于预览 |
-| `/works/` | `pages/works/index.astro` | 卡片网格 + 分类筛选（浏览器端读 `location.search`） |
-| `/works/[slug]/` | `pages/works/[slug].astro` | 详情（WorkLayout + Markdown 目录 + giscus + 上下篇） |
+| `/` | `pages/index.astro` | Hero（徽标 + 两行大字 + 副标题 + 两个统计 + 技术标签 ｜ 右侧磨砂玻璃代码卡片，照参考复刻）+ 最新文章 / 精选影像 / 关于预览 |
+| `/posts/` | `pages/posts/index.astro` | 文章列表（日期 + 标题 + 摘要 + 标签） |
+| `/posts/[slug]/` | `pages/posts/[slug].astro` | 文章详情（正文 / 上下篇 / giscus）；有 `link` 的外链文章不生成详情页 |
+| `/blog/` | `pages/blog/index.astro` | 归档时间线：按年份分组，点文字进当天文章详情 |
 | `/gallery/` | `pages/gallery/index.astro` | 40 图玻璃网格 + `<dialog>` 大图；`?game=` 浏览器端过滤 |
 | `/about/` | `pages/about.astro` | 履历时间线 + MagicBento + Lanyard 工牌 + ProximityText 标题 |
 | `/account/` | `pages/account.astro` | 互动：giscus 留言板 |
 | `/404` | `pages/404.astro` | — |
-| `/rss.xml` | `pages/rss.xml.ts` | 作品档案 RSS |
+| `/rss.xml` | `pages/rss.xml.ts` | 文章 RSS |
+
+> ⚠️ **`/works/` 与 `/works/[slug]/` 已于 2026-09-19 删除**（作品库整体下线，见 HANDOFF §40）。
+> 不要再照旧文档去找 `pages/works/`、`content/works/`、`WorkLayout.astro`、`WorkCard.astro` —— 都不存在了。
 
 > ⚠️ `ProximityText`（ReactBits `VariableProximity` 宿主）按**空格**分词且每词 `nowrap`：
 > **中文长句会被当成一个不可换行的词导致溢出，切勿用于中文段落**，只适合短文本 / 拉丁标题。
 
 ## 内容怎么加
 
-- **作品**：复制 `src/content/works/w00X-*.md` → 改 frontmatter
-  （`title / summary / date / order(→W-00x 编号) / tags[] / tools[] / state / cover / link?`）。
-  `tags` 会出现在顶部导航「作品库」二级菜单。
+- **文章**：在 `src/content/posts/` 新建 `YYYY-MM-DD-slug.md`，frontmatter 写
+  `title / date / tags[] / summary`（可选 `link` 跳外链）。`/posts/` 与 `/blog/` 自动收录。
 - **影集**：webp 放 `public/shots/mc/`（1600w q78，约 80KB 内）+ `src/content/shots/` 加一条 md
-  （`title / date / game / image / note / aspect`）。`game` 会出现在导航「画廊」二级菜单。
+  （`title / date / game / image / note / aspect`）。
 - **更新记录**：`src/content/changelog/YYYY-MM-DD.md`，一天一个文件，`items[]` 里写
-  `kind / title / note?`。
-- 新增作品后跑 `npm run og` 重新生成分享图（`scripts/gen-og.mjs`，基于 sharp）。
+  `kind / title / note?`；侧栏「活跃热力图」自动聚合。
+- ~~**作品**~~：作品集合已随作品库删除（HANDOFF §40），不要再往 `src/content/works/` 加内容。
+- ⚠️ **改完文案顺手跑 `node scripts/verify-copy.mjs`**（禁用词 / 占位词 / 文案锚点，31 条）。
 
 ## 验证 — 三条铁律
 
@@ -170,26 +180,28 @@ public/                    ← covers / lanyard / og / shots / media(bg-loop.mp4
 
 | 脚本 | 覆盖 | 基线 |
 |---|---|---|
-| `smoke.mjs` | 总入口：溢出 / 异常 / 侧栏同步 / 软导航 / 手机端 | **45/45** |
-| `verify-hero.mjs` | 首页 Hero 几何/排版/断点 + **容器宽度/居中/留白对称**（1440 与 1920） | **81/81** |
-| `verify-home.mjs` | 首页四层结构 / 图片策略 / SEO | **23/23** |
-| `verify-nav-shrink.mjs` | 导航三态 + 移动端汉堡 + **导航容器与主内容容器同宽同左缘** | **39/39** |
-| `verify-nav.mjs` | 导航几何 / 分类入口在左栏 / 无遗留二级菜单 | **14/14** |
+| `smoke.mjs` | 总入口：溢出 / 异常 / 侧栏同步 / 软导航 / 手机端 | **48/48** |
+| `verify-copy.mjs` | ★文案断言（禁用词 / 占位词 / notice·tagline 锚点；**不需要浏览器**） | **31/31** |
+| `verify-hero.mjs` | 首页 Hero 几何/排版/断点 + 容器宽度/居中/留白对称（1440 与 1920）+ 磨砂玻璃卡片 | **88/88** |
+| `verify-home.mjs` | 首页四层结构 / 图片策略 / SEO | **24/24** |
+| `verify-nav-shrink.mjs` | 导航三态 + 移动端汉堡 + 导航容器与主内容容器同宽同左缘 | **40/40** |
+| `verify-nav.mjs` | 导航几何 / 归档入口在左栏 / 无遗留二级菜单 | **14/14** |
 | `verify-brand.mjs` | 品牌标志 | **10/10** |
 | `verify-theme.mjs` | 单主题不变量 | **11/11** |
-| `verify-redesign.mjs` | 玻璃令牌 / 暂停按钮 / 导航过渡 | **14/14** |
+| `verify-redesign.mjs` | 玻璃令牌 / 无暂停按钮 / 导航过渡 | **16/16** |
 | `verify-search.mjs` | 搜索悬浮窗 | **17/17** |
-| `verify-videobg.mjs` | 背景视频 + hero 实际像素对比度 + **主容器边缘无分界线**（逐 72px 段 / 8bit 灰度口径）+ 结构判定（容器上不得有绝对定位的渐变伪元素） | **22/22** |
-| `verify-videobg-global.mjs` | 全站视频一致性 + 软导航不重建 | **25/25** |
+| `verify-videobg.mjs` | 背景视频 + hero 实际像素对比度 + 主容器边缘无分界线（逐 72px 段 / 8bit）+ 结构判定 | **22/22** |
+| `verify-videobg-global.mjs` | 全站视频一致性 + 软导航不重建 | **29/29** |
 | `contrast-audit.mjs` | WCAG 对比度审计（渐变文字逐停靠点取最差） | 暗色 **0 处不达标** |
-| `mobile-shots.mjs` | 三机型 × 5 页截图 + 溢出 | **15/15 无溢出** |
+| `mobile-shots.mjs` | 三机型 × 6 页截图 + 溢出 | **18/18 无溢出** |
 | `diag-errors.mjs` | 逐页 JS 异常计数 | 7 页全 **0** |
 | `diag-edges.mjs` | 诊断：容器边缘逐段偏差 + 长竖线名单 + 容器级装饰层结构判定 | 按需（非断言） |
 | `probe-point.mjs` | 诊断：把像素坐标翻译成 DOM（判断某处是"视频内容"还是"CSS 层"） | 按需（非断言） |
 | `diag-424.mjs` | 诊断：`React error #424` 完整栈（注入 `reportError` 钩子 + 注入自检）。`STRESS=1`（`HOPS`/`GAP` 快速换页）+ `CPU=n` + `LOAD=n` 可稳定复现 | 修复后 **0 次** |
 | `poll-deploy.mjs` | 推送后确认上线：按 `--have`/`--not` 特征轮询线上（含首页自己的 CSS chunk） | 按需 |
+| `run-regress.mjs` | **批跑上面 16 个断言脚本**（串行）+ 汇总 PASS/FAIL | **16/16** |
 
-改完对应模块就跑它；`smoke.mjs` 是每次都要跑的总入口。
+改完对应模块就跑它；`smoke.mjs` 是每次都要跑的总入口，一次跑全套用 `node scripts/run-regress.mjs`。
 
 ## 改完必须做的三件事
 

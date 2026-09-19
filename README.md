@@ -1,6 +1,6 @@
 # CloudWing / 云翼
 
-个人学习与作品档案站 —— Astro 静态站，**暗色电影感 + 玻璃拟态**（雾蓝强调色、全站背景视频、磨砂玻璃卡片）。
+个人博客与学习档案站 —— Astro 静态站，**暗色电影感 + 玻璃拟态**（雾蓝强调色、全站背景视频、磨砂玻璃卡片）。
 记录代码、图集与学习轨迹，按编号留存、过程可追溯。
 
 > 🔧 **给接手开发者的首读文件：[`docs/HANDOFF.md`](./docs/HANDOFF.md)** —— 完整交接文档：环境硬约束、
@@ -24,7 +24,7 @@
 | 侧栏 | 右栏「活跃热力图」（近 26 周、5 档强度、跟随强调色）；左栏「文章」分组 + 归档时间线入口 |
 | 强调色 | 5 套预设（雾蓝 / 镜蓝 / 极光 / 余烬 / 紫晶）：点一下**同步**换强调色 + 整页色调 + 代码高亮，900ms 中间色过渡 |
 | 子页面 | 三栏布局（左导航树 + 内容 + 右挂件）、更新日历、天气卡、音乐播放器 |
-| 订阅 | 作品档案 **RSS** → `/rss.xml`（head 自动发现 + 页脚入口） |
+| 订阅 | 文章 **RSS** → `/rss.xml`（head 自动发现；页脚入口已于 2026-09-19 随页脚一并删除） |
 
 ## 本地运行
 
@@ -45,22 +45,22 @@ npm run og         # 重新生成分享图
 ```text
 src/
   site.ts                  ← 站点信息 / NAV / IMG_CDN 图床开关 / GISCUS / MUSIC / WEATHER_CITY
-  content.config.ts        ← works（作品）/ shots（影集）/ changelog（更新记录）schema
+  content.config.ts        ← posts（文章）/ shots（影集）/ changelog（更新记录）schema
   content/posts/*.md       ← 博客文章（title/date/tags/summary/link?）→ /blog/ 归档
   content/shots/*.md       ← 影集条目（title/date/game/image/aspect）
   content/changelog/*.md   ← 一天一个文件，驱动侧栏「活跃热力图」
-  pages/                   ← index / blog / gallery / about / account / 404 / rss.xml
+  pages/                   ← index / posts / posts[slug] / blog / gallery / about / account / 404 / rss.xml
   components/ReactBits/    ← React Bits 官方原码（**只允许在宿主层改**，见铁律三）
   components/*.jsx         ← 宿主层（Particles / Lanyard / 强调色等适配）
-  layouts/Base.astro       ← 全局壳：暗色引导、Header/Footer、背景视频、Particles
+  layouts/Base.astro       ← 全局壳：暗色引导、Header、背景视频、Particles
   scripts/ui.js            ← 全站交互中枢（动效 / 侧栏 / 搜索 / 音乐都在这）
   scripts/hero-theme.js    ← 首页强调色预设（补间 + 换色）
   styles/global.css        ← 设计 token + 玻璃基础；styles/motion.css ← 动效 token
 plugins/                   ← 构建期插件（CJS shim、React 安全卸载），勿删
 public/
   shots/mc/*.webp          ← 影集 40 张（已转 webp，共 ~3MB）
-  covers/                  ← 作品封面
   media/bg-loop.mp4        ← 背景视频（约 15.5MB，随站点打包）
+  lanyard/ og/ music/      ← 工牌模型、分享图、音乐占位
   favicon.svg / favicon-dark.svg
 ```
 
@@ -81,14 +81,16 @@ public/
 ## 验证
 
 全部脚本在 `scripts/`，用法 `node scripts/<名>.mjs [url]`（前置：本地预览已起 + 无头浏览器 9222 已起）。
+**一次跑全套：`node scripts/run-regress.mjs`（16 个脚本串行 + 汇总；`verify-copy` 不需要浏览器）。**
 ⚠️ **必须串行跑**，并发会产生大面积假失败。
 
 | 脚本 | 覆盖 | 基线 |
 |---|---|---|
 | `smoke.mjs` | 总入口：溢出 / 异常 / 侧栏同步 / 软导航 / 手机端 | **48/48** |
+| `verify-copy.mjs` | ★文案断言：禁用词（浅色通透/双主题…）、占位词、`notice`/`tagline` 与页面锚点一致 | **31/31** |
 | `verify-hero.mjs` | 首页 Hero 几何、与主栅格对齐、两行标题、强调色预设、**代码卡片磨砂玻璃** | **88/88** |
 | `verify-home.mjs` | 首页四层结构 / 图片策略 / SEO | **24/24** |
-| `verify-nav-shrink.mjs` | 导航三态 + 移动端汉堡（含"抽屉已无分类入口"） | **42/42** |
+| `verify-nav-shrink.mjs` | 导航三态 + 移动端汉堡（含"抽屉已无分类入口"） | **40/40** |
 | `verify-nav.mjs` | 导航几何、无遗留二级菜单 | **14/14** |
 | `verify-brand.mjs` | 品牌标志 | **10/10** |
 | `verify-theme.mjs` | 单主题不变量（恒为暗色） | **11/11** |

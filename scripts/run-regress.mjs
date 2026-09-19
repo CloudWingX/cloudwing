@@ -1,7 +1,10 @@
 import { spawnSync } from 'node:child_process';
 
 const NODE = 'C:/Users/24645/.workbuddy/binaries/node/versions/22.22.2-3/node.exe';
+// verify-copy 排在最前：它只读已构建的 dist（不需要无头浏览器），最便宜，
+// 也最该先跑 —— 文案漂移是唯一"几何全绿却带着错东西上线"的缺陷类（HANDOFF §32）。
 const scripts = [
+  'verify-copy',
   'smoke', 'verify-hero', 'verify-home', 'verify-nav-shrink', 'verify-nav',
   'verify-brand', 'verify-theme', 'verify-redesign', 'verify-search',
   'verify-videobg', 'verify-videobg-global', 'contrast-audit',
