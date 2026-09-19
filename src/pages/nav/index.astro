@@ -7,8 +7,12 @@
 // 三条设计约束（都是为了和站点其余部分保持一致）：
 //   1. 材质沿用全站毛玻璃令牌（--glass / --glass-blur / --line-2 / --r-l / --shadow-sm），
 //      不自己调一套颜色，这样强调色预设、浅色/深色兜底都能自动跟随。
-//   2. 图标不用第三方 favicon 服务（站点刻意不依赖外部请求，见 site.ts 的 IMG_CDN 注释），
-//      默认按站名首字现算一个圆牌；站长要真实图标就填 item.icon 指向站内图片。
+//   2. 图标不用第三方 favicon 服务（站点刻意不依赖外部请求，见 site.ts 的 IMG_CDN 注释）。
+//      填了 item.icon → 只画真实图标；没填 → 按站名首字现算一个圆牌。
+//      ⚠️ 两者**互斥、不同时渲染**：原先把首字留在 DOM 里当"加载失败的兜底"，
+//         但 CSS 无法感知背景图是否真的加载成功 —— 结果图标有透明区域时
+//         底下那个首字会透出来，看起来像"两个图标叠在一起"（站长 2026-09-19 指出）。
+//         现在改为：**有 icon 就完全不渲染首字**（见下方 {!it.icon && mono(...)}）。
 //   3. href 以 '#' 开头 = 只占位、地址还没定 → 渲染成**不可点击**的虚线卡。
 //      这样"骨架态"不会把假地址带上线，也不会让访客点到死链。
 //      2026-09-19 起条目已全部填实，这条分支作为将来加新条目时的兜底保留。
@@ -72,7 +76,7 @@ const META_DESC =
                 <li>
                   <a class="nvc" href={it.href} target="_blank" rel="noreferrer">
                     <span class="nvc-ico" aria-hidden="true" style={it.icon ? `--ico:url("${it.icon}")` : undefined}>
-                      {mono(it.name)}
+                      {!it.icon && mono(it.name)}
                     </span>
                     <span class="nvc-main">
                       <span class="nvc-row">
@@ -223,8 +227,9 @@ const META_DESC =
     line-height: 1;
   }
   /* ★站点图标走 CSS 背景图，而不是 <img>★（2026-09-19）
-     理由：背景图**加载失败时什么都不画** —— 底下的首字圆牌自然露出，
-     不会像 <img> 那样留下破图标记；也就不需要 onerror 之类的 JS 兜底。
+     为什么不加 onerror JS 兜底：模板里 **有 icon 就不渲染首字**，
+     两者互斥 —— 不需要"加载失败再换回去"的运行时判断，纯静态即可。
+     没有 icon 的条目则完全不进这条规则（--ico 为空 → background-image: none）。
      图标尺寸用 content-box + contain：非正方形的 logo（横排字标等）也不会被拉伸。 */
   .nvc-ico::before {
     content: '';
