@@ -17,6 +17,14 @@ const { current = '/' } = Astro.props;
 const isActive = (href: string) =>
   href === '/' ? current === '/' : current.startsWith(href);
 
+/* 父项高亮口径：路由落在自己**或任一 child** 上时都算当前
+   （/blog/ /log/ 不再是顶栏一级项，高亮要落到「记录」上）。 */
+const isActiveGroup = (item: (typeof NAV)[number]) =>
+  isActive(item.href) || (item.children ?? []).some((c) => isActive(c.href));
+
+/* 显示名微调（历史口径）：作品库→作品、关于→档案 */
+const showLabel = (l: string) => l.replace(/作品库$/, '作品').replace(/^关于$/, '档案');
+
 /* ---------- 各子页面的分类 → 对应导航项的二级菜单（移动端菜单里用） ----------
    画廊的分类 = 截图所属游戏（game）。由内容集合现算，新增截图后菜单自动更新。
    （作品库已于 2026-09-19 移除，博客归档页无二级分类。） */
@@ -62,13 +70,37 @@ try {
 
     <ul class="nav-links">
       {
-        items.map((item) => (
-          <li>
-            <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
-              {item.label.replace(/作品库$/, '作品').replace(/^关于$/, '档案')}
-            </a>
-          </li>
-        ))
+        items.map((item) =>
+          item.children ? (
+            <li class="has-sub">
+              <a
+                href={item.href}
+                aria-haspopup="true"
+                aria-current={isActiveGroup(item) ? 'page' : undefined}
+              >
+                {showLabel(item.label)}
+                <svg class="caret" viewBox="0 0 10 6" aria-hidden="true">
+                  <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </a>
+              <ul class="nav-sub" data-nav-sub>
+                {item.children.map((c) => (
+                  <li>
+                    <a href={c.href} aria-current={isActive(c.href) ? 'page' : undefined}>
+                      {showLabel(c.label)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ) : (
+            <li>
+              <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+                {showLabel(item.label)}
+              </a>
+            </li>
+          )
+        )
       }
     </ul>
 
@@ -104,17 +136,23 @@ try {
 
   {/* ── 移动端菜单：从顶部下拉（参考同款：淡入 + 轻微下移 + 逐项错峰）── */}
   <div id="cw-mobile-menu" class="mobile-menu" data-mnav-panel hidden>
-    {items.map((item) => (
-      <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
-    ))}
-    {/* ★手机端抽屉现在**只有 5 个一级页面入口**★
-        —— 2026-09-18 按用户要求依次删掉了两组分类（作品库 / 画廊）与底部外链
-        （GitHub / Bilibili / RSS，桌面端顶栏与页脚仍有）。
-        ⚠️ 两处取舍要记得：
-        1. <1200px 侧栏是 display:none，所以手机端目前**没有分类入口**；
-           若以后要补，建议在 /works/ 与 /gallery/ 页面内各加一排筛选 chip
-           （它们现在只有"当前分类回显条"，本身没有选择器）。
-        2. 手机端也**没有 GitHub / Bilibili / RSS 入口**了（页脚仍可达）。 */}
+    {items.map((item) =>
+      item.children ? (
+        <div class="mm-group">
+          <span class="mm-group-t">{showLabel(item.label)}</span>
+          {item.children.map((c) => (
+            <a class="mm-sub" href={c.href} aria-current={isActive(c.href) ? 'page' : undefined}>
+              {showLabel(c.label)}
+            </a>
+          ))}
+        </div>
+      ) : (
+        <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{showLabel(item.label)}</a>
+      )
+    )}
+    {/* ★手机端抽屉结构（2026-09-19 晚随「记录」下拉改形）★
+        一级链接 5 个（首页/画廊/导航/关于/互动）+「记录」分组（组标题 + 文章/归档/日志 三个缩进链接）。
+        历史：2026-09-18 按用户要求删掉了两组分类与底部外链（GitHub/Bilibili/RSS，桌面端仍可达）。 */}
   </div>
 </header>
 
@@ -263,8 +301,8 @@ try {
   }
   .nav-links a:hover { color: var(--nav-ink); }
   .nav-links a[aria-current='page'] { color: var(--nav-ink); }
-  /* 当前页/悬停的下划线：用站点雾蓝强调色（参考里是文字变色，这里保留品牌色） */
-  .nav-links a[aria-current='page']::after {
+  /* 当前页/悬停的下划线：只落在**一级**链接上（下拉里的当前页用强调色文字，不加横线） */
+  .nav-links > li > a[aria-current='page']::after {
     content: '';
     position: absolute;
     left: 0;
@@ -273,6 +311,77 @@ try {
     height: 1px;
     background: var(--accent);
   }
+
+  /* ── 「记录」悬停下拉（2026-09-19 晚，站长要求）──
+     桌面 hover 浮出 + 键盘 focus-within 兜底；玻璃材质与抽屉同源。 */
+  .nav-links li.has-sub { position: relative; }
+  .nav-links .has-sub > a { display: inline-flex; align-items: center; gap: 5px; }
+  .nav-links .has-sub .caret {
+    width: 10px;
+    height: 6px;
+    flex: none;
+    opacity: 0.7;
+    transition: transform 0.25s var(--nav-ease), opacity 0.2s ease;
+  }
+  .nav-links li.has-sub:hover .caret,
+  .nav-links li.has-sub:focus-within .caret { transform: rotate(180deg); opacity: 1; }
+  .nav-sub {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 50%;
+    transform: translate(-50%, -6px);
+    min-width: 132px;
+    margin: 0;
+    padding: 8px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: rgba(10, 10, 15, 0.92);
+    border: 1px solid var(--nav-border-scrolled);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    /* ⚠️ -webkit- 必须写在标准属性之前（构建压缩会丢后写的重复声明，见 HANDOFF §22） */
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 0.25s var(--nav-ease),
+      transform 0.25s var(--nav-ease),
+      visibility 0.25s;
+    z-index: 5;
+  }
+  /* hover 桥：链接与面板之间留了 12px 缝隙，这块透明垫片防止移过去时菜单收回 */
+  .nav-sub::before {
+    content: '';
+    position: absolute;
+    left: -14px;
+    right: -14px;
+    top: -12px;
+    height: 12px;
+  }
+  .nav-links li.has-sub:hover > .nav-sub,
+  .nav-links li.has-sub:focus-within > .nav-sub {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+  }
+  .nav-sub a {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: var(--nav-ink-muted);
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 20px;
+    white-space: nowrap;
+    transition: color 0.2s ease, background 0.2s ease;
+  }
+  .nav-sub a:hover { color: var(--nav-ink); background: rgba(255, 255, 255, 0.06); }
+  .nav-sub a[aria-current='page'] { color: var(--accent); }
 
   /* ── 右侧动作组 ── */
   .nav-actions {
@@ -355,6 +464,7 @@ try {
     .logo,
     .nav-links,
     .nav-actions,
+    .nav-sub,
     .btn { transition: none; }
   }
 
@@ -426,6 +536,21 @@ try {
     padding: 8px 0;
   }
   .mobile-menu > a[aria-current='page'] { color: var(--accent); }
+  /* 「记录」分组（2026-09-19 晚）：组标题 + 缩进的三个子链接 */
+  .mobile-menu .mm-group { display: flex; flex-direction: column; }
+  .mobile-menu .mm-group-t {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--nav-ink-dim);
+    padding: 2px 0 4px;
+  }
+  .mobile-menu .mm-sub {
+    color: var(--nav-ink);
+    text-decoration: none;
+    font-size: 15px;
+    padding: 7px 0 7px 14px;
+  }
+  .mobile-menu .mm-sub[aria-current='page'] { color: var(--accent); }
   /* 以下已随手机端抽屉精简一并删除（2026-09-18）：
      .mm-group / .mm-group-t / .mm-chips / .mm-chip（两组分类）
      .mm-actions / .mm-btn（GitHub / Bilibili / RSS 外链） */

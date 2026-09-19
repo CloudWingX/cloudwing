@@ -136,15 +136,34 @@ export const SITE = {
   since: 2025,
 };
 
-export const NAV = [
+/* ▍顶部导航（site.ts 是唯一数据源，Header.astro 渲染桌面顶栏 + 移动端抽屉）
+   2026-09-19 晚：站长要求把「文章 / 归档 / 日志」三个子页面收进「记录」一个入口，
+   鼠标悬停时浮出二级菜单（桌面端 hover + 键盘 focus-within；移动端抽屉里是分组标题 + 三个链接）。
+   - 有 children 的项：桌面上是「记录 ▾」悬停下拉；父项 href 仍然可点（落到 /posts/）。
+   - 当前路由落在任一 child 时，父项也亮（Header 的 isActive 已处理）。 */
+export type NavItem = {
+  href: string;
+  label: string;
+  no?: string;
+  children?: { href: string; label: string }[];
+};
+
+export const NAV: NavItem[] = [
   { href: '/', label: '首页', no: '00' },
-  { href: '/posts/', label: '文章', no: '01' },
-  { href: '/blog/', label: '归档', no: '02' },
-  { href: '/log/', label: '日志', no: '03' },
-  { href: '/gallery/', label: '画廊', no: '04' },
-  { href: '/nav/', label: '导航', no: '05' },
-  { href: '/about/', label: '关于', no: '06' },
-  { href: '/account/', label: '互动', no: '07' },
+  {
+    href: '/posts/',
+    label: '记录',
+    no: '01',
+    children: [
+      { href: '/posts/', label: '文章' },
+      { href: '/blog/', label: '归档' },
+      { href: '/log/', label: '日志' },
+    ],
+  },
+  { href: '/gallery/', label: '画廊', no: '02' },
+  { href: '/nav/', label: '导航', no: '03' },
+  { href: '/about/', label: '关于', no: '04' },
+  { href: '/account/', label: '互动', no: '05' },
 ];
 
 /* ▍网站导航页（/nav/）的条目 —— 按用途分组的站点收藏夹。

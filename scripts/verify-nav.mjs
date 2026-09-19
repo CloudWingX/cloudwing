@@ -79,14 +79,44 @@ const sub = await ev(`(()=>{const el=document.querySelector('.shell-left a[href=
     宽高:Math.round(b.width)+'×'+Math.round(b.height),
     文字:(el.textContent||'').trim().slice(0,20)};})()`);
 console.log('  ' + JSON.stringify(sub));
-check('导航栏已无二级菜单（照参考）', (await ev(`document.querySelectorAll('[data-nav-sub], .nav-sub').length`)) === 0);
+check('「记录」下拉菜单存在（恰好 1 个 data-nav-sub）',
+  (await ev(`document.querySelectorAll('[data-nav-sub], .nav-sub').length`)) === 1);
 check('博客归档入口仍在（左栏导航树，可见）', !!sub && sub.在左栏 === true && sub.可见 === true,
   sub ? `${sub.文字}（${sub.宽高}）` : '未找到左栏 /blog/ 链接');
 check('已无遗留的二级菜单开关', (await ev(`document.querySelectorAll('[data-nav-caret]').length`)) === 0);
 
+console.log('\n=== 「记录」悬停下拉（2026-09-19 晚站长要求）===');
+// 桌面悬停「记录」→ 二级菜单浮出（文章/归档/日志）；移开 → 收回。键盘可访问性走 focus-within。
+const rec = await ev(`(()=>{const a=document.querySelector('.nav-links .has-sub > a');
+  if(!a) return null; const b=a.getBoundingClientRect();
+  return {x:Math.round(b.left+b.width/2), y:Math.round(b.top+b.height/2),
+    文字:(a.textContent||'').trim(), 当前:a.getAttribute('aria-current')==='page'};})()`);
+console.log('  ' + JSON.stringify(rec));
+check('顶栏有「记录」入口', !!rec && rec.文字.includes('记录'), rec ? rec.文字 : '未找到');
+check('落在 /blog/ 时「记录」高亮（aria-current）', !!rec && rec.当前 === true);
+await s('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rec.x, y: rec.y });
+await sleep(500);
+const subOpen = await ev(`(()=>{const s=document.querySelector('.nav-sub'); if(!s) return null;
+  const cs=getComputedStyle(s); const b=s.getBoundingClientRect();
+  return {浮出:cs.visibility==='visible'&&parseFloat(cs.opacity)>0.9&&b.height>0,
+    在顶栏下方:b.top>0 && b.bottom<=window.innerHeight,
+    链接:[...s.querySelectorAll('a')].map(a=>({文字:(a.textContent||'').trim(), href:a.getAttribute('href')}))};})()`);
+console.log('  ' + JSON.stringify(subOpen));
+check('悬停后二级菜单浮出', !!subOpen && subOpen.浮出 === true);
+check('浮层落在视口内（顶栏下方）', !!subOpen && subOpen.在顶栏下方 === true);
+check('二级菜单含 文章/归档/日志 三项',
+  !!subOpen && JSON.stringify(subOpen.链接.map(l => l.文字)) === JSON.stringify(['文章', '归档', '日志']),
+  JSON.stringify(subOpen?.链接?.map(l => l.文字)));
+check('二级菜单指向 /posts/ /blog/ /log/',
+  !!subOpen && JSON.stringify(subOpen.链接.map(l => l.href)) === JSON.stringify(['/posts/', '/blog/', '/log/']),
+  JSON.stringify(subOpen?.链接?.map(l => l.href)));
+await s('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rec.x, y: Math.min(rec.y + 400, 880) });
+await sleep(500);
+check('移开后二级菜单收回', (await ev(`getComputedStyle(document.querySelector('.nav-sub')).visibility`)) === 'hidden');
+
 console.log('\n=== 布局未受影响 ===');
 check('无横向溢出', (await ev(`document.documentElement.scrollWidth-document.documentElement.clientWidth`)) === 0);
-check('导航项仍可点击（元素在最上层）', (await ev(`(()=>{const a=document.querySelector('.nav-links a[href="/blog/"]');
+check('导航项仍可点击（元素在最上层）', (await ev(`(()=>{const a=document.querySelector('.nav-links > li > a[href="/gallery/"]');
   if(!a) return false; const b=a.getBoundingClientRect();
   const top=document.elementFromPoint(Math.round(b.left+b.width/2), Math.round(b.top+b.height/2));
   return a===top||a.contains(top)||top?.closest('.nav-links')!==null;})()`)) === true);
