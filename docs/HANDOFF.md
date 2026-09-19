@@ -2602,6 +2602,15 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
 > 两轮 poll 的"未通过 → 通过"过渡，本身就是 §7.6 第 3 条要的**对照组**：
 > 若判据恒真，第一轮就该绿。
 
+**§48.7 / §49.3 落地后再次上线确认**（同样用内容特征，`--page /nav/`）：
+
+```bash
+node scripts/poll-deploy.mjs --page /nav/ --have 'curseforge.svg' --have 'github.svg' --timeout 600
+# ✅ 线上已是本次构建（前 4 轮 2s/18s/34s/51s 均报"未通过 2 项"，68s 翻绿 —— 又是真实的构建切换）
+node scripts/verify-interaction.mjs https://cloudwing.pages.dev
+# ✅ 12/12 —— 含 [F] 文章正文例外；线上端到端复现同一组结论
+```
+
 **`verify-interaction.mjs` 的六组断言（关键：带对照组）**：
 
 | 组 | 断言 | 实测 |
