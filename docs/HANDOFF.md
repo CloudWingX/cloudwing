@@ -10,7 +10,9 @@
 > （见 §43.1），其"简版硬规则"职责并入本文件。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-20 凌晨第二轮 **「记录」三页（文章/归档/日志）+ 档案页与其余子页面壳层统一：
+> 最后更新：2026-09-20 凌晨第三轮 **顶栏「记录」点击不再跳转——只开合二级菜单
+> （捕获阶段拦截 + stopPropagation 压过 ClientRouter，见 §54）**；
+> 同日凌晨第二轮 **「记录」三页（文章/归档/日志）+ 档案页与其余子页面壳层统一：
 > 标题→内容间距全站 1.6rem、档案页页头改「PROFILE / 档案 + h1 档案」（ProximityText 特效保留），见 §53**；
 > 同日凌晨 **壳层统一：子页面页头格式统一（kicker「EN / 中文」、删标题下描述）、
 > 内容列顶部与侧栏首卡顶边全页对齐（偏差 0），见 §52**；
@@ -2849,3 +2851,17 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
 - 悬停实况截图：`_shots/records-dropdown.png`（记录 ▾ + 玻璃下拉三项）。
 - ⚠️ 教训（沿用 §50.4）：**改 NAV 结构（加项/收组）必须同步两处断言**——
   `verify-nav-shrink` 的抽屉计数与 `verify-nav` 的一级入口选择器，这轮是提前改好才没红。
+
+## §54 顶栏「记录」点击不跳转，只开合二级菜单（2026-09-20 凌晨第三轮）
+
+**站长要求**：点击「记录」按钮时，不要跳转任何页面，仅展开二级菜单。
+
+- 实现（`src/scripts/nav-mobile.js` 新增 `initSubmenuToggle()`）：
+  - 父项 `a`（`/posts/`）的 click 被拦截：`preventDefault` + `stopPropagation`，改为给 `li.has-sub` 加/去 `.open`；再点一次收起；点外部 / Esc 收起；`aria-expanded` 同步。
+  - ⚠️ **关键坑：必须捕获阶段（`{capture:true}`）+ `stopPropagation`**——Astro ClientRouter 也在 document 上监听 click 接管同源链接，bubble 阶段先 `preventDefault` 拦不住它的 `pushState` 导航（探针实测 URL 照样变成 /posts/）。
+  - 触屏没有 hover，这条拦截也是触屏端唯一可靠的展开途径。
+- CSS（`Header.astro` scoped style）：`.has-sub.open` 与 hover 同款展开态（菜单浮出 + caret 旋转），二者叠加互不干扰；父项 `a` 标记补 `aria-expanded="false"` 初始值。
+- 语义口径：父项 a 是**分组入口**而非页面链接，`/posts/` 只能经下拉里的「文章」到达。
+- 验证：CDP 探针四步全过（点父项 URL 不变 + 菜单展开 + aria-expanded=true → 再点收起 → 点子项「归档」正常软导航到 /blog/）；
+  `verify-nav-shrink` 40/40、`verify-interaction` 12/12、`verify-shell` 全过；**发布前全量 20/20**（§47.2）。
+- 环境坑（复用记忆）：遗留 astro preview 占 4321 端口时 `--force` 不生效（报错文案误导），需先杀旧 node 进程；preview 必须用后台任务起，前台 `&` 会随命令结束被杀。

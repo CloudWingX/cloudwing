@@ -76,6 +76,7 @@ try {
               <a
                 href={item.href}
                 aria-haspopup="true"
+                aria-expanded="false"
                 aria-current={isActiveGroup(item) ? 'page' : undefined}
               >
                 {showLabel(item.label)}
@@ -364,6 +365,15 @@ try {
   }
   .nav-links li.has-sub:hover > .nav-sub,
   .nav-links li.has-sub:focus-within > .nav-sub {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+  }
+  /* 点击展开态（2026-09-20）：父项 a 不再跳转，nav-mobile.js 给 li 加 .open 钉住菜单；
+     与 hover 同款展开，二者叠加互不干扰（hover 移开时 .open 仍保持）。 */
+  .nav-links li.has-sub.open .caret { transform: rotate(180deg); opacity: 1; }
+  .nav-links li.has-sub.open > .nav-sub {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;

@@ -117,9 +117,51 @@ function initNavIndicators() {
   requestAnimationFrame(() => syncActive(false));
 }
 
+/* ---------- 桌面端「记录」父项：点击只开合二级菜单，不跳转（2026-09-20 站长要求）----------
+   父项 a 语义上仍是分组入口而非页面链接：click 统一 preventDefault，
+   改为给 li 加/去 .open（CSS 与 hover 同款展开态）。触屏没有 hover，这条也是触屏的唯一展开途径。
+   事件走 document 委托 + window 单例，软导航重建 Header 后依然有效。 */
+function initSubmenuToggle() {
+  const st = (window.__cwSubT ||= { wired: false });
+  if (st.wired) return;
+  st.wired = true;
+
+  const items = () => Array.from(document.querySelectorAll('.nav-links li.has-sub'));
+  const setOpen = (li, on) => {
+    li.classList.toggle('open', on);
+    li.querySelector(':scope > a')?.setAttribute('aria-expanded', String(on));
+  };
+  const closeAll = (except) => {
+    items().forEach((li) => { if (li !== except) setOpen(li, false); });
+  };
+
+  document.addEventListener('click', (ev) => {
+    const t = ev.target instanceof Element ? ev.target : null;
+    if (!t) return;
+    const trigger = t.closest('.nav-links li.has-sub > a');
+    if (trigger) {
+      // 必须捕获阶段 + stopPropagation：ClientRouter 也在 document 上监听 click
+      // 接管同源链接，若让它先跑，preventDefault 拦不住它的 pushState 导航。
+      ev.preventDefault(); // 点「记录」不跳任何页面，只展开/收起二级菜单
+      ev.stopPropagation();
+      const li = trigger.closest('li.has-sub');
+      const on = !li.classList.contains('open');
+      closeAll(li);
+      setOpen(li, on);
+      return;
+    }
+    // 点父项以外（含二级菜单里的真实链接）→ 收起已展开的分组
+    if (!t.closest('.nav-links li.has-sub')) closeAll();
+  }, true); // capture：抢在 ClientRouter 的 bubble 监听之前
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') closeAll();
+  });
+}
+
 function boot() {
   try { initMobileNav(); } catch (e) { /* ignore */ }
   try { initNavIndicators(); } catch (e) { /* ignore */ }
+  try { initSubmenuToggle(); } catch (e) { /* ignore */ }
 }
 ready(boot);
 document.addEventListener('astro:page-load', boot);
