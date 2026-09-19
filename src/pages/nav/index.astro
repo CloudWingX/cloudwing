@@ -71,8 +71,8 @@ const META_DESC =
               it.live ? (
                 <li>
                   <a class="nvc" href={it.href} target="_blank" rel="noreferrer">
-                    <span class="nvc-ico" aria-hidden="true">
-                      {it.icon ? <img src={it.icon} alt="" loading="lazy" /> : mono(it.name)}
+                    <span class="nvc-ico" aria-hidden="true" style={it.icon ? `--ico:url("${it.icon}")` : undefined}>
+                      {mono(it.name)}
                     </span>
                     <span class="nvc-main">
                       <span class="nvc-row">
@@ -206,6 +206,7 @@ const META_DESC =
   }
 
   .nvc-ico {
+    position: relative;
     flex: none;
     display: grid;
     place-items: center;
@@ -221,11 +222,22 @@ const META_DESC =
     font-weight: 500;
     line-height: 1;
   }
-  .nvc-ico img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+  /* ★站点图标走 CSS 背景图，而不是 <img>★（2026-09-19）
+     理由：背景图**加载失败时什么都不画** —— 底下的首字圆牌自然露出，
+     不会像 <img> 那样留下破图标记；也就不需要 onerror 之类的 JS 兜底。
+     图标尺寸用 content-box + contain：非正方形的 logo（横排字标等）也不会被拉伸。 */
+  .nvc-ico::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    padding: 7px;
+    background-image: var(--ico, none);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-origin: content-box;
+    background-clip: content-box;
   }
 
   .nvc-main {

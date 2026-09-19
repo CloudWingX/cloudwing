@@ -164,19 +164,21 @@ export const SITE_NAV: {
     group: 'AI 与云服务',
     hint: '模型接口与站点后台',
     items: [
-      { name: 'DeepSeek 对话', href: 'https://chat.deepseek.com/', desc: '官方网页对话入口，写作与代码问答', tag: '对话' },
-      { name: 'Kimi 开放平台', href: 'https://platform.kimi.com/console/api-keys', desc: '大模型 API 控制台，管理密钥与用量', tag: 'API' },
-      { name: 'APINebula', href: 'https://apinebula.ai/', desc: '第三方模型中转，一个密钥接多家；需充值', tag: '中转' },
+      { name: 'DeepSeek 对话', href: 'https://chat.deepseek.com/', desc: '官方网页对话入口，写作与代码问答', tag: '对话', icon: '/nav/deepseek.svg' },
+      { name: 'Kimi 开放平台', href: 'https://platform.kimi.com/console/api-keys', desc: '大模型 API 控制台，管理密钥与用量', tag: 'API', icon: '/nav/kimi.png' },
+      { name: 'APINebula', href: 'https://apinebula.ai/', desc: '第三方模型中转，一个密钥接多家；需充值', tag: '中转', icon: '/nav/apinebula.svg' },
       // ⚠️ 原来的地址带账户 ID（dash.cloudflare.com/<32 位 hash>/...），那是账号凭据的一部分，
       //    公开页面上不放；要直达项目就自己在浏览器里存书签。
-      { name: 'Cloudflare Pages', href: 'https://dash.cloudflare.com/', desc: '本站的托管控制台，登录后进入', tag: '部署' },
+      { name: 'Cloudflare Pages', href: 'https://dash.cloudflare.com/', desc: '本站的托管控制台，登录后进入', tag: '部署', icon: '/nav/cloudflare.png' },
     ],
   },
   {
     group: '开发与工具',
     hint: '写代码时会打开的那几个',
     items: [
-      { name: 'React Bits', href: 'https://www.reactbits.dev/', desc: '200+ 可直接复制的 React 动效与背景组件', tag: '组件' },
+      { name: 'React Bits', href: 'https://www.reactbits.dev/', desc: '200+ 可直接复制的 React 动效与背景组件', tag: '组件', icon: '/nav/reactbits.png' },
+      // ⚠️ 本站图标取不到：其 TLS 证书已过期（Node 与浏览器两侧一致报 CERT_HAS_EXPIRED），
+      //    http 路径 404、备用路径同样证书失败 —— 不填 icon，卡片退回按站名首字生成的圆牌。
       { name: 'GitHub Proxy', href: 'https://github.akams.cn/', desc: 'GitHub 下载加速，支持 Clone / Releases / Raw', tag: '加速' },
     ],
   },
@@ -184,39 +186,41 @@ export const SITE_NAV: {
     group: '学习与刷题',
     hint: '练手与补基础',
     items: [
-      { name: '力扣 LeetCode', href: 'https://leetcode.cn/', desc: '中文算法题库，周赛与题解社区', tag: '算法' },
-      { name: '柏码', href: 'https://www.itbaima.cn/zh-CN', desc: '计算机系列视频课程，基础资源免费', tag: '课程' },
+      { name: '力扣 LeetCode', href: 'https://leetcode.cn/', desc: '中文算法题库，周赛与题解社区', tag: '算法', icon: '/nav/leetcode.png' },
+      { name: '柏码', href: 'https://www.itbaima.cn/zh-CN', desc: '计算机系列视频课程，基础资源免费', tag: '课程', icon: '/nav/itbaima.png' },
     ],
   },
   {
     group: '设计与素材',
     hint: '字体、模型、可商用资源',
     items: [
-      { name: '找字体网 ZFONT', href: 'https://www.zfont.cn/', desc: '免费可商用中文字体下载，更新频繁', tag: '字体' },
-      { name: '模之屋 PlayBox', href: 'https://www.aplaybox.com/', desc: '3D 模型、动作与插画创作分享社区', tag: '模型' },
+      { name: '找字体网 ZFONT', href: 'https://www.zfont.cn/', desc: '免费可商用中文字体下载，更新频繁', tag: '字体', icon: '/nav/zfont.png' },
+      { name: '模之屋 PlayBox', href: 'https://www.aplaybox.com/', desc: '3D 模型、动作与插画创作分享社区', tag: '模型', icon: '/nav/aplaybox.png' },
     ],
   },
   {
     group: '效率与阅读',
     hint: '顺手会用到的',
     items: [
-      { name: '打字鸭', href: 'https://daziya.com/', desc: '盲打指法、拼音与代码打字练习', tag: '练习' },
-      { name: '星辰云博客', href: 'https://blog.xingchencloud.top/p/19901205.html', desc: '《Github 镜像加速站点收集》，汇总可用镜像', tag: '文章' },
+      { name: '打字鸭', href: 'https://daziya.com/', desc: '盲打指法、拼音与代码打字练习', tag: '练习', icon: '/nav/daziya.svg' },
+      { name: '星辰云博客', href: 'https://blog.xingchencloud.top/p/19901205.html', desc: '《Github 镜像加速站点收集》，汇总可用镜像', tag: '文章', icon: '/nav/xingchen.png' },
     ],
   },
   {
     group: '游戏与游戏开发',
     hint: '平时逛得最多的那一类',
     items: [
-      { name: 'Godot 引擎', href: 'https://godotengine.org/zh-cn/', desc: '免费开源 2D / 3D 游戏引擎与文档', tag: '引擎' },
-      { name: '中文 Minecraft Wiki', href: 'https://zh.minecraft.wiki/', desc: '官方授权中文百科，方块 / 生物 / 红石 / 版本', tag: '百科' },
-      { name: 'MC 百科', href: 'https://www.mcmod.cn/', desc: '国内最大的 MC 模组中文百科与教程', tag: '百科' },
+      { name: 'Godot 引擎', href: 'https://godotengine.org/zh-cn/', desc: '免费开源 2D / 3D 游戏引擎与文档', tag: '引擎', icon: '/nav/godot.svg' },
+      { name: '中文 Minecraft Wiki', href: 'https://zh.minecraft.wiki/', desc: '官方授权中文百科，方块 / 生物 / 红石 / 版本', tag: '百科', icon: '/nav/mcwiki.png' },
+      { name: 'MC 百科', href: 'https://www.mcmod.cn/', desc: '国内最大的 MC 模组中文百科与教程', tag: '百科', icon: '/nav/mcmod.png' },
+      // ⚠️ 该站图标取不到：Cloudflare 机器人防护对非浏览器请求一律 403，CDP 真实浏览器
+      //    等 12s 仍未过 JS 挑战（页面标题停在"请稍候…"）—— 不填 icon，退回首字圆牌。
       { name: 'CurseForge', href: 'https://www.curseforge.com/minecraft', desc: '全球最大的 MC 模组与整合包托管平台', tag: '模组' },
-      { name: 'MinecraftShader', href: 'https://minecraftshader.com/', desc: 'MC 光影、材质包与模组资源，附安装教程', tag: '光影' },
-      { name: 'NameMC', href: 'https://zh-cn.namemc.com/minecraft-skins', desc: 'MC 皮肤库与玩家 ID 查询', tag: '皮肤' },
-      { name: '地形师茶馆', href: 'https://terratea.cc/', desc: 'MC 地形创作社区，WorldMachine / WorldPainter 教程', tag: '地形' },
-      { name: '方块小镇 Yuushya', href: 'https://yuushya.com/townscape/', desc: 'MC 建筑向模组，1000+ 建材与方块建模系统', tag: '建筑' },
-      { name: 'Mooncell', href: 'https://fgo.wiki/w/%E8%8B%B1%E7%81%B5%E5%9B%BE%E9%89%B4', desc: 'FGO 中文 Wiki，英灵图鉴与数值检索', tag: '图鉴' },
+      { name: 'MinecraftShader', href: 'https://minecraftshader.com/', desc: 'MC 光影、材质包与模组资源，附安装教程', tag: '光影', icon: '/nav/minecraftshader.png' },
+      { name: 'NameMC', href: 'https://zh-cn.namemc.com/minecraft-skins', desc: 'MC 皮肤库与玩家 ID 查询', tag: '皮肤', icon: '/nav/namemc.png' },
+      { name: '地形师茶馆', href: 'https://terratea.cc/', desc: 'MC 地形创作社区，WorldMachine / WorldPainter 教程', tag: '地形', icon: '/nav/terratea.png' },
+      { name: '方块小镇 Yuushya', href: 'https://yuushya.com/townscape/', desc: 'MC 建筑向模组，1000+ 建材与方块建模系统', tag: '建筑', icon: '/nav/yuushya.png' },
+      { name: 'Mooncell', href: 'https://fgo.wiki/w/%E8%8B%B1%E7%81%B5%E5%9B%BE%E9%89%B4', desc: 'FGO 中文 Wiki，英灵图鉴与数值检索', tag: '图鉴', icon: '/nav/fgo.png' },
     ],
   },
 ];
