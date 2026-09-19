@@ -1,0 +1,340 @@
+---
+// 网站导航（/nav/）：按用途分组的站点收藏夹。
+//
+// 数据全部来自 src/site.ts 的 SITE_NAV，页面本身不含任何硬编码条目 ——
+// 站长加一个站点只要改那一个数组，不用碰这个文件。
+//
+// 三条设计约束（都是为了和站点其余部分保持一致）：
+//   1. 材质沿用全站毛玻璃令牌（--glass / --glass-blur / --line-2 / --r-l / --shadow-sm），
+//      不自己调一套颜色，这样强调色预设、浅色/深色兜底都能自动跟随。
+//   2. 图标不用第三方 favicon 服务（站点刻意不依赖外部请求，见 site.ts 的 IMG_CDN 注释），
+//      默认按站名首字现算一个圆牌；站长要真实图标就填 item.icon 指向站内图片。
+//   3. href 以 '#' 开头 = 该位仍空着 → 渲染成**不可点击**的虚线占位卡。
+//      这样"骨架态"不会把假地址带上线，也不会让访客点到死链。
+import SidebarLayout from '../../layouts/SidebarLayout.astro';
+import { SITE_NAV } from '../../site';
+
+const isLive = (h: string) => /^https?:\/\//i.test(h);
+const mono = (s: string) => (String(s || '?').trim().charAt(0) || '?').toUpperCase();
+const hostOf = (u: string) => {
+  try {
+    return new URL(u).host.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+};
+
+// 空分组不渲染（把某组条目全删掉时，页面不会剩一个孤零零的标题）
+const groups = SITE_NAV.map((g) => ({
+  ...g,
+  items: g.items.map((it) => ({ ...it, live: isLive(it.href), host: hostOf(it.href) })),
+})).filter((g) => g.items.length > 0);
+
+const total = groups.reduce((n, g) => n + g.items.length, 0);
+const live = groups.reduce((n, g) => n + g.items.filter((i) => i.live).length, 0);
+const empty = total - live;
+
+// 状态行**由数据现算**，不写死文案 —— 避免"填满了页面还写着空位"这类文案漂移
+// （这正是 scripts/verify-copy.mjs 想堵的那类问题）。
+const stat = live
+  ? `已收录 ${live} 个站点${empty ? `，另有 ${empty} 个空位` : ''}`
+  : `骨架已就位：共 ${empty} 个空位，填上站点名与地址即可`;
+
+const META_DESC =
+  'CloudWing 的网站导航 —— 按用途整理的常用站点收藏，覆盖技术文档、在线工具、素材资源与友情链接。';
+---
+<SidebarLayout title="网站导航" description={META_DESC} center>
+  <div class="wrap">
+    <header class="page-head" data-ent>
+      <p class="kicker"><b>SITES</b> / 网站导航 · 收藏夹</p>
+      <h1>网站导航</h1>
+      <p class="txt">按用途分组的常用站点。分组与版式已经就位，条目陆续往里填。</p>
+      <p class="navm-stat" data-ent style="--ad:.1s">
+        <span class="ns-dot" aria-hidden="true"></span>{stat}
+      </p>
+    </header>
+
+    {
+      groups.map((g, gi) => (
+        <section class="section navm-sec" data-ent style={`--ad:${(0.14 + gi * 0.06).toFixed(2)}s`}>
+          <div class="navm-head">
+            <h2 class="navm-title">{g.group}</h2>
+            {g.hint && <p class="navm-hint">{g.hint}</p>}
+            <p class="navm-count">
+              <b>{g.items.filter((i) => i.live).length}</b> / {g.items.length}
+            </p>
+          </div>
+
+          <ul class="navm-grid">
+            {g.items.map((it) =>
+              it.live ? (
+                <li>
+                  <a class="nvc" href={it.href} target="_blank" rel="noreferrer">
+                    <span class="nvc-ico" aria-hidden="true">
+                      {it.icon ? <img src={it.icon} alt="" loading="lazy" /> : mono(it.name)}
+                    </span>
+                    <span class="nvc-main">
+                      <span class="nvc-row">
+                        <span class="nvc-name">{it.name}</span>
+                        {it.tag && <span class="nvc-tag">{it.tag}</span>}
+                      </span>
+                      {it.desc && <span class="nvc-desc">{it.desc}</span>}
+                      {it.host && <span class="nvc-host">{it.host}</span>}
+                    </span>
+                    <span class="nvc-go" aria-hidden="true">↗</span>
+                  </a>
+                </li>
+              ) : (
+                <li>
+                  <div class="nvc is-slot">
+                    <span class="nvc-ico" aria-hidden="true">+</span>
+                    <span class="nvc-main">
+                      <span class="nvc-row">
+                        <span class="nvc-name">{it.name}</span>
+                        {it.tag && <span class="nvc-tag">{it.tag}</span>}
+                      </span>
+                      {it.desc && <span class="nvc-desc">{it.desc}</span>}
+                    </span>
+                    <span class="nvc-empty">空位</span>
+                  </div>
+                </li>
+              )
+            )}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+</SidebarLayout>
+
+<style>
+  /* 状态行：一条细的 mono 小字，跟站点其它"计数/标签"同一套语气 */
+  .navm-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-3);
+  }
+  .ns-dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* 分组之间靠 .section + .section 的顶部分隔线（global.css），这里只收紧上边距，
+     免得每组之间空出一屏。 */
+  .navm-sec {
+    padding-top: 1.7rem;
+  }
+  .navm-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 0.7rem;
+  }
+  .navm-title {
+    margin: 0;
+    font-size: 1.06rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--ink);
+  }
+  .navm-hint {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--ink-2);
+  }
+  .navm-count {
+    margin: 0 0 0 auto;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+  }
+  .navm-count b {
+    font-weight: 500;
+    color: var(--accent-deep);
+  }
+
+  /* 网格：min(17rem, 100%) 保证窄屏（内容列 < 272px）也只会退成一列、不会横向溢出 */
+  .navm-grid {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr));
+    gap: 1rem;
+  }
+  .navm-grid > li {
+    display: flex;
+  }
+
+  /* ── 玻璃卡（材质与全站一致：见 global.css 的 --glass / --glass-blur） ── */
+  .nvc {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    width: 100%;
+    padding: 0.95rem 1rem;
+    border: var(--line-w) solid var(--line-2);
+    border-radius: var(--r-l);
+    background: var(--glass);
+    /* ⚠️ -webkit- 必须写在标准属性之前（构建压缩会整条丢掉，见 HANDOFF §22） */
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-sm);
+    color: var(--ink);
+    text-decoration: none;
+    transition: transform 0.18s var(--ease), box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  .nvc:not(.is-slot):hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--accent);
+  }
+  .nvc:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .nvc-ico {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    overflow: hidden;
+    border: var(--line-w) solid var(--line-2);
+    border-radius: 12px;
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    font-family: var(--font-mono);
+    font-size: 0.98rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .nvc-ico img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .nvc-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+    min-width: 0; /* 少了它，长站名会把 flex 撑破（省略号也不生效） */
+  }
+  .nvc-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+  .nvc-name {
+    font-size: 0.97rem;
+    font-weight: 500;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nvc-tag {
+    flex: none;
+    padding: 0.05rem 0.36rem;
+    border: var(--line-w) solid var(--line-2);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+  }
+  .nvc-desc {
+    font-size: 0.83rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+  .nvc-host {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--ink-3);
+    overflow-wrap: anywhere;
+  }
+  .nvc-go {
+    flex: none;
+    margin-left: auto;
+    align-self: center;
+    font-size: 0.95rem;
+    color: var(--ink-3);
+    transition: transform 0.18s var(--ease), color 0.18s ease;
+  }
+  .nvc:not(.is-slot):hover .nvc-go {
+    color: var(--accent);
+    transform: translate(2px, -2px);
+  }
+
+  /* ── 空位（href 还是 '#' 的条目）：虚线 + 去投影，一眼看出"这里还没填" ── */
+  .nvc.is-slot {
+    border-style: dashed;
+    background: color-mix(in srgb, var(--glass) 55%, transparent);
+    box-shadow: none;
+  }
+  .nvc.is-slot .nvc-ico {
+    border-style: dashed;
+    background: transparent;
+    color: var(--ink-3);
+  }
+  .nvc.is-slot .nvc-name {
+    color: var(--ink-2);
+  }
+  .nvc-empty {
+    flex: none;
+    margin-left: auto;
+    align-self: center;
+    padding: 0.1rem 0.44rem;
+    border: 1px dashed var(--line-2);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+  }
+
+  @media (max-width: 620px) {
+    .navm-sec {
+      padding-top: 1.3rem;
+    }
+    .navm-grid {
+      gap: 0.7rem;
+    }
+    .nvc {
+      padding: 0.8rem 0.85rem;
+      gap: 0.7rem;
+    }
+    .nvc-ico {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nvc,
+    .nvc-go {
+      transition: none !important;
+    }
+    .nvc:not(.is-slot):hover {
+      transform: none;
+    }
+  }
+</style>

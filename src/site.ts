@@ -141,8 +141,60 @@ export const NAV = [
   { href: '/posts/', label: '文章', no: '01' },
   { href: '/blog/', label: '归档', no: '02' },
   { href: '/gallery/', label: '画廊', no: '03' },
-  { href: '/about/', label: '关于', no: '04' },
-  { href: '/account/', label: '互动', no: '05' },
+  { href: '/nav/', label: '导航', no: '04' },
+  { href: '/about/', label: '关于', no: '05' },
+  { href: '/account/', label: '互动', no: '06' },
+];
+
+/* ▍网站导航页（/nav/）的条目 —— 按用途分组的站点收藏夹。
+   现在是**骨架数据**：分组与版式已就位，具体站点等站长补齐。
+   - 上线一个站点：把 href 改成完整地址（http/https 开头），name / desc / tag 一并改写。
+   - href 以 '#' 开头 = 该位仍空着。页面会把它渲染成**不可点击**的虚线占位卡，
+     这样既不会把假地址带上线，也不会让访客点到死链。
+   - 不需要的条目直接删行；某个分组被删空则该组整块不渲染。
+   - 可选 icon：给一个站内图片路径（如 '/nav/cloudflare.png'）即可替换默认的首字母圆牌；
+     不给就按 name 首字生成，全程不发外部请求（本站刻意不依赖第三方 favicon 服务）。 */
+export const SITE_NAV: {
+  group: string;
+  hint?: string;
+  items: { name: string; href: string; desc?: string; tag?: string; icon?: string }[];
+}[] = [
+  {
+    group: '技术站点',
+    hint: '查文档、泡社区、翻源码',
+    items: [
+      { name: '官方文档', href: '#slot-docs', desc: '把常用框架的文档站地址填这里', tag: '文档' },
+      { name: '技术社区', href: '#slot-community', desc: '问答或论坛地址填这里', tag: '社区' },
+      { name: '源码托管', href: '#slot-git', desc: '代码仓库地址填这里', tag: '源码' },
+    ],
+  },
+  {
+    group: '工具与效率',
+    hint: '日常会反复打开的那几个',
+    items: [
+      { name: '在线工具', href: '#slot-tool', desc: '编解码 / 正则 / 格式化之类', tag: '工具' },
+      { name: '效率服务', href: '#slot-utility', desc: '剪贴板、图床、短链之类', tag: '效率' },
+      { name: '部署与托管', href: '#slot-deploy', desc: '站点托管或云服务控制台', tag: '部署' },
+    ],
+  },
+  {
+    group: '素材与资源',
+    hint: '图标、字体、图片',
+    items: [
+      { name: '图标库', href: '#slot-icon', desc: '图标集或矢量素材站', tag: '图标' },
+      { name: '字体', href: '#slot-font', desc: '免费可商用字体站', tag: '字体' },
+      { name: '图库', href: '#slot-photo', desc: '免费图片或纹理站', tag: '图片' },
+    ],
+  },
+  {
+    group: '友情链接',
+    hint: '互相交换过的朋友站点',
+    items: [
+      { name: '友链一', href: '#slot-friend-1', desc: '朋友站点的名字与地址', tag: '友链' },
+      { name: '友链二', href: '#slot-friend-2', desc: '朋友站点的名字与地址', tag: '友链' },
+      { name: '友链三', href: '#slot-friend-3', desc: '朋友站点的名字与地址', tag: '友链' },
+    ],
+  },
 ];
 
 // 互动页留言板（giscus / GitHub Discussions）。已启用：

@@ -17,15 +17,16 @@
 | 仓库 | GitHub `CloudWingX/cloudwing`（公开，分支 `main`） |
 | 技术栈 | Astro 7.3（静态输出）+ React 岛 + gsap；React Bits 组件**原码**放 `src/components/ReactBits/` |
 | 主题 | **只有一套暗色**：亮色主题与切换按钮已删除 |
-| 导航 | 6 项：首页 / 文章 / 归档 / 画廊 / 关于 / 互动；`fixed` 通栏 → 滚动收成胶囊（容器 1300 / 1140），**不再下滑收起、没有二级菜单** |
+| 导航 | 7 项：首页 / 文章 / 归档 / 画廊 / 导航 / 关于 / 互动；`fixed` 通栏 → 滚动收成胶囊（容器 1300 / 1140），**不再下滑收起、没有二级菜单** |
 | 搜索 | **悬浮窗**（Pagefind），入口：`⌘/Ctrl + K`、左栏、移动端菜单（非独立页面） |
 | 背景 | 自托管视频 `public/media/bg-loop.mp4` + React Bits Particles 粒子层 |
 | 首页 | Hero（两行大标题 + 副标题 + 统计 + 技术标签 ｜ 右侧**磨砂玻璃代码卡片**，底部 5 个强调色预设）+ 最新文章 / 精选影像 / 关于预览 |
 | 文章 | `/posts/` 文章列表 + `/posts/[slug]/` 详情页（正文 / 上下篇 / giscus 评论） |
 | 归档 | `/blog/` 时间线：自建站起**每一条改动精确到日**，一天一句话，点文字跳转对应文章详情 |
-| 侧栏 | 右栏「活跃热力图」（近 26 周、5 档强度、跟随强调色）；左栏「文章」分组 + 归档时间线入口 |
+| 侧栏 | 右栏「活跃热力图」（近 26 周、5 档强度、跟随强调色）；左栏「文章」分组 + 站点入口（归档时间线 / 网站导航 / 关于 / 互动） |
 | 强调色 | 5 套预设（雾蓝 / 镜蓝 / 极光 / 余烬 / 紫晶）：点一下**同步**换强调色 + 整页色调 + 代码高亮，900ms 中间色过渡 |
 | 子页面 | 三栏布局（左导航树 + 内容 + 右挂件）、更新日历、天气卡、音乐播放器 |
+| 网站导航 | `/nav/` 按用途分组的站点收藏夹（毛玻璃卡片网格）。条目在 `site.ts` 的 `SITE_NAV`；`href` 以 `#` 开头的条目渲染成虚线**空位卡**（不可点击），填上真实地址即启用 |
 | 订阅 | 文章 **RSS** → `/rss.xml`（head 自动发现；页脚入口已于 2026-09-19 随页脚一并删除） |
 
 ## 本地运行
@@ -46,12 +47,12 @@ npm run og         # 重新生成分享图
 
 ```text
 src/
-  site.ts                  ← 站点信息 / NAV / IMG_CDN 图床开关 / GISCUS / MUSIC / WEATHER_CITY
+  site.ts                  ← 站点信息 / NAV / SITE_NAV（网站导航条目）/ IMG_CDN 图床开关 / GISCUS / MUSIC / WEATHER_CITY
   content.config.ts        ← posts（文章）/ shots（影集）/ changelog（更新记录）schema
   content/posts/*.md       ← 博客文章（title/date/tags/summary/link?）→ /blog/ 归档
   content/shots/*.md       ← 影集条目（title/date/game/image/aspect）
   content/changelog/*.md   ← 一天一个文件，驱动侧栏「活跃热力图」
-  pages/                   ← index / posts / posts[slug] / blog / gallery / about / account / 404 / rss.xml
+  pages/                   ← index / posts / posts[slug] / blog / gallery / nav / about / account / 404 / rss.xml
   components/ReactBits/    ← React Bits 官方原码（**只允许在宿主层改**，见铁律三）
   components/*.jsx         ← 宿主层（Particles / Lanyard / 强调色等适配）
   layouts/Base.astro       ← 全局壳：暗色引导、Header、背景视频、Particles
@@ -78,6 +79,8 @@ public/
 - **博客**：在 `src/content/posts/` 新建 `YYYY-MM-DD-slug.md`，frontmatter 写 title/date/tags/summary（可选 `link` 跳外链），正文写在 md 里 —— 归档页自动按年份归档，无 `link` 时正文可在页面内展开。
 - **影集**：webp 放 `public/shots/mc/`，在 `src/content/shots/` 加一条 md（image 指向 `/shots/mc/mc-xxx.webp`）。
 - **更新记录**：`src/content/changelog/YYYY-MM-DD.md`（一天一个文件，`items[]` 写 kind/title/note），侧栏「活跃热力图」会自动聚合。
+- **网站导航**：改 `site.ts` 的 `SITE_NAV` —— 往对应分组加一行（`name`/`href`/`desc`/`tag`），
+  `href` 写成完整地址即启用；想留空位就写成 `#` 开头（页面渲染成虚线空位卡，不可点击）。分组删空则该组不渲染。
 - **留言板**：`site.ts` 的 `GISCUS` 填 repo/repoId/categoryId 后重建。
 
 ## 验证
@@ -88,10 +91,10 @@ public/
 
 | 脚本 | 覆盖 | 基线 |
 |---|---|---|
-| `smoke.mjs` | 总入口：溢出 / 异常 / 侧栏同步 / 软导航 / 手机端 | **48/48** |
+| `smoke.mjs` | 总入口：溢出 / 异常 / 侧栏同步 / 软导航 / 手机端（6 个子页面） | **53/53** |
 | `verify-copy.mjs` | ★文案断言：禁用词（浅色通透/双主题…）、占位词、`notice`/`tagline` 与页面锚点一致 | **31/31** |
 | `verify-hero.mjs` | 首页 Hero 几何、与主栅格对齐、两行标题、强调色预设、**代码卡片磨砂玻璃** | **88/88** |
-| `verify-home.mjs` | 首页四层结构 / 图片策略 / SEO | **24/24** |
+| `verify-home.mjs` | 首页四层结构 / 图片策略 / SEO（6 页） | **25/25** |
 | `verify-nav-shrink.mjs` | 导航三态 + 移动端汉堡（含"抽屉已无分类入口"） | **40/40** |
 | `verify-nav.mjs` | 导航几何、无遗留二级菜单 | **14/14** |
 | `verify-brand.mjs` | 品牌标志 | **10/10** |
@@ -99,10 +102,10 @@ public/
 | `verify-redesign.mjs` | 玻璃令牌、减少动态、导航过渡 | **16/16** |
 | `verify-search.mjs` | 搜索悬浮窗（懒加载 / 快捷键 / 软导航后可用） | **17/17** |
 | `verify-videobg.mjs` | 背景视频 + hero 文字真实像素对比度 + 容器无分界线 | **22/22** |
-| `verify-videobg-global.mjs` | 全站视频一致性、软导航不重建 | **29/29** |
+| `verify-videobg-global.mjs` | 全站视频一致性、软导航不重建（含 `/nav/`） | **33/33** |
 | `contrast-audit.mjs` | WCAG 对比度审计 | **0 处不达标** |
-| `mobile-shots.mjs` | 三机型 × 6 页截图 + 横向溢出 | **18/18 无溢出** |
-| `diag-errors.mjs` | 逐页 JS 异常计数 | **7 页 0 异常** |
+| `mobile-shots.mjs` | 三机型 × 7 页截图 + 横向溢出 | **21/21 无溢出** |
+| `diag-errors.mjs` | 逐页 JS 异常计数 | **8 页 0 异常** |
 | `diag-424.mjs` | React `error #424` 诊断（含压力复现开关） | **0 命中** |
 
 ## 发布到 GitHub + Cloudflare Pages
