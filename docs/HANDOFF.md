@@ -2990,9 +2990,20 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
   （选中态 + `period` + 列表 ≥5 条三重判定）。
 - **探针判据已按 §7.6 验证**：同一探针缺陷构建 2/6 → 修复后 **6/6**。
 
-### 58.4 验证与遗留
+### 58.4 验证与上线（2026-09-20 深夜已完成）
 
-- `npm run build`（含 pagefind）21 页退出码 0；`smoke 61/61`、`verify-ghhot 11/11`、`verify-shell 50/50`（本地 4321 串行）。
-- ⚠️ 本轮**没有跑全量回归**（§47 分层：非发布轮；推送上线前再跑）。
-- 推送通道注意：仓库级 git 代理（127.0.0.1:33210）未运行时直连会失败，走 §2 的隧道方案；
-  上线后用 `poll-deploy.mjs --have '<ui.js 新代码的特征>'` 确认（**不能用 chunk 哈希**）。
+- 发布前全量 **21/21**（新基线：smoke 61/61、ghhot 11/11）；推送 `a367f46..1007ed2`
+  （git 代理 33210 未运行，**绕过代理直连一次成功**：`git -c http.proxy= -c https.proxy= push`）。
+- **线上确认（三层特征）**：① `poll-deploy --page /log/ --have '<changelog 新条目>'` ×2，
+  54 秒「未通过 2 项 → 0 项」真实翻转；② **JS chunk**（poll-deploy 不查 JS）：
+  首页 `Base…js` 含 `__cwGhHotApi` ✓、`/gallery/` HTML 内联脚本含 `__cwGalViewerWired` ✓；
+  ③ 线上端到端：`verify-ghhot` **11/11**、`probe-softnav` **6/6**、
+  硬加载 /gallery/ 点卡片开图 ✓、放慢节奏的完整软导航序列全绿 ✓。
+- ⚠️ **`smoke.mjs` 打线上会间歇 3 处红（已取证，非回归）**：`/about/ 两栏等高 763/1006` +
+  [3] 画廊段 2 条。复现实验：同一序列固定 3.5s sleep 线上稳定失败、**8s 全绿、本地全绿**——
+  根因是 smoke 的**固定 sleep 节奏**撞上 /about/ 的重资源岛（吊牌 GLB ~2.4MB + three.js）
+  在线上的加载时长：上一页还没装载完就点下一个链接 → 该次导航静默丢失（§7.1 第 1 条
+  "轮询等待、不要固定 sleep" 正是这类问题；[1] 的等高断言同理，右栏 ghhot 卡异步渲染
+  在线上要几秒，`sideSticky()` 未跑完就量了）。**待办**：把 smoke [3] 的固定 sleep 换成
+  「等 pathname 变化 + 等页面装载完成」的轮询，[1] 的等高断言等 boot 完成再量
+  ——属测试基建改动，动手前过一下 §7.6 并知会站长。复现/判别脚本：`_shots/_smoke-gal-debug.mjs`（3.5s 版）与 `_shots/_smoke-gal-slow.mjs`（8s 版）。
