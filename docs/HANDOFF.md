@@ -3141,3 +3141,17 @@ PNG 算亮度（`_shots/probe-whiteflash.mjs` + `measure-flash.mjs`）：**无�
   （CSS 2.1 Appendix E：根元素背景 → 负 z-index → 块级背景 → …）。
 - 修后 smoke **64/64**；推送后线上以 `poll-deploy --not 'style="background'` +
   首页截图（视频纹理）双确认。
+
+### 61.4 站长反馈白闪仍在 → pre-CSS body 深色兜底（2026-09-21 早）
+
+- 站长复测仍见白闪，且明确要求**不动网页背景**。软导航路径已连帧证净（61 帧级取证），
+  剩余暴露面是「pre-CSS 首绘画布」：**meta color-scheme 救不了所有浏览器的画布**
+  （Safari/部分 Windows 内核 pre-CSS 画布就是白）。
+- 修法（不碰 html，不碰背景视频）：head 授权顺序最前放 `<style is:inline>` ——
+  `html{color-scheme:dark}` + `body{background:#070b0f}`。两条保障：
+  ① html 保持无背景，body 背景照旧传播到画布（视频层无恙，实测 mean 32.0 不变）；
+  ② 内联块在构建产物里位于 `/_astro/*.css` 之前（dist 实测 pos 2166 < 4288），
+  全局样式表载入后按文档序覆盖它 —— 它只兜「CSS 未就绪」的窗口。
+- 验证：构建产物顺序断言 ✓、smoke **64/64** ✓、视频层截图亮度 32.0 不变 ✓。
+- 若站长环境**仍**白闪：那就只剩「软导航回退硬导航」或录屏级信息才可定位 ——
+  需要站长提供浏览器/设备/整屏还是局部。

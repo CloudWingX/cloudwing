@@ -80,6 +80,15 @@ const BUILD_ID = import.meta.env.PROD ? Date.now().toString(36) : 'dev';
     <!-- §61：浏览器在解析 CSS 前就按暗色起步（首绘画布/表单控件/overscroll 全暗） -->
     <meta name="color-scheme" content="dark" />
     <meta name="cw-build" content={BUILD_ID} />
+    <style is:inline>
+      /* §61.4 pre-CSS 深色画布（2026-09-21）：部分浏览器（Safari/Windows 内核等）
+         pre-CSS 首绘画布就是白，meta color-scheme 救不了它们的画布 —— 这里直接给 body
+         打深色。两条铁律：① html 必须保持无背景（body 背景传播到画布是 z:-4 背景
+         视频层可见的前提，§61.3）；② 本块必须排在全局样式表之前（Astro 按授权顺序
+         输出，样式表载入后即覆盖本规则，它只兜「CSS 未就绪」的窗口）。 */
+      html { color-scheme: dark; }
+      body { background: #070b0f; }
+    </style>
     <script is:inline>
       // 主题：全站只有一套**暗色**（亮色主题与切换按钮已删除）。
       // 这里把 data-theme 尽早写成 dark，避免首屏出现浅色闪烁；主题色 meta 同步为深色。
