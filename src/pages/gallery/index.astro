@@ -288,34 +288,56 @@ const count = String(shots.length);
 </style>
 
 <script>
-  // 画廊大图浏览：卡片 → dialog 大图（支持点击背板/✕/Esc 关闭）
-  const dlg = document.getElementById('galDialog');
-  if (dlg && typeof dlg.showModal === 'function') {
-    const img = document.getElementById('gdImg');
-    const titleEl = document.getElementById('gdTitle');
-    const metaEl = document.getElementById('gdMeta');
-    const noteEl = document.getElementById('gdNote');
+  // 画廊大图浏览：卡片 → dialog 大图（支持点击背板/✕/Esc 关闭）。
+  // ⚠️ 软导航会整块换掉 <main>：dialog 与卡片每次进页都是新节点，而本模块脚本
+  //    只执行一次 —— 绝不能缓存节点引用（HANDOFF §6.20 SearchModal 同款坑）：
+  //    实测缓存后切页往返再点卡片，showModal 抛 InvalidStateError (not in a
+  //    Document)，表现为「点击无任何反应」。做法：点击监听一次性挂 document
+  //    委托，每次触发重新查「当前」节点；dialog 自身事件（背板/close）由
+  //    astro:page-load 重绑到当前 dialog。
+  if (!window.__cwGalViewerWired) {
+    window.__cwGalViewerWired = true;
+
+    const closeViewer = () => {
+      const dlg = document.getElementById('galDialog');
+      if (dlg && dlg.open) dlg.close();
+      document.body.classList.remove('modal-open');
+    };
 
     document.addEventListener('click', (e) => {
-      const card = e.target.closest('[data-gal-open]');
+      const t = e.target instanceof Element ? e.target : null;
+      if (!t) return;
+      if (t.closest('[data-gal-close]')) { closeViewer(); return; }
+      const card = t.closest('[data-gal-open]');
       if (!card) return;
+      const dlg = document.getElementById('galDialog');
+      const img = document.getElementById('gdImg');
+      const titleEl = document.getElementById('gdTitle');
+      const metaEl = document.getElementById('gdMeta');
+      const noteEl = document.getElementById('gdNote');
+      if (!dlg || typeof dlg.showModal !== 'function') return;
       const src = card.dataset.img;
       if (!src) return;
-      img.src = src;
-      img.alt = card.dataset.title || '';
-      titleEl.textContent = card.dataset.title || '';
-      metaEl.textContent = card.dataset.meta || '';
-      noteEl.textContent = card.dataset.note || '';
+      if (img) { img.src = src; img.alt = card.dataset.title || ''; }
+      if (titleEl) titleEl.textContent = card.dataset.title || '';
+      if (metaEl) metaEl.textContent = card.dataset.meta || '';
+      if (noteEl) noteEl.textContent = card.dataset.note || '';
       dlg.showModal();
       document.body.classList.add('modal-open');
     });
-    document.querySelectorAll('[data-gal-close]').forEach((b) =>
-      b.addEventListener('click', () => { dlg.close(); document.body.classList.remove('modal-open'); })
-    );
-    dlg.addEventListener('click', (e) => {
-      if (e.target === dlg) { dlg.close(); document.body.classList.remove('modal-open'); }
-    });
-    dlg.addEventListener('close', () => document.body.classList.remove('modal-open'));
+
+    // dialog 自身事件：只绑「当前」dialog（dataset 防重）；换页后重绑新节点
+    const wireDlg = () => {
+      const dlg = document.getElementById('galDialog');
+      if (!dlg || dlg.dataset.cwViewerWired) return;
+      dlg.dataset.cwViewerWired = '1';
+      dlg.addEventListener('click', (e) => {
+        if (e.target === dlg) closeViewer();
+      });
+      dlg.addEventListener('close', () => document.body.classList.remove('modal-open'));
+    };
+    wireDlg();
+    document.addEventListener('astro:page-load', wireDlg);
   }
 
   // 分类筛选：导航栏「画廊」二级菜单点分类 → /gallery/?game=xxx。

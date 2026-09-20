@@ -1741,25 +1741,33 @@ function githubTrending() {
     fetchBucket(period, bucket);
   };
 
-  /* tab 切换：委托 + window 单例（软导航重建侧栏后依然有效） */
+  /* tab 切换：委托 + window 单例（软导航重建侧栏后依然有效）。
+     ⚠️ 监听器与定时器只注册一次，但侧栏每次软导航都会整块换新，而本函数
+     每页都会重跑、拿到新的 card/load 闭包。若监听器抓死首次的闭包，切 tab
+     就会写进已脱离文档的旧卡片（实测缺陷：period 不变、选中态不动、列表不刷新）。
+     现把「当前这一次」的 card/load 挂 window.__cwGhHotApi，监听器只做转发。 */
+  window.__cwGhHotApi = { card, load };
   if (!window.__cwGhHotWired) {
     window.__cwGhHotWired = true;
     document.addEventListener('click', (ev) => {
       const tab = ev.target instanceof Element && ev.target.closest('[data-ghhot-tab]');
       if (!tab) return;
+      const api = window.__cwGhHotApi;
+      if (!api || !api.card || !api.card.isConnected) return;
       ev.preventDefault();
       const period = tab.getAttribute('data-ghhot-tab');
-      card.querySelectorAll('[data-ghhot-tab]').forEach((b) =>
+      api.card.querySelectorAll('[data-ghhot-tab]').forEach((b) =>
         b.setAttribute('aria-selected', String(b === tab)));
-      load(period, false);
+      api.load(period, false);
     });
     /* 驻留自动刷新：每分钟比对当前周期的桶 ID，跨桶（如 24 点）自动重拉 */
     window.setInterval(() => {
-      if (!document.contains(card)) return;
-      const period = card.dataset.ghhotPeriod || 'daily';
+      const api = window.__cwGhHotApi;
+      if (!api || !api.card || !document.contains(api.card)) return;
+      const period = api.card.dataset.ghhotPeriod || 'daily';
       const bucket = bucketOf(period);
       const cached = readStore()[period];
-      if (!cached || cached.bucket !== bucket.id) load(period, true);
+      if (!cached || cached.bucket !== bucket.id) api.load(period, true);
     }, 60000);
   }
   load('daily', false);

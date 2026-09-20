@@ -246,6 +246,26 @@ const main = async () => {
       await evaluate(`[...document.querySelectorAll('a')].find((a) => a.getAttribute('href') === ${JSON.stringify(path)})?.click()`);
       await sleep(3500);
     }
+    // 画廊大图（2026-09-20 修复回归）：软导航一圈后再进画廊，点卡片必须能开大图。
+    // 修复前：页面脚本缓存了 dialog 节点，软导航换新后 showModal 抛
+    // InvalidStateError (not in a Document)，表现为「点卡片没反应」。
+    await evaluate(`[...document.querySelectorAll('a[href="/gallery/"]')].find((a) => a.getBoundingClientRect().width > 0)?.click()`);
+    let galNav = false;
+    const t2 = Date.now();
+    while (Date.now() - t2 < 15000) {
+      await sleep(500);
+      galNav = !!(await evaluate(`location.pathname === '/gallery/' && document.querySelectorAll('[data-gal-open]').length > 0`));
+      if (galNav) break;
+    }
+    check('软导航一圈后进画廊、卡片就位', galNav === true);
+    await evaluate(`document.querySelector('[data-gal-open]')?.click()`);
+    await sleep(800);
+    const galDlgOpen = await evaluate(`document.getElementById('galDialog')?.open === true`);
+    check('画廊点卡片打开大图（软导航后）', galDlgOpen === true);
+    await evaluate(`document.querySelector('[data-gal-close]')?.click()`);
+    await sleep(400);
+    const galDlgClosed = await evaluate(`document.getElementById('galDialog')?.open !== true`);
+    check('画廊大图可关闭', galDlgClosed === true);
     check('软导航一圈后仍无 JS 异常', errors.length === 0, errors[0] || '');
   });
 

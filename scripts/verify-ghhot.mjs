@@ -117,6 +117,46 @@ const cache = await ev(`(() => {
 check('每日缓存桶 = 当天（跨 24 点自动失效）', cache.daily === true);
 check('每周缓存桶 = 本周周一（周末 24 点跨桶）', cache.weekly === true);
 
+/* ⑤ 软导航换页后切 tab 仍生效（2026-09-20 修复回归）：
+   侧栏每次软导航都会整块换新，而委托监听只注册一次 —— 修复前监听器抓死
+   首次闭包，把渲染写进已脱离文档的旧卡片，表现为「切 tab 没反应」。 */
+await ev(`(() => {
+  const as = document.querySelectorAll('a[href="/account/"]');
+  for (let i = 0; i < as.length; i++) {
+    const r = as[i].getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) { as[i].click(); return true; }
+  }
+  return false;
+})()`);
+let ghNav = false;
+const ghT0 = Date.now();
+while (Date.now() - ghT0 < 15000) {
+  await sleep(500);
+  ghNav = (await ev('location.pathname')) === '/account/';
+  if (ghNav) break;
+}
+await sleep(1200);
+const ghAfterNav = await ev(`(() => {
+  const card = document.querySelector('[data-ghhot]');
+  if (!card) return null;
+  const d = card.querySelector('[data-ghhot-tab="daily"]');
+  d.click();
+  return { connected: card.isConnected, periodBefore: card.dataset.ghhotPeriod };
+})()`);
+await sleep(1200);
+const ghSwitch = await ev(`(() => {
+  const card = document.querySelector('[data-ghhot]');
+  return {
+    period: card?.dataset.ghhotPeriod,
+    sel: card?.querySelector('[data-ghhot-tab][aria-selected="true"]')?.getAttribute('data-ghhot-tab'),
+    items: card?.querySelectorAll('.sw-hot-item').length ?? 0,
+  };
+})()`);
+check('软导航换页后热榜卡片仍在当前文档', ghNav === true && ghAfterNav?.connected === true,
+  `nav=${ghNav} connected=${ghAfterNav?.connected}`);
+check('软导航换页后切回「每日」仍生效', ghSwitch?.period === 'daily' && ghSwitch?.sel === 'daily' && ghSwitch?.items >= 5,
+  `period=${ghSwitch?.period} sel=${ghSwitch?.sel} n=${ghSwitch?.items}`);
+
 /* ⑤ 截图存档 */
 await ev(`document.querySelector('[data-ghhot]')?.scrollIntoView({ block: 'center', behavior: 'instant' })`);
 await sleep(600);
