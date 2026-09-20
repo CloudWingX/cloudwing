@@ -3095,3 +3095,31 @@ ClientRouter 软导航换进来的是新 DOM（所以文件夹墙看得见），
   ③ 刷新后戳一致；④ 防环：防护表已记该构建时**必须**放弃刷新。
   判据缺陷态（无 §60 脚本 / 无防环）分别会红。
 - 本地全量 22 脚本批跑见 §59.4 同款口径（ghhot 仍受凌晨空窗影响，见 §59.4 取证）。
+
+## 61. 「切回画廊闪白屏」：深色画布兜底 + 文件夹纸即时加载（2026-09-21 早）★
+
+**站长报障**：点别的页面再切回画廊，闪白屏。**排查**（连帧取证，§7.6）：
+CDP `Page.startScreencast` 对软导航（本地 + 线上 `/posts/ → /gallery/`）逐帧采样并自解码
+PNG 算亮度（`_shots/probe-whiteflash.mjs` + `measure-flash.mjs`）：**无任何亮帧**
+（mean 全程 24–35，切换瞬间反而变暗）——软导航渲染路径本身不产生白。
+真正的暴露面是「CSS 未就绪就首绘」的路径：全站深色全靠 body 的 CSS 渐变，
+`<html>` 无背景色、head 无 color-scheme 元信息 → 弱网硬加载 / ClientRouter 拉取失败
+回退硬导航 / 手机浏览器首绘 / overscroll 回弹，都会露出浏览器默认白底。
+本地无法复现该路径的首绘白（无头合成器起始即黑 + CSS 有磁盘缓存），按机制补三层兜底。
+
+### 61.1 修法
+
+| 层 | 改动 | 作用 |
+|---|---|---|
+| `<html>` 行内样式 | `style="background:#03060a"`（Base.astro） | CSS/JS 之前的第一个绘制就是深色；ClientRouter 同步新文档 html 属性，软导航后不丢 |
+| head 元信息 | `<meta name="color-scheme" content="dark">` | 浏览器解析 CSS 前按暗色起步（首绘画布/表单控件/overscroll） |
+| 画廊文件夹纸 | `loading="lazy"` → `loading="eager" decoding="async"` | 纸张是首屏内容（每夹仅 3 张），懒加载放大「切回画廊」swap 后 0.7s 淡入期的空屏感 |
+
+（CSS 里的 `:root { color-scheme: dark }` 此前已有，但生效要等样式表；meta 是它的 pre-CSS 前置。）
+
+### 61.2 回归
+
+- smoke **64/64**、verify-copy **31/31**、verify-shell **50/50**；连帧复测软导航
+  152 帧无亮帧（max mean 23.8，文件夹纸改即时加载后淡入期即有实际内容）。
+- ⚠️ 若站长侧仍见白闪：需要录屏或说明白的是**整屏还是局部**、哪条操作路径 ——
+  Chromium 侧软导航已证无白帧，剩余候选只有用户环境的硬导航/GPU 合成路径。

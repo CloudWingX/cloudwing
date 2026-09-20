@@ -86,7 +86,9 @@ const folders = [...gameMap.entries()]
                 <span class="folder-back" aria-hidden="true" />
                 <span class="folder-papers" aria-hidden="true">
                   {f.thumbs.map((t, j) => (
-                    <img class="folder-paper" src={t} alt="" loading="lazy" style={`--pi:${j}`} />
+                    /* §61：文件夹纸是首屏内容，懒加载会让「切回画廊」时更久地空着一块
+                       （软导航 swap 后 0.7s 淡入期间尤其明显）—— 改为立即加载。 */
+                    <img class="folder-paper" src={t} alt="" loading="eager" decoding="async" style={`--pi:${j}`} />
                   ))}
                 </span>
                 <span class="folder-front" aria-hidden="true" />

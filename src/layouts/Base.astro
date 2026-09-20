@@ -36,7 +36,11 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
 const BUILD_ID = import.meta.env.PROD ? Date.now().toString(36) : 'dev';
 ---
 <!doctype html>
-<html lang="zh-CN">
+<!-- ★ 深色画布兜底（§61）：html 行内背景在**任何 CSS/JS 之前**就位，杜绝
+     「CSS 未就绪就首绘」路径下的白屏闪（弱网硬加载 / ClientRouter 拉取失败回退
+     硬导航 / 手机浏览器首绘）。ClientRouter 换页会同步新文档的 html 属性，
+     新文档同样带这个行内样式，软导航后不丢。 -->
+<html lang="zh-CN" style="background:#03060a">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -71,6 +75,8 @@ const BUILD_ID = import.meta.env.PROD ? Date.now().toString(36) : 'dev';
     <meta name="twitter:image" content={ogImageAbs} />
     <link rel="canonical" href={Astro.url.href} />
     <meta name="theme-color" content="#070b0f" />
+    <!-- §61：浏览器在解析 CSS 前就按暗色起步（首绘画布/表单控件/overscroll 全暗） -->
+    <meta name="color-scheme" content="dark" />
     <meta name="cw-build" content={BUILD_ID} />
     <script is:inline>
       // 主题：全站只有一套**暗色**（亮色主题与切换按钮已删除）。
