@@ -16,6 +16,8 @@
   /* ▍强调色：雾蓝 #9FD3E8（用户指定），与背景视频的青蓝（实测色相 192°）同族。
      每个都在深色面上验证过 WCAG AA（见 scripts/contrast-audit.mjs）。 */
   --accent: #9fd3e8;        /* 主强调：按钮底/图标/强调文字 */
+  --accent-rgb: 159, 211, 232; /* 同上 RGB 三元组：供 rgba(var(--accent-rgb), a) 调透明度
+                                  （2026-09-20 补：此前只在首页定义，其它页 rgba() 全部静默失效） */
   --accent-deep: #bfe4f2;   /* 悬停/链接文字（对深底更亮） */
   --accent-soft: rgba(159, 211, 232, 0.14);
   --accent-grad: linear-gradient(135deg, #9fd3e8 0%, #6aa6d8 100%);

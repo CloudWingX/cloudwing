@@ -54,6 +54,31 @@ for (const d of [...days.values()].sort((a, b) => (a.date < b.date ? 1 : -1))) {
 }
 const yearList = [...years.entries()].sort((a, b) => b[0] - a[0]);
 const totalDays = days.size;
+
+/* ---------- 热力图：按日更新条数，GitHub contributions 风格（§55，2026-09-20）----------
+   口径与时间轴一致 = changelog 条目数；列 = 周（周日始），行 = 周日..周六；
+   范围 = 首条更新所在周的周日 → 构建日。零客户端 JS：tooltip 用原生 title。 */
+const UTC = (s) => new Date(s + 'T00:00:00Z');
+const todayKey = new Date().toISOString().slice(0, 10);
+const hmStart = UTC([...days.keys()].sort()[0]);
+hmStart.setUTCDate(hmStart.getUTCDate() - hmStart.getUTCDay()); // 回到所在周的周日
+const hmCells = [];
+for (let d = new Date(hmStart); d <= UTC(todayKey); d.setUTCDate(d.getUTCDate() + 1)) {
+  const key = d.toISOString().slice(0, 10);
+  hmCells.push({ key, dow: d.getUTCDay(), n: days.get(key)?.items.length ?? 0 });
+}
+while (hmCells.length % 7 !== 0) hmCells.push(null); // 补齐最后一周
+const hmWeeks = [];
+for (let i = 0; i < hmCells.length; i += 7) hmWeeks.push(hmCells.slice(i, i + 7));
+const hmLevel = (n) => (n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 7 ? 3 : 4);
+const hmTotal = logs.length;
+/* 月份标签：本周首日（周日）的月份与上周不同 → 在该列上方标月份 */
+const hmMonths = hmWeeks.map((w, i) => {
+  if (!w[0]) return null;
+  const m = UTC(w[0].key).getUTCMonth() + 1;
+  const prev = i > 0 && hmWeeks[i - 1][0] ? UTC(hmWeeks[i - 1][0].key).getUTCMonth() + 1 : null;
+  return m !== prev ? `${m}月` : null;
+});
 ---
 <SidebarLayout title="归档" bodyClass="archive-route">
   <div class="archive-root">
@@ -62,6 +87,43 @@ const totalDays = days.size;
         <p class="kicker"><b>ARCHIVE</b> / 归档</p>
         <h1>归档</h1>
       </header>
+
+      <section class="hm" data-ent aria-label="更新热力图">
+        <div class="hm-meta">
+          <span class="hm-stat">
+            {hmCells[0].key.slice(0, 7).replace('-', '.')} – {todayKey.slice(0, 7).replace('-', '.')}
+            {' '}共 <b>{hmTotal}</b> 条更新 · 活跃 <b>{totalDays}</b> 天
+          </span>
+          <span class="hm-legend" aria-hidden="true">
+            少
+            {[0, 1, 2, 3, 4].map((l) => <i class={`hm-c hm-l${l}`}></i>)}
+            多
+          </span>
+        </div>
+        <div class="hm-scroll" tabindex="0" role="img" aria-label="按日更新条数热力图，颜色越深当天更新越多">
+          <div class="hm-grid">
+            <div class="hm-months" aria-hidden="true">
+              {hmMonths.map((m) => <span class="hm-month">{m}</span>)}
+            </div>
+            <div class="hm-cols">
+              {hmWeeks.map((w) => (
+                <div class="hm-week">
+                  {w.map((c) =>
+                    c ? (
+                      <i
+                        class={`hm-c hm-l${hmLevel(c.n)}`}
+                        title={`${c.key}：${c.n} 条更新`}
+                      ></i>
+                    ) : (
+                      <i class="hm-c"></i>
+                    )
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {yearList.map(([year, list]) => (
         <section class="tl-year" data-ent aria-label={`${year} 年（${list.length} 天）`}>
@@ -95,6 +157,35 @@ const totalDays = days.size;
 <style>
   .archive-root { padding: 2.4rem 0 3rem; }
   .page-head { margin-bottom: 1.6rem; }
+
+  /* ── 更新热力图（§55）：GitHub contributions 风格，站点 accent 色阶 ──
+     位置 = 标题下、内容上；不设 margin-top（保持 verify-shell 的 1.6rem 间距口径）。 */
+  .hm { margin-bottom: 2.2rem; }
+  .hm-meta {
+    display: flex; align-items: baseline; justify-content: space-between;
+    flex-wrap: wrap; gap: 0.4rem 1rem; margin-bottom: 0.7rem;
+  }
+  .hm-stat { font-size: 0.84rem; color: var(--ink-2); }
+  .hm-stat b { color: var(--accent); font-variant-numeric: tabular-nums; }
+  .hm-legend {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 0.72rem; color: var(--ink-3);
+  }
+  .hm-scroll { overflow-x: auto; padding-bottom: 2px; }
+  .hm-months { display: flex; gap: 3px; margin-bottom: 3px; }
+  .hm-month { width: 10px; flex: none; font-size: 0.66rem; color: var(--ink-3); white-space: nowrap; }
+  .hm-cols { display: flex; gap: 3px; }
+  .hm-week { display: flex; flex-direction: column; gap: 3px; flex: none; }
+  .hm-c {
+    width: 10px; height: 10px; border-radius: 2.5px; flex: none;
+    background: rgba(var(--accent-rgb), 0.13);
+    box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.1);
+  }
+  .hm-l1 { background: rgba(var(--accent-rgb), 0.34); box-shadow: none; }
+  .hm-l2 { background: rgba(var(--accent-rgb), 0.55); box-shadow: none; }
+  .hm-l3 { background: rgba(var(--accent-rgb), 0.78); box-shadow: none; }
+  .hm-l4 { background: rgba(var(--accent-rgb), 1); box-shadow: 0 0 4px rgba(var(--accent-rgb), 0.4); }
+  .hm-c:hover { transform: scale(1.35); }
 
   .tl-year { margin-bottom: 2.4rem; }
   .tl-yy {

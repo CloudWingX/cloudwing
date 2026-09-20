@@ -10,7 +10,9 @@
 > （见 §43.1），其"简版硬规则"职责并入本文件。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-20 凌晨第三轮 **顶栏「记录」点击不再跳转——只开合二级菜单
+> 最后更新：2026-09-20 上午 **归档页标题下新增「更新热力图」（GitHub contributions 风格，
+> 按日更新条数着色，见 §55；顺带修掉 `--accent-rgb` 只在首页定义、其它页 rgba() 静默失效的坑）**；
+> 同日凌晨第三轮 **顶栏「记录」点击不再跳转——只开合二级菜单
 > （捕获阶段拦截 + stopPropagation 压过 ClientRouter，见 §54）**；
 > 同日凌晨第二轮 **「记录」三页（文章/归档/日志）+ 档案页与其余子页面壳层统一：
 > 标题→内容间距全站 1.6rem、档案页页头改「PROFILE / 档案 + h1 档案」（ProximityText 特效保留），见 §53**；
@@ -2865,3 +2867,22 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
 - 验证：CDP 探针四步全过（点父项 URL 不变 + 菜单展开 + aria-expanded=true → 再点收起 → 点子项「归档」正常软导航到 /blog/）；
   `verify-nav-shrink` 40/40、`verify-interaction` 12/12、`verify-shell` 全过；**发布前全量 20/20**（§47.2）。
 - 环境坑（复用记忆）：遗留 astro preview 占 4321 端口时 `--force` 不生效（报错文案误导），需先杀旧 node 进程；preview 必须用后台任务起，前台 `&` 会随命令结束被杀。
+
+## §55 归档页「更新热力图」（2026-09-20 上午）
+
+**站长要求**：给归档页内容上方、标题下方增加热力图，参考 `blog.tsh520.cn/archive/`（该站热力图是 JS 渲染，抓不到静态结构，按 GitHub contributions 惯例实现）。
+
+- 位置与口径：`/blog/` 的 `.page-head` 之后、年份时间轴之前；强度 = **当日 changelog 条目数**（与时间轴同口径），0/1/2–3/4–7/8+ 五档，站点雾蓝 accent 色阶。
+- 实现（`src/pages/blog/index.astro`，零客户端 JS）：
+  - 构建期算好 43 周（首条更新所在周的周日 → 构建日），列 = 周（周日始）× 7 行；最后一周补 `null` 占位；
+  - 月份标签 = 本周首日的月份与上周不同则标；tooltip 用原生 `title`（`YYYY-MM-DD：N 条更新`）；
+  - 统计行「`YYYY.MM – YYYY.MM` 共 N 条更新 · 活跃 D 天」+ 右侧「少 □□□□□ 多」图例；
+  - 容器 `.hm` 不设 margin-top（保住 verify-shell 对 `/blog/` 的 1.6rem 间距口径，实测 25.6px ✓），移动端 `.hm-scroll` 横向滚动。
+- ⚠️ **连带修复：`--accent-rgb` 只在 `index.astro`（首页，hero-theme.js 补间用）定义过，
+  其余页面 `rgba(var(--accent-rgb), a)` 全部静默失效变透明**——热力图首版整片网格不可见即此因
+  （时间轴 `.tl-dot` 的光晕其实也一直没生效）。已在 `global.css :root` 补默认值 `159, 211, 232`
+  （与 `--accent: #9fd3e8` 同源）；首页运行时仍由 hero-theme.js 写在 `documentElement` 内联样式上，优先级更高，互不影响。
+- 视觉：空格底 `rgba(accent, 0.13)` + 1px 内描边（深底上可见），hover 放大 1.35；l4 满色带 4px 光晕。
+- 验证：CDP 探针（43 列 / 306 格 / 295 格带 title / 月份标签 11 个 / 间距 26≈25.6 / 无溢出）；
+  `verify-shell` 全过；发布前全量见下。
+- 截图：`_shots/blog-heatmap.png`。
