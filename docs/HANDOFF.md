@@ -3047,3 +3047,20 @@ frontmatter 按 `game` 分组的逻辑会**自动长出新文件夹，零页面�
   `folder-hover.png`（悬停翻盖态，CDP `Input.dispatchMouseEvent` 移入后截图）。
 - 交互零新增 JS 监听（翻盖是纯 CSS hover，进图集走 `<a>` 软导航），§58 类
   「闭包抓死旧节点」风险面不新增。
+
+### 59.4 上线记录与 verify-ghhot「凌晨空窗」取证（2026-09-21 清晨）
+
+- **发布前全量 20/21**：唯一 FAIL 是 `verify-ghhot`（4/11），**已取证为环境性伪失败、非回归**
+  （§59 未触碰热榜代码）。根因：热榜查询是 `created:>=当天0点 stars:>10` —— 清晨跑批时
+  「每日」桶还是**空集**（实测 `created:>=2026-09-21 stars:>10` → `total_count: 0`），
+  卡片抛 `empty` 进错误态，7 条依赖数据的断言全红（`state=error, n=0`）。
+  已排除限流（重置后复跑仍 4/11）与代理（api.github.com 直连 200；死代理 33210 只影响 git）。
+  昨晚深夜 11/11 是因为桶里已攒了一整天数据。**判别脚本**：`_shots/check-ghapi.mjs`。
+  ⚠️ **待办（需站长拍板）**：给每日桶加兜底（如空集时回退展示昨日/本周数据，或降低 stars 阈值），
+  否则每天 0 点后到首仓破 10 星前热榜卡都是错误态。动手前过 §7.6。
+- **推送**：`d217f2e..d552d18`（github.com:443 间歇不可达复发：首轮 5 连败且第 2 次误报
+  「Everything up-to-date」，ls-remote 证伪后重试首轮即成功——**推送后必须以 ls-remote/
+  内容特征确认，不能信 push 的模糊输出**）。
+- **线上确认**：poll-deploy 49 秒翻转（/gallery/ HTML 含 `gal-folders-sec`、`folder-front`、
+  「返回文件夹」三特征）；线上端到端 `probe-softnav` **6/6**、线上截图
+  `_shots/folder-idle.png` / `folder-hover.png`（文件夹墙 + 悬停翻盖态）。
