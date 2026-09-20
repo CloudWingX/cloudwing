@@ -3064,3 +3064,34 @@ frontmatter 按 `game` 分组的逻辑会**自动长出新文件夹，零页面�
 - **线上确认**：poll-deploy 49 秒翻转（/gallery/ HTML 含 `gal-folders-sec`、`folder-front`、
   「返回文件夹」三特征）；线上端到端 `probe-softnav` **6/6**、线上截图
   `_shots/folder-idle.png` / `folder-hover.png`（文件夹墙 + 悬停翻盖态）。
+
+## 60. 构建指纹自愈：存量标签页跨部署自动刷新（2026-09-21 清晨）★
+
+**站长报障**：「点击文件夹后没有进入图集」。排查结论：**新鲜会话下功能完全正常**——
+桌面真实鼠标点击（`_shots/probe-folder-click.mjs`，CDP `Input.dispatchMouseEvent`）三条路径
+（首点 / 返回后再点 / 软导航往返后点）、移动端触屏仿真（`probe-folder-click-mobile.mjs`）、
+线上截图（`shot-album.mjs`：点后图集卡片 `opacity:1` 全部可见）全绿；
+smoke §59 三断言也一直绿。**根因是 §5 铁律的跨部署变体**：部署前就开着的标签页，
+ClientRouter 软导航换进来的是新 DOM（所以文件夹墙看得见），内存里的 JS 却还是旧构建的
+——旧 `applyGameFilter` 没有视图切换逻辑 → URL 变成 `?game=...` 但界面不切。
+所有跨部署的存量访客都会中招，此前只能靠用户手动刷新。
+
+### 60.1 修法（`src/layouts/Base.astro`）
+
+- 每次构建生成唯一 `BUILD_ID`（`Date.now().toString(36)`，模块级求值 → 一次构建全站一致；
+  dev 恒为 `'dev'`），写进 `<meta name="cw-build">`。
+- 头部 `is:inline` 脚本记下本标签页 JS 首次加载时的戳；每个 `astro:page-load` 比对
+  「当前 DOM 的戳 vs 内存里的戳」，不一致 = 跨部署存量标签页 → `location.reload()` 自愈。
+- **防循环刷新**：sessionStorage 记「已为哪个构建刷过」，同一构建只自动刷一次
+  （防 CDN 供旧页时无限刷新）；try/catch 兜底禁用 storage 的环境。
+- **边界**：这只保护「装了新代码之后」的部署（旧内存脚本里没有这段检查，救不了本次
+  已中招的标签页 —— 那些刷新一次即愈）。无 JS / 无 ClientRouter 时不派发 astro:page-load，不动作。
+
+### 60.2 回归（§7.6）
+
+- 新常驻脚本 `scripts/verify-buildstamp.mjs`（4 条，已入 run-regress 队列）：
+  ① 戳一致时手动派发 astro:page-load **不**刷新（防误伤）；
+  ② 伪造旧戳（= 跨部署存量标签页）**必须**触发整页刷新；
+  ③ 刷新后戳一致；④ 防环：防护表已记该构建时**必须**放弃刷新。
+  判据缺陷态（无 §60 脚本 / 无防环）分别会红。
+- 本地全量 22 脚本批跑见 §59.4 同款口径（ghhot 仍受凌晨空窗影响，见 §59.4 取证）。

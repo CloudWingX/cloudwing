@@ -28,6 +28,12 @@ const withParticles = true;
 // 全站背景视频开关（见 site.ts 的 VIDEO_BG）：
 // 开着的时候 body 会加 .has-video-bg，让不透明页面底色让位给视频（见 motion.css）。
 const hasVideoBg = Boolean(VIDEO_BG.src);
+// 构建指纹（§60，2026-09-21）：每次构建唯一。软导航换进来的是新 DOM（带新指纹），
+// 而标签页里的 JS 还是首次加载那一版 —— 部署后仍开着的存量标签页会出现
+// 「DOM 新、逻辑旧」错配（实测症状：画廊点文件夹 URL 变了但视图不切，§59.5）。
+// 头部内联脚本比对不一致时整页刷新一次自愈（sessionStorage 防循环刷新）。
+// 模块级求值：一次构建内所有页面共享同一指纹；dev 恒为 'dev'（不触发刷新）。
+const BUILD_ID = import.meta.env.PROD ? Date.now().toString(36) : 'dev';
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -65,6 +71,7 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
     <meta name="twitter:image" content={ogImageAbs} />
     <link rel="canonical" href={Astro.url.href} />
     <meta name="theme-color" content="#070b0f" />
+    <meta name="cw-build" content={BUILD_ID} />
     <script is:inline>
       // 主题：全站只有一套**暗色**（亮色主题与切换按钮已删除）。
       // 这里把 data-theme 尽早写成 dark，避免首屏出现浅色闪烁；主题色 meta 同步为深色。
@@ -76,6 +83,29 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
       })();
       // 尽早打上 js 标记，让「入场/显现」动效只在 JS 可用时接管（无 JS 则直接显示）
       document.documentElement.classList.add('js');
+    </script>
+    <script is:inline>
+      // §60 构建指纹自愈（2026-09-21）：ClientRouter 软导航后，astro:page-load 时
+      // 比对「当前 DOM 的 cw-build 戳」与「本标签页 JS 首次加载时记下的戳」。
+      // 不一致 = 存量标签页跨部署（DOM 新、JS 旧）→ 整页刷新一次拿齐新 JS。
+      // sessionStorage 防环：对同一构建只自动刷一次；刷新后仍不一致（如 CDN 供旧页）就放弃。
+      // 这是对「监听器闭包抓旧构建逻辑」这一 §5 铁律跨部署变体的兜底，不是替代。
+      (function () {
+        var m = document.querySelector('meta[name="cw-build"]');
+        window.__cwBuildStamp = m ? m.getAttribute('content') : '';
+        document.addEventListener('astro:page-load', function () {
+          var cur = document.querySelector('meta[name="cw-build"]');
+          cur = cur ? cur.getAttribute('content') : '';
+          if (!cur || cur === window.__cwBuildStamp) return;
+          try {
+            var KEY = 'cwBuildReload';
+            if (sessionStorage.getItem(KEY) === cur) return;
+            sessionStorage.setItem(KEY, cur);
+          } catch (e) {}
+          window.__cwBuildStamp = cur;
+          location.reload();
+        });
+      })();
     </script>
     <ClientRouter />
   </head>

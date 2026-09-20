@@ -13,6 +13,8 @@ const scripts = [
   'verify-interaction',
   'verify-log',
   'verify-shell',
+  // §60 构建指纹自愈（存量标签页跨部署自动刷新）——全局 head 脚本，紧跟 shell 之后
+  'verify-buildstamp',
   'verify-hero', 'verify-home', 'verify-nav-shrink', 'verify-nav',
   'verify-brand', 'verify-theme', 'verify-redesign', 'verify-search',
   'verify-videobg', 'verify-videobg-global', 'contrast-audit',
