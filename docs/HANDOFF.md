@@ -10,7 +10,9 @@
 > （见 §43.1），其"简版硬规则"职责并入本文件。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-20 深夜 **修复两处「软导航后交互失效」：右栏 GitHub 热榜切 tab 失效（§58）、
+> 最后更新：2026-09-20 傍晚 **画廊新增「文件夹视图」为默认（§59）：按 game 收拢成拟物文件夹、
+> 悬停翻盖动效、点文件夹进入图集；smoke 61 → 64**；
+> 此前深夜 **修复两处「软导航后交互失效」：右栏 GitHub 热榜切 tab 失效（§58）、
 > 画廊大图切页往返后点不开（§58）；smoke 58 → 61、verify-ghhot 9 → 11，两处都有常驻回归断言**；
 > 同日傍晚 **交接完善：全篇基线数字刷新（21 脚本 / 21/21 / smoke 58/58）、
 > §57 章节地图与阅读路径、09-20 changelog 补录（4 条）**；
@@ -51,7 +53,7 @@
 > 自检入口仍为 `cd endfield-blog && node scripts/run-regress.mjs`（**现为 21 个脚本**一次批跑）→
 > 最近一次 **21/21 全绿**（2026-09-20 下午，GitHub 热榜卡 + 新脚本 verify-ghhot 加入后的发布前全量，见 §56；
 > 此前 20/20 见 §53 / §54）；
-> 单入口 `node scripts/smoke.mjs` 为 **61/61**（2026-09-20 深夜，画廊软导航回归段 +3 后，见 §58）。
+> 单入口 `node scripts/smoke.mjs` 为 **64/64**（2026-09-20 傍晚，画廊文件夹视图回归段 +3 后，见 §59）。
 > ✅ **文案漂移现在有断言了**（2026-09-19）：`scripts/verify-copy.mjs`（31 条，见 §7.2 / §42.2）——
 > §32 那种"几何全绿却带着错文案上线"的缺陷类已被堵住。
 > ✅ **`React error #424` 已于 2026-09-18 定位并修掉**（见 §37）：根因是软导航时
@@ -77,7 +79,7 @@
 `border-check` / `imgstats` / `shot-*` 等——不在批跑队列但不是死代码，清单见 §7.2 表尾。）
 ⚠️ **"一键批跑"不等于"每次改动都要跑"** —— 测试按 §47 分层，全量只在 PR/合并/发布/明确要求时跑。
 
-> **接手第一件事**：`cd endfield-blog && npm run build && node scripts/smoke.mjs`（期望 **61/61**）。
+> **接手第一件事**：`cd endfield-blog && npm run build && node scripts/smoke.mjs`（期望 **64/64**）。
 > ⚠️ 必须用 `npm run build`（= `astro build && pagefind --site dist`）——只跑 astro build
 > 不会生成 pagefind 索引，verify-search 会全红。⚠️ 回归前确认 4321 服务是**新起的**
 > （陈旧的 preview 会让你测一小时的旧 dist，见 §41）。
@@ -1496,7 +1498,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 
 | 脚本 | 覆盖什么 | 当前基线 |
 |---|---|---|
-| `smoke.mjs` | ★总入口：各页横向溢出/控制台异常/侧栏存在与等高、长页两栏逐帧同步、"不钉在导航栏下"、软导航往返后的文章列表/详情跳转与热力图浮层交互、**软导航一圈后画廊大图开/关（§58）**、手机端侧栏隐藏（含 `/log/`） | **61/61**（2026-09-20 深夜画廊回归段 +3，见 §58） |
+| `smoke.mjs` | ★总入口：各页横向溢出/控制台异常/侧栏存在与等高、长页两栏逐帧同步、"不钉在导航栏下"、软导航往返后的文章列表/详情跳转与热力图浮层交互、**软导航一圈后画廊大图开/关（§58）+ 画廊文件夹墙/进图集/返回（§59）**、手机端侧栏隐藏（含 `/log/`） | **64/64**（2026-09-20 傍晚画廊文件夹视图段 +3，见 §59） |
 | `verify-hero.mjs` | 首页 Hero：几何/比例 + 与主栅格对齐（同宽/同内边距/内容左缘重合）+ 两行标题 + 强调色预设 + **整块竖向居中/容器居中/标题字号/`--card-shift`** + **手机端代码卡片按内容展开（未被压扁裁切）** + **代码卡片磨砂玻璃（模糊 ≥16px 且提饱和 / 多层玻璃）** | **88/88**（2026-09-18：修手机端卡片被裁 85 → 86，加磨砂玻璃 2 条 → 88） |
 | `verify-home.mjs` | 首页四层结构（最新**博客**）、图片策略、防 CLS 容器、alt、区块间距、SEO（6 页）、移动端单列 | **26/26**（2026-09-19 晚 `/log/` 加入后 +1） |
 | `verify-nav-shrink.mjs` | 导航三态（贴顶通栏/滚动胶囊/回顶）+ 形态过渡 + 移动端汉堡菜单（**含"抽屉一级 5 链接 + 记录组 3 链接共 8"、"记录"分组存在且无 ?tag=/?game= 分类链接"、"已无外链按钮"、"左右各内缩 12px"、"四角圆角 ≥12px 且一致"**）+ **导航容器与主内容容器同宽、同左缘、自身居中** | **40/40**（2026-09-19 深夜「记录」下拉改断言，条数不变） |
@@ -1903,7 +1905,7 @@ node scripts/run-regress.mjs          # 期望「总结: 21/21 通过」
 # 4) 线上同一套（先确认推送成功、CF 构建完成；反向特征检查见 §7.5）
 git ls-remote origin main
 node scripts/poll-deploy.mjs --have '--w-max:\s*1300px' --not 'hero::before'   # 通了才继续
-node scripts/smoke.mjs https://cloudwing.pages.dev                 # 期望 61/61（#424 已修复，见 §37）
+node scripts/smoke.mjs https://cloudwing.pages.dev                 # 期望 64/64（#424 已修复，见 §37）
 node scripts/verify-videobg.mjs https://cloudwing.pages.dev dark   # 期望 22/22（含"容器边缘无分界线"）
 node scripts/verify-copy.mjs https://cloudwing.pages.dev           # 期望 31/31（走 sitemap 枚举全站页面）
 
@@ -2926,7 +2928,7 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
 | 顺序 | 读什么 | 目的 |
 |---|---|---|
 | 1 | §0 一句话现状 + §0.1–§0.4 轮次摘要 | 站点是什么、现在什么状态 |
-| 2 | §1 五分钟上手 → 照做一遍 build + smoke（期望 **61/61**） | 把本地环境跑起来 |
+| 2 | §1 五分钟上手 → 照做一遍 build + smoke（期望 **64/64**） | 把本地环境跑起来 |
 | 3 | §2 环境硬约束 + §3 目录结构 | 本机的坑、每个目录谁负责 |
 | 4 | §5 三条铁律 + §6 踩坑手册（先通读标题） | **不做错事**；细节等踩到再查 |
 | 5 | §7 验证与调试（§7.1 调试环境三步、§7.2 脚本清单表、§7.6 断言三铁律） | 学会怎么验证自己的改动 |
@@ -3007,3 +3009,41 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
   在线上要几秒，`sideSticky()` 未跑完就量了）。**待办**：把 smoke [3] 的固定 sleep 换成
   「等 pathname 变化 + 等页面装载完成」的轮询，[1] 的等高断言等 boot 完成再量
   ——属测试基建改动，动手前过一下 §7.6 并知会站长。复现/判别脚本：`_shots/_smoke-gal-debug.mjs`（3.5s 版）与 `_shots/_smoke-gal-slow.mjs`（8s 版）。
+
+## 59. 画廊「文件夹视图」为默认（2026-09-20 傍晚）★
+
+**站长需求**：画廊里的图按分类收归到文件夹，文件夹拟物风、贴合全站暗色玻璃风，
+悬停有「文件夹张开」动效，点击文件夹进入对应图集。已确认口径：**按 `game` 字段分类 + 文件夹视图为默认**。
+数据现状：40 张截图全是 `Minecraft` → 今天只有 1 个文件夹；未来新增其它游戏的截图，
+frontmatter 按 `game` 分组的逻辑会**自动长出新文件夹，零页面改动**。
+
+### 59.1 实现（`src/pages/gallery/index.astro` 单文件闭环）
+
+- **数据**：frontmatter 新增 `folders` = 按 `game` 分组（按张数降序），每夹带
+  `count` / `latest` / `thumbs`（最新 3 张缩略图，当文件夹口探出的「纸张」）。
+- **视图互斥**：`#gal-folders-sec`（文件夹墙，默认）/ `#gal-album-sec`（原玻璃卡片网格 + 大图 dialog）。
+  浏览器端按 `?game=` 有无切换 —— 复用既有 `applyGameFilter`（`astro:page-load` 重放），
+  **零新增节点缓存**（§5 铁律无新风险面）；文件夹本体是 `<a href="/gallery/?game=X">`，
+  软导航拦截、前进后退、「返回文件夹」全部天然可用。图集视图里仍按 `game` 过滤卡片。
+- **拟物 CSS**：`folder-back`（玻璃底板）→ `folder-papers`（3 张缩略图错位叠放，`nth-child` 各自
+  rotate/translate）→ `folder-front`（带舌片 `::before` 的盖，`transform-origin: bottom`，
+  悬停 `rotateX(46deg)` 向后翻开 + accent 辉光，纸张上浮错位）→ `folder-info`（标签固定最上层，
+  不随盖翻动，保证可读）。颜色全走 `--glass` / `--accent` / `--line-2` 令牌，
+  `prefers-reduced-motion` 全量降级（悬停不翻开）。手机端两列、高度收紧。
+
+### 59.2 顺手修的一个老 bug
+
+`.gal-filter { display:inline-flex }` 一直压过 `[hidden]` 的 UA 样式 —— 分类筛选条
+**在文件夹视图下其实从未隐藏过**（旧版首屏也能看到「分类 — 40 张」）。补
+`.gal-filter[hidden]{display:none!important}`；截图对比见 `_shots/folder-idle.png`（修后无筛选条）。
+
+### 59.3 回归断言与验证（§7.6）
+
+- `smoke.mjs` [3] 画廊段 61 → **64**，新增三条：① 默认见文件夹墙、图集隐藏；
+  ② 点文件夹 → URL 带 `?game=`、文件夹墙隐藏、图集显示且**有可见宽度 > 0 的卡片**；
+  ③ 「返回文件夹」→ `/gallery/` 无查询串、回到文件夹墙。判据在缺陷态（无 §59 结构）必然红
+  （`gal-folders-sec` 不存在），已满足"先证红再接受"。
+- 本地全量 **64/64**；软导航一圈后仍无 JS 异常。视觉：`_shots/folder-idle.png`（静态）+
+  `folder-hover.png`（悬停翻盖态，CDP `Input.dispatchMouseEvent` 移入后截图）。
+- 交互零新增 JS 监听（翻盖是纯 CSS hover，进图集走 `<a>` 软导航），§58 类
+  「闭包抓死旧节点」风险面不新增。

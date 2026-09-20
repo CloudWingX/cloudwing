@@ -1,6 +1,8 @@
 ---
 // 画廊（原“影集”，V44 重做）：去掉沉浸式 DomeGallery 球幕，
 // 改为与全站风格统一的玻璃卡片网格 + 点击大图浏览；背景沿用全站 Particles。
+// §59（2026-09-20）：新增「文件夹视图」为默认 —— 按 game（站点既有分类字段）
+// 收拢成拟物文件夹，悬停文件夹有「翻开盖子」动效，点文件夹进入对应图集。
 import SidebarLayout from '../../layouts/SidebarLayout.astro';
 import { getCollection } from 'astro:content';
 import { imgUrl } from '../../site';
@@ -38,6 +40,22 @@ const shots = all
     };
   });
 const count = String(shots.length);
+// 文件夹视图（§59，2026-09-20 站长要求）：按 game（站点既有分类字段）收拢成拟物文件夹，
+// 文件夹视图为默认；点文件夹 → /gallery/?game=X 进入对应图集（浏览器端切换，见页面底部脚本）。
+// 未来新增其它游戏的截图时，文件夹会自动长出来，不需要改页面。
+const gameMap = new Map();
+for (const s of shots) {
+  if (!gameMap.has(s.game)) gameMap.set(s.game, []);
+  gameMap.get(s.game).push(s);
+}
+const folders = [...gameMap.entries()]
+  .sort((a, b) => b[1].length - a[1].length)
+  .map(([game, list]) => ({
+    game,
+    count: list.length,
+    latest: list[0]?.date ?? '',
+    thumbs: list.slice(0, 3).map((s) => s.image), // 最新 3 张作为文件夹口探出的「纸张」
+  }));
 // 分类（游戏/场景）在导航栏「画廊」二级菜单里：点分类 → /gallery/?game=xxx。
 // 静态站构建时拿不到查询串，所以过滤在浏览器端做（见页面底部脚本）。
 ---
@@ -50,11 +68,41 @@ const count = String(shots.length);
         <span class="gf-k">分类</span>
         <span class="gf-v" id="gal-cat">—</span>
         <span class="gf-n"><span id="gal-count">{count}</span> 张</span>
-        <a class="gf-clear" href="/gallery/">显示全部</a>
+        <a class="gf-clear" href="/gallery/">返回文件夹</a>
       </p>
     </header>
 
-    <section class="section" style="padding-top:1.6rem">
+    <!-- §59 文件夹墙（默认视图）：按 game 收拢的拟物文件夹 -->
+    <section class="section" id="gal-folders-sec" style="padding-top:1.6rem">
+      <ul class="gal-folders">
+        {
+          folders.map((f, i) => (
+            <li class="gal-folder-item" data-ent style={`--ad:${(i % 8) * 70}ms`}>
+              <a
+                class="folder"
+                href={`/gallery/?game=${encodeURIComponent(f.game)}`}
+                aria-label={`打开图集：${f.game}，共 ${f.count} 张`}
+              >
+                <span class="folder-back" aria-hidden="true" />
+                <span class="folder-papers" aria-hidden="true">
+                  {f.thumbs.map((t, j) => (
+                    <img class="folder-paper" src={t} alt="" loading="lazy" style={`--pi:${j}`} />
+                  ))}
+                </span>
+                <span class="folder-front" aria-hidden="true" />
+                <span class="folder-info">
+                  <span class="folder-game">{f.game}</span>
+                  <span class="folder-meta">{f.count} 张 · 最近 {f.latest}</span>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <!-- 图集视图（?game=X 时显示）：原玻璃卡片网格 + 大图浏览 -->
+    <section class="section" id="gal-album-sec" style="padding-top:1.6rem" hidden>
       <ul class="gal-grid">
         {
           shots.map((s, i) => (
@@ -142,6 +190,10 @@ const count = String(shots.length);
     background: var(--accent-soft);
   }
   .gal-item[hidden] { display: none !important; }
+  /* [hidden] 会被下面的 display:inline-flex 覆盖，必须显式压住（§59 顺手修） */
+  .gal-filter[hidden] { display: none !important; }
+  /* §59：两个视图互斥切换（浏览器端按 ?game= 切，见页面底部脚本） */
+  #gal-folders-sec[hidden], #gal-album-sec[hidden] { display: none !important; }
   /* 画廊页样式：玻璃卡网格，跟随浅/深主题 */
   .gal-grid {
     list-style: none;
@@ -230,6 +282,140 @@ const count = String(shots.length);
   }
   .gal-meta { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-2); }
 
+  /* ── §59 拟物文件夹（暗色玻璃 + accent 染色，贴合全站风格） ─────────
+     结构：folder-back（底板）→ folder-papers（3 张缩略图当“纸”）→
+     folder-front（带舌片的盖，铰链在底边）→ folder-info（固定标签）。
+     悬停：盖子绕底边向后翻开（rotateX），纸张上浮错位，露出文件夹口。 */
+  .gal-folders {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+  }
+  .folder {
+    position: relative;
+    display: block;
+    height: 210px;
+    perspective: 700px;
+    text-decoration: none;
+    color: var(--ink);
+    outline-offset: 4px;
+    cursor: pointer;
+  }
+  /* 底板：文件夹的“底” */
+  .folder-back {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--r-l);
+    border: var(--line-w) solid var(--line-2);
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-sm);
+  }
+  /* 纸张：最新 3 张缩略图从文件夹口探出 */
+  .folder-papers {
+    position: absolute;
+    left: 13%;
+    right: 13%;
+    top: 14px;
+    height: 62%;
+    z-index: 2;
+  }
+  .folder-paper {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    border: var(--line-w) solid var(--line-2);
+    overflow: hidden;
+    background: var(--paper-1);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.32s var(--ease), box-shadow 0.32s var(--ease);
+  }
+  .folder-paper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s var(--ease);
+  }
+  /* 三张纸错位叠放（--pi 由行内样式给 0/1/2，仅作语义标记；错位用 nth-child） */
+  .folder-paper:nth-child(1) { transform: rotate(-3.5deg) translate(-8px, 2px); }
+  .folder-paper:nth-child(2) { transform: rotate(1.5deg) translateY(-2px); }
+  .folder-paper:nth-child(3) { transform: rotate(4.5deg) translate(8px, 3px); }
+  /* 盖：舌片 + 铰链在底边，悬停向后翻开 */
+  .folder-front {
+    position: absolute;
+    left: -1.5%;
+    right: -1.5%;
+    bottom: -2px;
+    height: 56%;
+    z-index: 3;
+    border-radius: var(--r-l);
+    border: var(--line-w) solid var(--line-2);
+    background: linear-gradient(180deg,
+      color-mix(in srgb, var(--accent) 8%, var(--glass)),
+      color-mix(in srgb, var(--accent) 20%, var(--glass)));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-sm);
+    transform-origin: 50% 100%;
+    transition: transform 0.34s var(--ease), border-color 0.34s var(--ease), box-shadow 0.34s var(--ease);
+  }
+  .folder-front::before {
+    content: '';
+    position: absolute;
+    top: -13px;
+    left: 7%;
+    width: 40%;
+    height: 15px;
+    border: var(--line-w) solid var(--line-2);
+    border-bottom: none;
+    border-radius: 9px 9px 0 0;
+    background: color-mix(in srgb, var(--accent) 8%, var(--glass));
+  }
+  .folder:hover .folder-front,
+  .folder:focus-visible .folder-front {
+    transform: rotateX(46deg);
+    border-color: var(--accent);
+    box-shadow: 0 18px 40px -18px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  .folder:hover .folder-paper:nth-child(1),
+  .folder:focus-visible .folder-paper:nth-child(1) { transform: rotate(-6deg) translate(-12px, -14px); }
+  .folder:hover .folder-paper:nth-child(2),
+  .folder:focus-visible .folder-paper:nth-child(2) { transform: rotate(0.5deg) translateY(-18px); }
+  .folder:hover .folder-paper:nth-child(3),
+  .folder:focus-visible .folder-paper:nth-child(3) { transform: rotate(6deg) translate(12px, -12px); }
+  .folder:hover .folder-paper img { transform: scale(1.06); }
+  /* 标签固定在最上层，不随盖子翻动，保证可读 */
+  .folder-info {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 12px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0 1.1rem;
+    pointer-events: none;
+  }
+  .folder-game { font-weight: 500; font-size: 1.02rem; }
+  .folder-meta {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-2);
+    letter-spacing: 0.04em;
+  }
+  @media (max-width: 620px) {
+    .gal-folders { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
+    .folder { height: 170px; }
+    .folder-info { padding: 0 0.8rem; bottom: 10px; }
+    .folder-game { font-size: 0.92rem; }
+  }
+
   /* 大图 dialog */
   .gal-dialog {
     border: var(--line-w) solid var(--line-2);
@@ -284,6 +470,11 @@ const count = String(shots.length);
 
   @media (prefers-reduced-motion: reduce) {
     .gal-card, .gal-cover img { transition: none !important; }
+    .folder-front, .folder-paper, .folder-paper img { transition: none !important; }
+    .folder:hover .folder-front, .folder:focus-visible .folder-front { transform: none; }
+    .folder:hover .folder-paper:nth-child(1) { transform: rotate(-3.5deg) translate(-8px, 2px); }
+    .folder:hover .folder-paper:nth-child(2) { transform: rotate(1.5deg) translateY(-2px); }
+    .folder:hover .folder-paper:nth-child(3) { transform: rotate(4.5deg) translate(8px, 3px); }
   }
 </style>
 
@@ -340,17 +531,24 @@ const count = String(shots.length);
     document.addEventListener('astro:page-load', wireDlg);
   }
 
-  // 分类筛选：导航栏「画廊」二级菜单点分类 → /gallery/?game=xxx。
-  // 静态站构建时读不到查询串，所以在浏览器端过滤（软导航后同样重新应用）。
+  // 视图切换 + 分类筛选（§59）：无 ?game= → 文件夹墙（默认）；有 ?game=X → 图集视图，
+  // 且只显示该分类的卡片。「返回文件夹」链接走 /gallery/ 软导航，回来后由
+  // astro:page-load 重新应用 —— 与本文件其它交互一样，绝不缓存节点引用。
   const applyGameFilter = () => {
     const grid = document.querySelector('.gal-grid');
     if (!grid) return;
     let want = null;
     try {
       want = new URLSearchParams(location.search).get('game');
+      if (want === '') want = null; // ?game= 空值当全部
     } catch (err) {
       want = null;
     }
+    const foldersSec = document.getElementById('gal-folders-sec');
+    const albumSec = document.getElementById('gal-album-sec');
+    const inAlbum = !!want;
+    if (foldersSec) foldersSec.hidden = inAlbum;
+    if (albumSec) albumSec.hidden = !inAlbum;
     const items = Array.from(grid.querySelectorAll('.gal-item'));
     let n = 0;
     items.forEach((it) => {

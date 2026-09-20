@@ -258,6 +258,32 @@ const main = async () => {
       if (galNav) break;
     }
     check('软导航一圈后进画廊、卡片就位', galNav === true);
+    // §59 文件夹视图回归（2026-09-20）：默认看到文件夹墙、图集隐藏
+    await sleep(600);
+    const folderWall = await evaluate(`(() => {
+      const fw = document.getElementById('gal-folders-sec');
+      const ab = document.getElementById('gal-album-sec');
+      return { has: !!fw, fwHidden: fw ? fw.hidden : null, abHidden: ab ? ab.hidden : null,
+        folders: document.querySelectorAll('.gal-folders .folder').length };
+    })()`);
+    check('默认显示文件夹墙（§59）',
+      folderWall.has === true && folderWall.fwHidden === false && folderWall.abHidden === true,
+      JSON.stringify(folderWall));
+    // 点文件夹 → /gallery/?game=X 进入对应图集（文件夹墙隐藏、图集显示、有可见卡片）
+    await evaluate(`document.querySelector('.gal-folders .folder')?.click()`);
+    let galAlbum = false;
+    const t3 = Date.now();
+    while (Date.now() - t3 < 8000) {
+      await sleep(400);
+      galAlbum = !!(await evaluate(`(() => {
+        const fw = document.getElementById('gal-folders-sec');
+        const ab = document.getElementById('gal-album-sec');
+        const vis = [...document.querySelectorAll('[data-gal-open]')].some((c) => c.getBoundingClientRect().width > 0);
+        return /[?&]game=/.test(location.search) && fw?.hidden === true && ab?.hidden === false && vis;
+      })()`));
+      if (galAlbum) break;
+    }
+    check('点文件夹进入对应图集（§59）', galAlbum === true);
     await evaluate(`document.querySelector('[data-gal-open]')?.click()`);
     await sleep(800);
     const galDlgOpen = await evaluate(`document.getElementById('galDialog')?.open === true`);
@@ -266,6 +292,21 @@ const main = async () => {
     await sleep(400);
     const galDlgClosed = await evaluate(`document.getElementById('galDialog')?.open !== true`);
     check('画廊大图可关闭', galDlgClosed === true);
+    // 「返回文件夹」→ /gallery/（无查询串）应回到文件夹墙（§59）
+    await evaluate(`document.querySelector('.gf-clear')?.click()`);
+    let galBack = false;
+    const t4 = Date.now();
+    while (Date.now() - t4 < 8000) {
+      await sleep(400);
+      galBack = !!(await evaluate(`(() => {
+        const fw = document.getElementById('gal-folders-sec');
+        const ab = document.getElementById('gal-album-sec');
+        return location.pathname === '/gallery/' && !location.search &&
+          fw?.hidden === false && ab?.hidden === true;
+      })()`));
+      if (galBack) break;
+    }
+    check('「返回文件夹」回到文件夹墙（§59）', galBack === true);
     check('软导航一圈后仍无 JS 异常', errors.length === 0, errors[0] || '');
   });
 
