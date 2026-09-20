@@ -36,11 +36,13 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
 const BUILD_ID = import.meta.env.PROD ? Date.now().toString(36) : 'dev';
 ---
 <!doctype html>
-<!-- ★ 深色画布兜底（§61）：html 行内背景在**任何 CSS/JS 之前**就位，杜绝
-     「CSS 未就绪就首绘」路径下的白屏闪（弱网硬加载 / ClientRouter 拉取失败回退
-     硬导航 / 手机浏览器首绘）。ClientRouter 换页会同步新文档的 html 属性，
-     新文档同样带这个行内样式，软导航后不丢。 -->
-<html lang="zh-CN" style="background:#03060a">
+<!-- ⚠️ 绝不能给 <html> 设不透明背景（2026-09-21 §61 实测回归）：
+     本站背景视频层是 position:fixed; z-index:-4，它的可见性依赖
+     「html 无背景 → body 的深色渐变传播到画布（视口最底层）→ 负 z-index 层画在画布之上」。
+     一旦 html 有了不透明背景，body 渐变不再传播、留在 body 上，
+     绘制顺序就会盖住一切负 z-index 层 → 背景视频/网格全部隐身。
+     「CSS 未就绪白屏闪」的防护只靠下面的 meta color-scheme + theme-color（足够，见 §61.2）。 -->
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

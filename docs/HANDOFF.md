@@ -3123,3 +3123,21 @@ PNG 算亮度（`_shots/probe-whiteflash.mjs` + `measure-flash.mjs`）：**无�
   152 帧无亮帧（max mean 23.8，文件夹纸改即时加载后淡入期即有实际内容）。
 - ⚠️ 若站长侧仍见白闪：需要录屏或说明白的是**整屏还是局部**、哪条操作路径 ——
   Chromium 侧软导航已证无白帧，剩余候选只有用户环境的硬导航/GPU 合成路径。
+
+### 61.3 §61 第一版引入回归又回退（2026-09-21 早，站长发现：背景没了）
+
+- **回归**：第一版给 `<html>` 加了行内 `style="background:#03060a"`，上线后站长发现
+  **背景视频整个没了**。根因：背景视频层是 `position:fixed; z-index:-4`（VideoBackground），
+  它的可见性依赖「**html 无背景 → body 的深色渐变传播到画布**（由视口画在最底层）→
+  负 z-index 层画在画布之上」。html 一旦有不透明背景，body 渐变不再传播、留在 body 上，
+  绘制顺序就盖住一切负 z-index 层 → 视频 + grid-bg 全部隐身
+  （取证：`_shots/bg-home-now.png`（坏，mean 17.4，纯平渐变）vs
+  `bg-home-fixed.png`（好，mean 32.0，视频纹理回来））。
+- **回退**：撤掉 html 行内背景；白屏闪防护只保留 `meta color-scheme` + `theme-color`
+  （现代浏览器 pre-CSS 画布即暗，够用）。**铁律升级：绝不能给 `<html>` 设不透明背景**，
+  已写进 Base.astro 的 html 标签上方注释。
+- ⚠️ **同类坑记一辈子**：这个站点「画布由 body 传播、装饰层负 z-index」的分层设计，
+  意味着任何「给根元素加底色」的想法都会隐藏所有装饰层 —— 改动前先想绘制顺序
+  （CSS 2.1 Appendix E：根元素背景 → 负 z-index → 块级背景 → …）。
+- 修后 smoke **64/64**；推送后线上以 `poll-deploy --not 'style="background'` +
+  首页截图（视频纹理）双确认。
