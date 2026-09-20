@@ -116,9 +116,29 @@ console.log('\n[A] 鼠标拖选正文：应选不中（含对照组，证明拖�
 // 两种情况下都选不中，会掩盖真实结论（对照组必须能红，否则这条断言没有意义）。
 // 2026-09-20：标题下的描述简介按站长要求全站删除（§52），拖选对照改用右栏
 // 「今日一言」的引文（.sw-quote blockquote，纯文本、够长、不在链接里）。
-const para = await boxOf('.sw-quote blockquote');
+// 2026-09-20 晚（§56）：右栏顶部新增 GitHub 热榜卡——① 异步渲染会改侧栏高度，先等
+//   它 ready 再量坐标（骨架期 scrollIntoView 会停在当时的可滚动上限）；
+//   ② /nav/ 这类短页上引文只在页面滚到最底时才进视口（scrollIntoView 在溢出裁剪
+//   祖先上会提前停），所以改为直接滚到页底再量矩形。
+const para = await ev(`(async () => {
+  const hot = document.querySelector('[data-ghhot]');
+  if (hot) {
+    for (let i = 0; i < 40 && hot.dataset.ghhotState !== 'ready' && hot.dataset.ghhotState !== 'error'; i++) {
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }
+  const q = document.querySelector('.sw-quote blockquote');
+  if (!q) return null;
+  // 全局 CSS 是 smooth 滚动：不指定 behavior 的话 scrollTo 也在平滑滚动，
+  // 400ms 后量到的还是中途坐标——必须 instant（同 boxOf 的教训）。
+  window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' });
+  await new Promise((r) => setTimeout(r, 400));
+  const r = q.getBoundingClientRect();
+  if (r.height < 8 || r.top < 0 || r.bottom > window.innerHeight) return null; // 仍够不着
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2, l: r.left, t: r.top, w: r.width, h: r.height };
+})()`);
 if (!para) {
-  check('找得到一段正文（.sw-quote blockquote）', false, '选择器没命中');
+  check('找得到一段正文（.sw-quote blockquote）', false, '选择器没命中或滚到页底仍不可见');
 } else {
   await ev('getSelection().removeAllRanges()');
   await dragAcross(para.l + 4, para.t + para.h / 2, para.l + Math.min(para.w - 6, 220), para.t + para.h / 2);

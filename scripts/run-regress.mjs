@@ -16,6 +16,7 @@ const scripts = [
   'verify-hero', 'verify-home', 'verify-nav-shrink', 'verify-nav',
   'verify-brand', 'verify-theme', 'verify-redesign', 'verify-search',
   'verify-videobg', 'verify-videobg-global', 'contrast-audit',
+  'verify-ghhot',
   'mobile-shots', 'diag-errors', 'diag-424',
 ];
 

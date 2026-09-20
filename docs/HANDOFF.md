@@ -10,7 +10,9 @@
 > （见 §43.1），其"简版硬规则"职责并入本文件。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-20 上午 **归档页标题下新增「更新热力图」（GitHub contributions 风格，
+> 最后更新：2026-09-20 下午 **右栏新增「GitHub 热榜」卡（日/周/月/年四周期，时间桶缓存
+> 实现「24 点自动换新」，新第 21 号脚本 verify-ghhot，见 §56）**；
+> 同日中午 **归档页标题下新增「更新热力图」（GitHub contributions 风格，
 > 按日更新条数着色，见 §55；顺带修掉 `--accent-rgb` 只在首页定义、其它页 rgba() 静默失效的坑）**；
 > 同日凌晨第三轮 **顶栏「记录」点击不再跳转——只开合二级菜单
 > （捕获阶段拦截 + stopPropagation 压过 ClientRouter，见 §54）**；
@@ -2889,3 +2891,16 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
 - 同日午间追加（站长要求「宽一点大一点」）：格子不再写死 10px——`.hm-week`/`.hm-month` 改
   `flex: 1 1 0` 均分内容列宽，格子 `aspect-ratio: 1/1` 等比拉伸（实测约 13px，整体宽约 590px）；
   图例小色块单独定回 10px 固定尺寸。verify-shell 复跑 2× 全过（/account/ 首跑 1.3px 为字体时序假失败）。
+
+## §56 右栏「GitHub 热榜」卡（2026-09-20 下午）
+
+**站长要求**：右侧栏站点统计卡片上方做 GitHub 热榜，每日/每周/每月/每年四个子选项（默认每日），每日榜每天 24 点自动刷新、周榜每周最后一天 24 点、月/年同理，点击跳转对应仓库。
+
+- 位置与结构：`SidebarWidgets.astro` 的 `.shell-right` 首位（STATS 卡之前）；标题 GITHUB / 热榜 + 四 tab（每日/每周/每月/每年，`role=tablist/tab` + `aria-selected`）+ 条目列表（排名 / 全名 / ★star / 语言圆点 / 一行描述）+ 底注。交互在 `ui.js` 的 `githubTrending()`（照 weatherWidget 模式）。
+- 数据源：**GitHub Search API**（`/search/repositories?q=created:>=桶起点 stars:>10&sort=stars`，官方接口、无需鉴权、CORS 可用）——「期间内新建仓库按 star 排序」，一个代码路径覆盖全部四个周期（GitHub 无官方 trending API，第三方源不稳定故不用）。
+- **刷新语义的实现 = 时间桶缓存**（localStorage `__cwGhHot_v1`，按周期分键）：桶 ID = 日桶当天 / 周桶本周周一 / 月桶 `YYYY-MM` / 年桶 `YYYY`；桶滚动即旧缓存失效自动重拉——严格等价于「每日 24 点 / 周、月、年最后一天 24 点换新」。页面驻留时每分钟比对当前周期桶 ID，跨桶即时重拉（不用等切页）。
+- 细节：语言色点映射 GitHub Linguist 色（24 种，未知灰点）；star ≥1000 显示 `1.2k`；加载骨架 shimmer 占位高 520px ≈ 8 条实高（防渲染后右栏整体下跳的 CLS）；限流/断网进 error 态带「重试」按钮。
+- **新第 21 号脚本 `verify-ghhot.mjs`**（纳入 run-regress，20→21）：① 卡片位于 STATS 卡正上方；② 四 tab + 默认每日；③ 每日榜真实渲染 ≥5 条；④ 链接指向 github.com 仓库；⑤ 条目带 star；⑥ 切每周正常渲染；⑦ 日/周缓存桶 = 当天 / 本周一（自动换新的实现依据）。⚠️ 真实调用 api.github.com（搜索接口无鉴权限流 10 次/分），脚本只实拉日/周两周期，别在循环里跑。
+- ⚠️ **连带修 verify-interaction A 组拖选对照组（§49）**：热榜卡把右栏引文卡推低后，/nav/ 这类短页上引文只在**滚到页底**时才进视口（scrollIntoView 在溢出裁剪祖先上会提前停），且热榜异步渲染期量坐标会拿到骨架期的滚动上限——对照组改为「等热榜 ready → scrollTo 页底（必须 `behavior:'instant'`，全局 smooth 滚动的坑再 +1）→ 量矩形（底部越界即报不可达）」。
+- 验证：CDP 探针全过（位置 / 默认每日 / 8 条真实数据 / github.com 链接 / 切 tab / 缓存桶 / 切回秒出走缓存）；verify-ghhot 9/9；verify-interaction 复跑 2× 12/12；**发布前全量 21/21**（§47.2）。
+- 截图：`_shots/ghhot.png`。

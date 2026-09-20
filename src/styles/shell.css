@@ -691,6 +691,137 @@
   color: var(--ink-3);
   margin-left: 0.1em;
 }
+
+/* ---------- 右栏挂件：GitHub 热榜（§56，日/周/月/年四周期）---------- */
+.sw-hot-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin-bottom: 0.55rem;
+}
+.sw-hot-tab {
+  appearance: none;
+  border: var(--line-w-pill) solid var(--line-2);
+  border-radius: var(--r-s);
+  background: color-mix(in srgb, var(--glass) 70%, transparent);
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 0.22rem 0;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.sw-hot-tab:hover { color: var(--ink-2); }
+.sw-hot-tab[aria-selected='true'] {
+  color: var(--accent-deep);
+  border-color: rgba(var(--accent-rgb), 0.5);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+.sw-hot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 150px; /* 骨架/列表高度接近，避免加载时卡片高度跳变 */
+}
+/* 加载骨架：占位高度对齐 8 条渲染后的实际列表（实测 ~529px），
+   避免热榜渲染完成后右栏下方内容整体下跳（CLS） */
+.sw-hot[data-ghhot-state='loading'] .sw-hot-list::before {
+  content: '';
+  display: block;
+  height: 520px;
+  border-radius: var(--r-s);
+  background: linear-gradient(
+    100deg,
+    rgba(var(--accent-rgb), 0.05) 40%,
+    rgba(var(--accent-rgb), 0.12) 50%,
+    rgba(var(--accent-rgb), 0.05) 60%
+  );
+  background-size: 200% 100%;
+  animation: sw-hot-shimmer 1.2s linear infinite;
+}
+@keyframes sw-hot-shimmer {
+  to { background-position: -200% 0; }
+}
+.sw-hot-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.32rem 0.1rem;
+}
+.sw-hot-item + .sw-hot-item {
+  border-top: 1px solid color-mix(in srgb, var(--line-2) 55%, transparent);
+}
+.sw-hot-rank {
+  flex: none;
+  width: 1.1em;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.sw-hot-item:nth-child(-n + 3) .sw-hot-rank { color: var(--accent); font-weight: 600; }
+.sw-hot-main { min-width: 0; flex: 1; }
+.sw-hot-name {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sw-hot-name:hover { color: var(--accent-deep); }
+.sw-hot-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.1rem;
+  font-size: 0.68rem;
+  color: var(--ink-3);
+}
+.sw-hot-lang { display: inline-flex; align-items: center; gap: 0.25rem; }
+.sw-hot-lang i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  flex: none;
+}
+.sw-hot-stars { font-variant-numeric: tabular-nums; }
+.sw-hot-desc {
+  margin: 0.12rem 0 0;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--ink-3);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sw-hot-note {
+  margin: 0.55rem 0 0;
+  font-size: 0.66rem;
+  color: var(--ink-3);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.sw-hot[data-ghhot-state='error'] .sw-hot-note { color: #e8a79f; }
+.sw-hot-refresh {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.66rem;
+  color: var(--accent-deep);
+  cursor: pointer;
+}
+.sw-hot-refresh:hover { text-decoration: underline; text-underline-offset: 3px; }
 .sw-last {
   margin: 0;
   font-family: var(--font-mono);

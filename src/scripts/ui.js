@@ -155,6 +155,7 @@ function boot() {
     calPanel,           // 侧栏更新日历：点日期展开当天记录
     // navSub 已移除：导航栏改成参考形态后不再有二级菜单（分类改由左栏导航树承担）
     weatherWidget,      // 左侧栏天气小帖（uapis.cn，浏览器端拉取 + 30 分钟缓存）
+    githubTrending,     // 右侧栏 GitHub 热榜（日/周/月/年，Search API + 时间桶缓存，§56）
     musicPlayer,        // 左侧栏音乐播放器（歌曲见 site.ts 的 MUSIC）
     searchModal,        // 全站搜索悬浮窗（Pagefind，首次打开才加载）
     // motionToggle 已移除：2026-09-18 按用户要求删掉导航栏的「暂停背景动态」按钮，
@@ -1583,6 +1584,185 @@ function weatherWidget() {
     });
   }
   load(false);
+}
+
+/* ---------- 右侧栏「GitHub 热榜」（§56，2026-09-20）----------
+   日/周/月/年四个周期（默认每日），数据 = GitHub Search API：期间内新建仓库按 star 排序
+   （官方接口、无需鉴权、允许 CORS）。刷新语义按站长要求实现为「时间桶」：
+   缓存键 = 当前桶（日桶=当天 / 周桶=本周周一 / 月桶 / 年桶），桶一滚动即等价于
+   「每日 24 点 / 周、月、年最后一天 24 点」自动换新一版；页面驻留时每分钟比对桶 ID，
+   过点即自动重拉（不用等用户切页）。 */
+function githubTrending() {
+  const card = document.querySelector('[data-ghhot]');
+  if (!card) return;
+
+  const KEY = '__cwGhHot_v1';
+  const N = 8;
+  const LANG_COLORS = {
+    JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572a5', Rust: '#dea584',
+    Go: '#00add8', 'C++': '#f34b7d', C: '#555555', Java: '#b07219', 'C#': '#178600',
+    Vue: '#41b883', HTML: '#e34c26', CSS: '#563d7c', Shell: '#89e051', Zig: '#ec915c',
+    Lua: '#000080', MDX: '#fcb32c', 'Jupyter Notebook': '#da5b0b', Swift: '#f05138',
+    Kotlin: '#a97bff', Ruby: '#701516', PHP: '#4f5d95', Dart: '#00b4ab', Svelte: '#ff3e00',
+  };
+  const el = (sel) => card.querySelector(sel);
+
+  const pad = (n) => String(n).padStart(2, '0');
+  /* 周期 → 桶 ID 与查询起点（均为本地时区；桶滚动点即要求的 24 点） */
+  const bucketOf = (period, now = new Date()) => {
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const d = now.getDate();
+    if (period === 'daily') return { id: `${y}-${pad(m + 1)}-${pad(d)}`, start: `${y}-${pad(m + 1)}-${pad(d)}` };
+    if (period === 'weekly') {
+      const mon = new Date(y, m, d - ((now.getDay() + 6) % 7)); // 本周一
+      const s = `${mon.getFullYear()}-${pad(mon.getMonth() + 1)}-${pad(mon.getDate())}`;
+      return { id: 'w' + s, start: s };
+    }
+    if (period === 'monthly') return { id: `${y}-${pad(m + 1)}`, start: `${y}-${pad(m + 1)}-01` };
+    return { id: String(y), start: `${y}-01-01` };
+  };
+
+  const readStore = () => {
+    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+  };
+  const writeStore = (all) => {
+    try { localStorage.setItem(KEY, JSON.stringify(all)); } catch (e) { /* 隐私模式等忽略 */ }
+  };
+
+  const fmtStars = (n) => (n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n));
+
+  const render = (period, items) => {
+    const cur = card.dataset.ghhotPeriod || 'daily';
+    if (cur !== period) return; // 用户已切走：丢弃过期渲染
+    card.dataset.ghhotState = 'ready';
+    const list = el('[data-ghhot-list]');
+    list.innerHTML = '';
+    items.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.className = 'sw-hot-item';
+      const rank = document.createElement('span');
+      rank.className = 'sw-hot-rank';
+      rank.textContent = String(i + 1);
+      const main = document.createElement('div');
+      main.className = 'sw-hot-main';
+      const a = document.createElement('a');
+      a.className = 'sw-hot-name';
+      a.href = r.url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.textContent = r.name;
+      const meta = document.createElement('span');
+      meta.className = 'sw-hot-meta';
+      const stars = document.createElement('span');
+      stars.className = 'sw-hot-stars';
+      stars.textContent = '★ ' + fmtStars(r.stars);
+      meta.appendChild(stars);
+      if (r.lang) {
+        const lang = document.createElement('span');
+        lang.className = 'sw-hot-lang';
+        const dot = document.createElement('i');
+        dot.style.background = LANG_COLORS[r.lang] || '';
+        lang.appendChild(dot);
+        lang.appendChild(document.createTextNode(r.lang));
+        meta.appendChild(lang);
+      }
+      const desc = document.createElement('p');
+      desc.className = 'sw-hot-desc';
+      desc.textContent = r.desc || '';
+      desc.title = r.desc || '';
+      main.appendChild(a);
+      main.appendChild(meta);
+      main.appendChild(desc);
+      li.appendChild(rank);
+      li.appendChild(main);
+      list.appendChild(li);
+    });
+  };
+
+  const failed = (period) => {
+    if ((card.dataset.ghhotPeriod || 'daily') !== period) return;
+    card.dataset.ghhotState = 'error';
+    el('[data-ghhot-note]').innerHTML = '';
+    el('[data-ghhot-note]').textContent = '热榜暂时不可用（GitHub 接口限流或网络异常）';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sw-hot-refresh';
+    btn.textContent = '重试';
+    btn.addEventListener('click', () => load(period, true));
+    el('[data-ghhot-note]').appendChild(btn);
+  };
+
+  const inflight = {};
+  const fetchBucket = (period, bucket) => {
+    if (inflight[period]) return;
+    inflight[period] = true;
+    card.dataset.ghhotState = 'loading';
+    const q = encodeURIComponent(`created:>=${bucket.start} stars:>10`);
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = ctrl ? window.setTimeout(() => ctrl.abort(), 9000) : null;
+    fetch(`https://api.github.com/search/repositories?q=${q}&sort=stars&order=desc&per_page=${N}`,
+      { signal: ctrl.signal, headers: { Accept: 'application/vnd.github+json' } })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('http ' + r.status))))
+      .then((res) => {
+        window.clearTimeout(timer);
+        const items = (res.items || []).map((it) => ({
+          name: it.full_name,
+          url: it.html_url,
+          stars: it.stargazers_count || 0,
+          lang: it.language || '',
+          desc: it.description || '',
+        }));
+        if (!items.length) throw new Error('empty');
+        const all = readStore();
+        all[period] = { bucket: bucket.id, items, t: Date.now() };
+        writeStore(all);
+        render(period, items);
+      })
+      .catch(() => {
+        window.clearTimeout(timer);
+        failed(period);
+      })
+      .finally(() => {
+        inflight[period] = false;
+      });
+  };
+
+  const load = (period, force) => {
+    const bucket = bucketOf(period);
+    card.dataset.ghhotPeriod = period;
+    if (!force) {
+      const cached = readStore()[period];
+      if (cached && cached.bucket === bucket.id && cached.items) {
+        render(period, cached.items);
+        return;
+      }
+    }
+    fetchBucket(period, bucket);
+  };
+
+  /* tab 切换：委托 + window 单例（软导航重建侧栏后依然有效） */
+  if (!window.__cwGhHotWired) {
+    window.__cwGhHotWired = true;
+    document.addEventListener('click', (ev) => {
+      const tab = ev.target instanceof Element && ev.target.closest('[data-ghhot-tab]');
+      if (!tab) return;
+      ev.preventDefault();
+      const period = tab.getAttribute('data-ghhot-tab');
+      card.querySelectorAll('[data-ghhot-tab]').forEach((b) =>
+        b.setAttribute('aria-selected', String(b === tab)));
+      load(period, false);
+    });
+    /* 驻留自动刷新：每分钟比对当前周期的桶 ID，跨桶（如 24 点）自动重拉 */
+    window.setInterval(() => {
+      if (!document.contains(card)) return;
+      const period = card.dataset.ghhotPeriod || 'daily';
+      const bucket = bucketOf(period);
+      const cached = readStore()[period];
+      if (!cached || cached.bucket !== bucket.id) load(period, true);
+    }, 60000);
+  }
+  load('daily', false);
 }
 
 /* ---------- 左侧栏「音乐播放器」----------
