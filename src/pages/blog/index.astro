@@ -173,14 +173,18 @@ const hmMonths = hmWeeks.map((w, i) => {
   }
   .hm-scroll { overflow-x: auto; padding-bottom: 2px; }
   .hm-months { display: flex; gap: 3px; margin-bottom: 3px; }
-  .hm-month { width: 10px; flex: none; font-size: 0.66rem; color: var(--ink-3); white-space: nowrap; }
+  .hm-month { flex: 1 1 0; min-width: 0; font-size: 0.7rem; color: var(--ink-3); white-space: nowrap; }
   .hm-cols { display: flex; gap: 3px; }
-  .hm-week { display: flex; flex-direction: column; gap: 3px; flex: none; }
+  .hm-week { display: flex; flex-direction: column; gap: 3px; flex: 1 1 0; min-width: 0; }
+  /* 格子随列宽等比拉伸（2026-09-20 站长要求「宽一点大一点」）：不再写死 10px，
+     列均分内容列宽度，aspect-ratio 保正方形。图例里的小色块单独定回固定尺寸。 */
   .hm-c {
-    width: 10px; height: 10px; border-radius: 2.5px; flex: none;
+    width: auto; height: auto; aspect-ratio: 1 / 1;
+    border-radius: 3px; flex: none;
     background: rgba(var(--accent-rgb), 0.13);
     box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.1);
   }
+  .hm-legend .hm-c { width: 10px; height: 10px; aspect-ratio: auto; flex: none; }
   .hm-l1 { background: rgba(var(--accent-rgb), 0.34); box-shadow: none; }
   .hm-l2 { background: rgba(var(--accent-rgb), 0.55); box-shadow: none; }
   .hm-l3 { background: rgba(var(--accent-rgb), 0.78); box-shadow: none; }

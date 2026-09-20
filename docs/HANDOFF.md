@@ -2886,3 +2886,6 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
 - 验证：CDP 探针（43 列 / 306 格 / 295 格带 title / 月份标签 11 个 / 间距 26≈25.6 / 无溢出）；
   `verify-shell` 全过；发布前全量见下。
 - 截图：`_shots/blog-heatmap.png`。
+- 同日午间追加（站长要求「宽一点大一点」）：格子不再写死 10px——`.hm-week`/`.hm-month` 改
+  `flex: 1 1 0` 均分内容列宽，格子 `aspect-ratio: 1/1` 等比拉伸（实测约 13px，整体宽约 590px）；
+  图例小色块单独定回 10px 固定尺寸。verify-shell 复跑 2× 全过（/account/ 首跑 1.3px 为字体时序假失败）。
