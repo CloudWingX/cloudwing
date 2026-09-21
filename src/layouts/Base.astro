@@ -1,4 +1,5 @@
 ---
+import { execSync } from 'node:child_process';
 import { SITE, VIDEO_BG } from '../site';
 import ClientRouter from 'astro/components/ClientRouter.astro';
 import Header from '../components/Header.astro';
@@ -28,12 +29,21 @@ const withParticles = true;
 // 全站背景视频开关（见 site.ts 的 VIDEO_BG）：
 // 开着的时候 body 会加 .has-video-bg，让不透明页面底色让位给视频（见 motion.css）。
 const hasVideoBg = Boolean(VIDEO_BG.src);
-// 构建指纹（§60，2026-09-21）：每次构建唯一。软导航换进来的是新 DOM（带新指纹），
-// 而标签页里的 JS 还是首次加载那一版 —— 部署后仍开着的存量标签页会出现
-// 「DOM 新、逻辑旧」错配（实测症状：画廊点文件夹 URL 变了但视图不切，§59.5）。
-// 头部内联脚本比对不一致时整页刷新一次自愈（sessionStorage 防循环刷新）。
-// 模块级求值：一次构建内所有页面共享同一指纹；dev 恒为 'dev'（不触发刷新）。
-const BUILD_ID = import.meta.env.PROD ? Date.now().toString(36) : 'dev';
+// 构建指纹（§60）：软导航换进来的是新 DOM（带新指纹），而标签页里的 JS 还是首次
+// 加载那一版 —— 跨部署存量标签页会出现「DOM 新、逻辑旧」错配；头部内联脚本比对
+// 不一致时整页刷新一次自愈（sessionStorage 防循环）。
+// §63（2026-09-21）⚠️ 指纹必须**全站构建内恒定**：组件 frontmatter 是逐页执行的，
+// 用 Date.now() 会拿到「每页一个指纹」（实测 7 页 7 值），跨页软导航必触发误判
+// reload —— 站长侧「每个页面连续快速加载两次 + 白闪」即此。改取**部署提交 SHA**
+// （CF Pages CI 注入 CF_PAGES_COMMIT_SHA；本地回退 git rev-parse；都失败用常量，
+// 宁可漏一次跨部署自愈，也绝不能逐页漂移误刷）。用 globalThis 记忆化避免逐页 spawn。
+if (import.meta.env.PROD && !globalThis.__cwBuildId) {
+  globalThis.__cwBuildId =
+    process.env.CF_PAGES_COMMIT_SHA ||
+    process.env.COMMIT_REF ||
+    (() => { try { return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { return 'static-build'; } })();
+}
+const BUILD_ID = import.meta.env.PROD ? globalThis.__cwBuildId : 'dev';
 ---
 <!doctype html>
 <!-- §62（2026-09-21）：html 行内深色背景 = 空白导航期/硬加载首绘的防白屏根治。
