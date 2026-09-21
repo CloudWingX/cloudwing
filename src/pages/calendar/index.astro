@@ -1,0 +1,447 @@
+---
+// 日历页（「记录」二级菜单 · 2026-09-20 新增，参考 fqzlr.com/calendar 的月历+倒计时结构，
+// 视觉与信息全部按本站风格重做：深色玻璃卡片 + 全站强调色令牌 + 站点更新记录叠加）。
+//
+// 数据策略（全部构建期完成，访客端零外部请求、零运行时依赖）：
+//   · 农历 / 节气 / 传统节日：js-calendar-converter（MIT，jjonline/calendar.js）在
+//     frontmatter 里逐日换算 2025-01-01 ~ 2027-12-31，压成「标签数组 + 种类串」内联进页面；
+//   · 法定节假日 + 调休上班：国务院办公厅官方通知手工录入（2025、2026 两年，
+//     来源 gov.cn，见下方 OFF_RANGES 注释里的逐条原文）；
+//   · 站点更新标记：changelog 集合按日聚合（与 /log/ 热力同口径）。
+// 月历网格由页面底部脚本在 astro:page-load 时按访客本地「今天」渲染 —— 构建时间与访问
+// 时间解耦，任何月份都能翻；翻月为纯客户端，不发请求、不触发软导航。
+import SidebarLayout from '../../layouts/SidebarLayout.astro';
+import { getCollection } from 'astro:content';
+import calendarLib from 'js-calendar-converter';
+
+// ⚠️ 不要解构 solar2lunar：它内部依赖 this 访问年表（this.lYearDays），
+// 解构会丢掉接收者直接 TypeError（§64 构建实测）。
+const cal = ((calendarLib as any).default ?? (calendarLib as any)) as {
+  solar2lunar: (y: number, m: number, d: number) => any;
+};
+
+/* ---------- 农历标签：逐日换算并压缩 ---------- */
+const EPOCH_Y = 2025, EPOCH_M = 1, EPOCH_D = 1;
+const dayOffset = (y: number, m: number, d: number) =>
+  Math.round((Date.UTC(y, m - 1, d) - Date.UTC(EPOCH_Y, EPOCH_M - 1, EPOCH_D)) / 86400000);
+
+const END_Y = 2027;
+const labels: string[] = [];
+let kinds = '';
+// 倒计时事件（构建期收集）：传统节日 + 节气(清明/冬至) + 法定假期起始日
+const eventsByDate = new Map<string, Set<string>>();
+
+/* 法定节假日（国务院办公厅官方通知，gov.cn 原文口径）
+   2025（国办发明电〔2024〕7 号，2024-11-12 发布）：
+     元旦 1/1；春节 1/28~2/4（1/26、2/8 上班）；清明 4/4~4/6；
+     劳动节 5/1~5/5（4/27 上班）；端午 5/31~6/2；
+     国庆·中秋 10/1~10/8（9/28、10/11 上班）
+   2026（国办发明电〔2025〕8 号，2025-11-04 发布）：
+     元旦 1/1~1/3（1/4 上班）；春节 2/15~2/23（2/14、2/28 上班）；
+     清明 4/4~4/6；劳动节 5/1~5/5（5/9 上班）；端午 6/19~6/21；
+     中秋 9/25~9/27；国庆 10/1~10/7（9/20、10/10 上班） */
+const OFF_RANGES: { y: number; m1: number; d1: number; m2: number; d2: number; name: string }[] = [
+  { y: 2025, m1: 1, d1: 1, m2: 1, d2: 1, name: '元旦' },
+  { y: 2025, m1: 1, d1: 28, m2: 2, d2: 4, name: '春节' },
+  { y: 2025, m1: 4, d1: 4, m2: 4, d2: 6, name: '清明节' },
+  { y: 2025, m1: 5, d1: 1, m2: 5, d2: 5, name: '劳动节' },
+  { y: 2025, m1: 5, d1: 31, m2: 6, d2: 2, name: '端午节' },
+  { y: 2025, m1: 10, d1: 1, m2: 10, d2: 8, name: '国庆节·中秋节' },
+  { y: 2026, m1: 1, d1: 1, m2: 1, d2: 3, name: '元旦' },
+  { y: 2026, m1: 2, d1: 15, m2: 2, d2: 23, name: '春节' },
+  { y: 2026, m1: 4, d1: 4, m2: 4, d2: 6, name: '清明节' },
+  { y: 2026, m1: 5, d1: 1, m2: 5, d2: 5, name: '劳动节' },
+  { y: 2026, m1: 6, d1: 19, m2: 6, d2: 21, name: '端午节' },
+  { y: 2026, m1: 9, d1: 25, m2: 9, d2: 27, name: '中秋节' },
+  { y: 2026, m1: 10, d1: 1, m2: 10, d2: 7, name: '国庆节' },
+];
+const WORK_DAYS = [
+  '2025-01-26', '2025-02-08', '2025-04-27', '2025-09-28', '2025-10-11',
+  '2026-01-04', '2026-02-14', '2026-02-28', '2026-05-09', '2026-09-20', '2026-10-10',
+];
+const WORK_SET = new Set(WORK_DAYS);
+
+// 法定假期 → {ISO: [off|on, 区间名]}，同时把假期起始日登记进倒计时
+const holidayMap: Record<string, [string, string]> = {};
+for (const r of OFF_RANGES) {
+  const start = new Date(Date.UTC(r.y, r.m1 - 1, r.d1));
+  const end = new Date(Date.UTC(r.y, r.m2 - 1, r.d2));
+  for (let t = start.getTime(); t <= end.getTime(); t += 86400000) {
+    const d = new Date(t);
+    holidayMap[d.toISOString().slice(0, 10)] = ['off', r.name];
+  }
+  const iso = `${r.y}-${String(r.m1).padStart(2, '0')}-${String(r.d1).padStart(2, '0')}`;
+  (eventsByDate.get(iso) ?? eventsByDate.set(iso, new Set()).get(iso)!).add(r.name);
+}
+for (const iso of WORK_DAYS) holidayMap[iso] = ['on', '调休上班'];
+
+/* 传统节日 / 节气的收录范围（构建期白名单，控制信息密度） */
+const LUNAR_FESTS = new Set(['春节', '除夕', '元宵节', '龙抬头', '端午节', '七夕节', '中秋节', '重阳节', '腊八节']);
+const SOLAR_FESTS = new Set(['元旦节', '劳动节', '儿童节', '国庆节']);
+const TERMS = new Set(['清明', '冬至']);
+const renameSolar = (t: string) => (t === '元旦节' ? '元旦' : t);
+
+for (let y = EPOCH_Y; y <= END_Y; y++) {
+  for (let m = 1; m <= 12; m++) {
+    const dim = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    for (let d = 1; d <= dim; d++) {
+      const lu: any = cal.solar2lunar(y, m, d);
+      const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      let label: string;
+      let kind = 0;
+      const lf: string | null = lu.lunarFestival && LUNAR_FESTS.has(lu.lunarFestival) ? lu.lunarFestival : null;
+      const sf: string | null = lu.festival && SOLAR_FESTS.has(lu.festival) ? renameSolar(lu.festival) : null;
+      const tm: string | null = lu.isTerm && TERMS.has(lu.Term) ? lu.Term : null;
+      if (lf) { label = lf; kind = 1; }
+      else if (sf) { label = sf; kind = 1; }
+      else if (tm) { label = tm; kind = 2; }
+      else label = lu.lDay === 1 ? lu.IMonthCn : lu.IDayCn; // 初一显示月名，其余显示日名
+      labels.push(label);
+      kinds += String(kind);
+      if (lf || sf) (eventsByDate.get(iso) ?? eventsByDate.set(iso, new Set()).get(iso)!).add(lf || sf);
+      if (tm) (eventsByDate.get(iso) ?? eventsByDate.set(iso, new Set()).get(iso)!).add(`节气 ${tm}`);
+    }
+  }
+}
+
+/* 站点更新：changelog 按日聚合（与 /log/ 完全同口径） */
+const logMap: Record<string, number> = {};
+for (const e of await getCollection('changelog')) {
+  const iso = new Date(e.data.date).toISOString().slice(0, 10);
+  logMap[iso] = (logMap[iso] ?? 0) + (e.data.items?.length ?? 0);
+}
+
+/* 倒计时事件数组（按日期排序） */
+const events = [...eventsByDate.entries()]
+  .map(([d, set]) => ({ d, t: [...set].join(' · ') }))
+  .sort((a, b) => (a.d < b.d ? -1 : 1));
+
+const payload = {
+  y0: EPOCH_Y, m0: EPOCH_M, y1: END_Y, // 数据边界（含 12 月）
+  labels,
+  kinds,
+  holiday: holidayMap,
+  log: logMap,
+  events,
+};
+const dataJson = JSON.stringify(payload).replace(/</g, '\\u003c');
+---
+<SidebarLayout
+  title="日历"
+  description="CloudWing 站点日历：农历、节气、法定节假日与调休安排，叠加每日站点更新记录。"
+  bodyClass="cal-route"
+>
+  <div class="cal-root">
+    <div class="wrap">
+      <header class="page-head" data-ent>
+        <p class="kicker"><b>CALENDAR</b> / 日历</p>
+        <h1>日历</h1>
+        <p class="cal-sub">农历 · 节气 · 法定节假日与调休，叠加站点更新记录。</p>
+      </header>
+
+      <div class="cal-layout" data-ent>
+        <section class="cal-card cal-main" id="cw-cal" aria-label="月历">
+          <div class="cal-bar">
+            <h2 class="cal-title" id="cal-title" aria-live="polite"></h2>
+            <div class="cal-bar-btns">
+              <button class="cal-btn" id="cal-prev" type="button" aria-label="上一个月">‹</button>
+              <button class="cal-btn" id="cal-today" type="button">今天</button>
+              <button class="cal-btn" id="cal-next" type="button" aria-label="下一个月">›</button>
+            </div>
+          </div>
+          <div class="cal-week" aria-hidden="true">
+            <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span>
+            <span class="cal-wend">六</span><span class="cal-wend">日</span>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+          <noscript><p class="cal-nojs">月历需要启用 JavaScript 后按访客本地时间渲染。</p></noscript>
+        </section>
+
+        <aside class="cal-side">
+          <section class="cal-card cal-side-card" aria-label="近期节点">
+            <h3 class="cal-side-title">近期节点</h3>
+            <ul class="cal-count" id="cal-count"></ul>
+          </section>
+          <section class="cal-card cal-side-card" aria-label="图例">
+            <h3 class="cal-side-title">图例</h3>
+            <ul class="cal-legend">
+              <li><i class="cal-demo cal-badge-off">休</i>法定假期</li>
+              <li><i class="cal-demo cal-badge-on">班</i>调休上班</li>
+              <li><i class="cal-demo cal-demo-fest">节</i>节日</li>
+              <li><i class="cal-demo cal-demo-term">气</i>节气</li>
+              <li><i class="cal-demo cal-demo-log"></i>当日有站点更新</li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <script type="application/json" id="cw-cal-data" set:html={dataJson} />
+</SidebarLayout>
+
+<script>
+  /* 月历渲染：纯客户端，数据来自上面的内联 JSON（构建期冻结）。
+     astro:page-load 时重建（软导航后 DOM 全新，dataset.boot 是天然的重入守卫）。 */
+  type CalData = {
+    y0: number; m0: number; y1: number;
+    labels: string[];
+    kinds: string;
+    holiday: Record<string, [string, string]>;
+    log: Record<string, number>;
+    events: { d: string; t: string }[];
+  };
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const iso = (y: number, m: number, d: number) => `${y}-${pad(m)}-${pad(d)}`;
+
+  function bootCal() {
+    const root = document.getElementById('cw-cal');
+    const dataEl = document.getElementById('cw-cal-data') as HTMLScriptElement | null;
+    if (!root || !dataEl || root.dataset.boot) return;
+    root.dataset.boot = '1';
+    const DATA: CalData = JSON.parse(dataEl.textContent || '{}');
+
+    const y0m = DATA.y0 * 12 + (DATA.m0 - 1); // 数据起点（月索引）
+    const y1m = DATA.y1 * 12 + 11; // 数据终点（月索引）
+    const idxOf = (y: number, m: number, d: number) =>
+      Math.round((Date.UTC(y, m - 1, d) - Date.UTC(DATA.y0, DATA.m0 - 1, 1)) / 86400000);
+
+    const now = new Date();
+    let viewY = now.getFullYear();
+    let viewM = now.getMonth() + 1;
+
+    const $title = document.getElementById('cal-title')!;
+    const $grid = document.getElementById('cal-grid')!;
+    const $count = document.getElementById('cal-count')!;
+
+    function tooltipFor(y: number, m: number, d: number, label: string, kind: string): string {
+      const key = iso(y, m, d);
+      const h = DATA.holiday[key];
+      const n = DATA.log[key];
+      const parts: string[] = [`${key}`];
+      if (kind === '1') parts.push(label);
+      else if (kind === '2') parts.push(`节气 ${label}`);
+      else parts.push(`农历 ${label}`);
+      if (h) parts.push(h[0] === 'off' ? `${h[1]} · 放假` : '调休上班');
+      if (n) parts.push(`站点更新 ${n} 条`);
+      return parts.join(' · ');
+    }
+
+    function renderGrid() {
+      $title.textContent = `${viewY} 年 ${viewM} 月`;
+      const mi = viewY * 12 + (viewM - 1);
+      const canPrev = mi > y0m, canNext = mi < y1m;
+      (document.getElementById('cal-prev') as HTMLButtonElement).disabled = !canPrev;
+      (document.getElementById('cal-next') as HTMLButtonElement).disabled = !canNext;
+
+      const lead = (new Date(viewY, viewM - 1, 1).getDay() + 6) % 7; // 周一为一周之首
+      const dim = new Date(viewY, viewM, 0).getDate();
+      const todayIso = iso(now.getFullYear(), now.getMonth() + 1, now.getDate());
+      let html = '';
+      for (let i = 0; i < lead; i++) html += '<div class="cal-day cal-blank"></div>';
+      for (let d = 1; d <= dim; d++) {
+        const key = iso(viewY, viewM, d);
+        const idx = idxOf(viewY, viewM, d);
+        const inRange = idx >= 0 && idx < DATA.labels.length;
+        const label = inRange ? DATA.labels[idx] : '';
+        const kind = inRange ? DATA.kinds[idx] : '0';
+        const h = DATA.holiday[key];
+        const n = DATA.log[key] ?? 0;
+        const wend = [0, 6].includes(new Date(viewY, viewM - 1, d).getDay());
+        const cls = ['cal-day'];
+        if (wend) cls.push('is-wend');
+        if (key === todayIso) cls.push('is-today');
+        if (h) cls.push(h[0] === 'off' ? 'is-off' : 'is-work');
+        html += `<div class="${cls.join(' ')}" data-date="${key}" title="${tooltipFor(viewY, viewM, d, label, kind)}">`
+          + `<span class="cal-num">${d}</span>`
+          + (kind === '1' ? `<span class="cal-sub cal-sub-fest">${label}</span>`
+            : kind === '2' ? `<span class="cal-sub cal-sub-term">${label}</span>`
+            : `<span class="cal-sub">${label}</span>`)
+          + (h ? `<span class="cal-badge ${h[0] === 'off' ? 'cal-badge-off' : 'cal-badge-on'}">${h[0] === 'off' ? '休' : '班'}</span>` : '')
+          + (n ? '<span class="cal-logdot" aria-hidden="true"></span>' : '')
+          + '</div>';
+      }
+      const tail = (lead + dim) % 7 === 0 ? 0 : 7 - ((lead + dim) % 7);
+      for (let i = 0; i < tail; i++) html += '<div class="cal-day cal-blank"></div>';
+      $grid.innerHTML = html;
+    }
+
+    function renderCountdown() {
+      const todayIso = iso(now.getFullYear(), now.getMonth() + 1, now.getDate());
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const upcoming = DATA.events.filter((e) => e.d >= todayIso).slice(0, 6);
+      if (!upcoming.length) {
+        $count.innerHTML = '<li class="cal-count-empty">暂无事件</li>';
+        return;
+      }
+      $count.innerHTML = upcoming.map((e) => {
+        const diff = Math.round((Date.UTC(+e.d.slice(0, 4), +e.d.slice(5, 7) - 1, +e.d.slice(8, 10)) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+        const tag = diff === 0 ? '就是今天' : `<b>${diff}</b> 天`;
+        return `<li class="cal-count-item"><span class="cal-count-name">${e.t}</span><time datetime="${e.d}">${e.d}</time><span class="cal-count-diff">${tag}</span></li>`;
+      }).join('');
+    }
+
+    document.getElementById('cal-prev')!.addEventListener('click', () => {
+      viewM--; if (viewM < 1) { viewM = 12; viewY--; } renderGrid();
+    });
+    document.getElementById('cal-next')!.addEventListener('click', () => {
+      viewM++; if (viewM > 12) { viewM = 1; viewY++; } renderGrid();
+    });
+    document.getElementById('cal-today')!.addEventListener('click', () => {
+      viewY = now.getFullYear(); viewM = now.getMonth() + 1; renderGrid();
+    });
+
+    renderGrid();
+    renderCountdown();
+  }
+
+  if (document.readyState !== 'loading') bootCal();
+  document.addEventListener('DOMContentLoaded', bootCal);
+  document.addEventListener('astro:page-load', bootCal);
+</script>
+
+<style>
+  .cal-root { padding: 2.4rem 0 3rem; }
+  .page-head { margin-bottom: 1.6rem; }
+  .cal-sub-p { margin: 0; }
+  .page-head .cal-sub { margin: 0.5rem 0 0; color: var(--ink-3); font-size: 0.9rem; }
+
+  .cal-layout {
+    display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 1.2rem; align-items: start;
+  }
+  @media (max-width: 900px) { .cal-layout { grid-template-columns: 1fr; } }
+
+  /* 卡片：材质与全站一致（玻璃 + 细边框），见 HANDOFF §22 压缩丢 -webkit- 前缀的教训 */
+  .cal-card {
+    padding: 1.15rem 1.25rem;
+    border: var(--line-w) solid var(--line-2);
+    border-radius: var(--r-l);
+    background: var(--glass);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ---- 顶栏 ---- */
+  .cal-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.9rem; }
+  .cal-title {
+    margin: 0; font-size: 1.35rem; font-weight: 600; color: var(--ink);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+  }
+  .cal-bar-btns { display: flex; gap: 0.4rem; }
+  .cal-btn {
+    appearance: none; cursor: pointer; padding: 0.32em 0.8em;
+    border: 1px solid var(--line-2); border-radius: 999px;
+    background: transparent; color: var(--ink-2);
+    font-size: 0.85rem; line-height: 1.2; transition: color .18s, border-color .18s, background .18s;
+  }
+  .cal-btn:hover:not(:disabled) { color: var(--accent-deep); border-color: rgba(var(--accent-rgb), 0.4); background: var(--accent-soft); }
+  .cal-btn:disabled { opacity: 0.35; cursor: default; }
+
+  /* ---- 星期表头 ---- */
+  .cal-week {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 0.25rem; padding: 0 0.2rem;
+    font-size: 0.74rem; color: var(--ink-3); text-align: center;
+  }
+  .cal-week .cal-wend { color: rgba(var(--accent-rgb), 0.55); }
+
+  /* 月格/倒计时条目由客户端 innerHTML 动态生成，无 Astro scoped 属性标记，
+     样式统一放在文件末尾的 <style is:global> 块（§64 实测：动态节点配 scoped
+     样式会整块失效——静态卡片正常、动态格子裸奔回退 UA 默认）。 */
+
+  /* ---- 右侧栏 ---- */
+  .cal-side { display: grid; gap: 1.2rem; }
+  .cal-side-title {
+    margin: 0 0 0.8rem; font-size: 0.8rem; font-weight: 600;
+    letter-spacing: 0.12em; color: var(--ink-3);
+  }
+
+  .cal-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+  .cal-legend li { display: flex; align-items: center; gap: 0.55rem; font-size: 0.8rem; color: var(--ink-2); }
+  .cal-demo {
+    flex: none; width: 1.35rem; height: 1.35rem; border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; font-style: normal;
+  }
+  .cal-demo-fest { background: var(--accent-soft); color: var(--accent-deep); }
+  .cal-demo-term { background: rgba(134, 214, 180, 0.12); color: #86d6b4; }
+  .cal-demo-log { background: transparent; }
+  .cal-demo-log::after {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.8);
+  }
+
+  .cal-nojs { margin: 0; color: var(--ink-3); font-size: 0.85rem; }
+
+  @media (max-width: 640px) {
+    .cal-card { padding: 0.85rem 0.7rem; }
+  }
+</style>
+
+<style is:global>
+  /* ⚠️ 动态节点样式（客户端 innerHTML 生成，无 scoped 属性标记，必须全局）。
+     类名全部 cal- 前缀命名空间，不会泄漏误伤其他页面。 */
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-day {
+    position: relative; min-height: 3.6rem; padding: 0.4rem 0.45rem 1.35rem;
+    border: 1px solid transparent; border-radius: 10px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 0.1rem;
+  }
+  .cal-blank { min-height: 0; padding: 0; }
+  .cal-num {
+    font-family: var(--font-mono); font-size: 0.95rem; line-height: 1.2;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+  }
+  .cal-day.is-wend .cal-num { color: var(--ink-2); }
+  .cal-sub {
+    font-size: 0.68rem; line-height: 1.25; color: var(--ink-3);
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cal-sub-fest { color: var(--accent-deep); }
+  .cal-sub-term { color: #86d6b4; }
+
+  /* 今天：细描边 + 强调色底 */
+  .cal-day.is-today { border-color: rgba(var(--accent-rgb), 0.55); background: var(--accent-soft); }
+  .cal-day.is-today .cal-num { color: var(--accent-deep); font-weight: 600; }
+
+  /* 法定假期 / 调休：整格着色 + 角标 */
+  .cal-day.is-off { background: rgba(255, 107, 107, 0.07); }
+  .cal-day.is-work .cal-num { color: var(--ink-3); }
+  .cal-badge {
+    position: absolute; top: 0.35rem; right: 0.4rem;
+    font-size: 0.6rem; line-height: 1; padding: 0.22em 0.4em; border-radius: 6px;
+  }
+  .cal-badge-off { background: rgba(255, 107, 107, 0.16); color: #ff8a8a; }
+  .cal-badge-on { background: rgba(148, 163, 184, 0.16); color: var(--ink-2); }
+
+  /* 站点更新点（与 /log/ 同口径） */
+  .cal-logdot {
+    position: absolute; left: 50%; bottom: 0.34rem; transform: translateX(-50%);
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.8);
+  }
+
+  /* 倒计时条目（近期节点） */
+  .cal-count { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
+  .cal-count-item {
+    display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap;
+    padding-bottom: 0.55rem; border-bottom: 1px dashed var(--line-2);
+  }
+  .cal-count-item:last-child { border-bottom: 0; padding-bottom: 0; }
+  .cal-count-name { font-size: 0.86rem; color: var(--ink); }
+  .cal-count-item time {
+    font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .cal-count-diff { margin-left: auto; font-size: 0.78rem; color: var(--accent-deep); }
+  .cal-count-diff b { font-weight: 600; }
+  .cal-count-empty { color: var(--ink-3); font-size: 0.85rem; }
+
+  @media (max-width: 640px) {
+    .cal-day { min-height: 3rem; padding: 0.3rem 0.3rem 1.15rem; }
+    .cal-sub { font-size: 0.6rem; }
+  }
+</style>

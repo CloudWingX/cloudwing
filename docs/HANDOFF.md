@@ -14,6 +14,7 @@
 > 悬停翻盖动效、点文件夹进入图集；smoke 61 → 64**；
 > 此前深夜 **修复两处「软导航后交互失效」：右栏 GitHub 热榜切 tab 失效（§58）、
 > 画廊大图切页往返后点不开（§58）；smoke 58 → 61、verify-ghhot 9 → 11，两处都有常驻回归断言**；
+> 同日晚 **新增「日历」子页面 /calendar/（农历+节气+2025/2026 法定节假日与调休+站点更新叠加，smoke 64 → 73，见 §64）**；
 > 同日傍晚 **交接完善：全篇基线数字刷新（21 脚本 / 21/21 / smoke 58/58）、
 > §57 章节地图与阅读路径、09-20 changelog 补录（4 条）**；
 > 同日下午 **右栏新增「GitHub 热榜」卡（日/周/月/年四周期，时间桶缓存
@@ -53,7 +54,7 @@
 > 自检入口仍为 `cd endfield-blog && node scripts/run-regress.mjs`（**现为 21 个脚本**一次批跑）→
 > 最近一次 **21/21 全绿**（2026-09-20 下午，GitHub 热榜卡 + 新脚本 verify-ghhot 加入后的发布前全量，见 §56；
 > 此前 20/20 见 §53 / §54）；
-> 单入口 `node scripts/smoke.mjs` 为 **64/64**（2026-09-20 傍晚，画廊文件夹视图回归段 +3 后，见 §59）。
+> 单入口 `node scripts/smoke.mjs` 为 **73/73**（2026-09-20 晚，日历子页面：壳层 +5 + 功能断言 +4，见 §64；此前画廊文件夹视图回归段 +3，见 §59）。
 > ✅ **文案漂移现在有断言了**（2026-09-19）：`scripts/verify-copy.mjs`（31 条，见 §7.2 / §42.2）——
 > §32 那种"几何全绿却带着错文案上线"的缺陷类已被堵住。
 > ✅ **`React error #424` 已于 2026-09-18 定位并修掉**（见 §37）：根因是软导航时
@@ -1905,7 +1906,7 @@ node scripts/run-regress.mjs          # 期望「总结: 21/21 通过」
 # 4) 线上同一套（先确认推送成功、CF 构建完成；反向特征检查见 §7.5）
 git ls-remote origin main
 node scripts/poll-deploy.mjs --have '--w-max:\s*1300px' --not 'hero::before'   # 通了才继续
-node scripts/smoke.mjs https://cloudwing.pages.dev                 # 期望 64/64（#424 已修复，见 §37）
+node scripts/smoke.mjs https://cloudwing.pages.dev                 # 期望 73/73（#424 已修复，见 §37）
 node scripts/verify-videobg.mjs https://cloudwing.pages.dev dark   # 期望 23/23（§62 断言迁移 +1，见 §62.2）
 node scripts/verify-copy.mjs https://cloudwing.pages.dev           # 期望 31/31（走 sitemap 枚举全站页面）
 
@@ -2928,7 +2929,7 @@ node scripts/verify-interaction.mjs https://cloudwing.pages.dev
 | 顺序 | 读什么 | 目的 |
 |---|---|---|
 | 1 | §0 一句话现状 + §0.1–§0.4 轮次摘要 | 站点是什么、现在什么状态 |
-| 2 | §1 五分钟上手 → 照做一遍 build + smoke（期望 **64/64**） | 把本地环境跑起来 |
+| 2 | §1 五分钟上手 → 照做一遍 build + smoke（期望 **73/73**） | 把本地环境跑起来 |
 | 3 | §2 环境硬约束 + §3 目录结构 | 本机的坑、每个目录谁负责 |
 | 4 | §5 三条铁律 + §6 踩坑手册（先通读标题） | **不做错事**；细节等踩到再查 |
 | 5 | §7 验证与调试（§7.1 调试环境三步、§7.2 脚本清单表、§7.6 断言三铁律） | 学会怎么验证自己的改动 |
@@ -3224,3 +3225,37 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
 - 构建产物断言：全站页面指纹种类数 = **1**（修复前 7 页 7 值）。
 - smoke **64/64**、verify-buildstamp 4/4（自愈语义保留：伪造旧戳仍会刷新一次）、
   verify-videobg **23/23**。全量 23 脚本批跑见同轮记录（ghhot 凌晨空窗口径不变）。
+
+## 64. ★新增「日历」子页面 `/calendar/`（2026-09-20 晚）★
+
+**站长需求**：「记录」二级菜单加日历，参考 fqzlr.com/calendar，要有相关节假日；
+随后追加要求「稍微改造一下以符合本站风格」——即不照搬参考站，按深色玻璃视觉重做。
+
+### 64.1 实现要点
+
+- 导航：`site.ts` 的「记录」children 追加 `{ href:'/calendar/', label:'日历' }`，
+  Header 桌面下拉 / 移动抽屉自动长出（NAV 是唯一数据源，零 Header 改动）。
+- 页面：`src/pages/calendar/index.astro`（SidebarLayout 壳）。深色玻璃月历主卡 +
+  右侧「近期节点」倒计时卡与「图例」卡；格子 = 日期数字 + 农历/节日/节气副标签 +
+  「休/班」角标 + 站点更新圆点；今天描边、周末降调。
+- 农历/节气/传统节日：新依赖 `js-calendar-converter`（MIT，jjonline/calendar.js），
+  **构建期**在 frontmatter 逐日换算 2025-01-01 ~ 2027-12-31，压成 labels 数组 +
+  kinds 数字串内联进页面（约 6KB），访客端零外部请求、零运行时计算。
+  ⚠️ 两个实测坑：① `solar2lunar` 内部用 `this` 查年表，**不能解构调用**（TypeError: lYearDays）；
+  ② 客户端 innerHTML 动态节点**没有 Astro scoped 属性标记**，样式必须放
+  `<style is:global>`（类名 cal- 前缀防泄漏）——scoped 下静态区正常、动态区整块
+  回退 UA 默认，极易误判为「样式没写」。
+- 法定节假日：国务院办公厅官方通知手工录入（2025：国办 2024-11-12 发布；
+  2026：国办 2025-11-04 发布，gov.cn 原文口径），休=红「休」、调休上班=灰「班」，
+  tooltip 给出区间名（如「春节 · 放假」）。
+- 站点更新叠加：changelog 按日计数（与 /log/ 热力同口径），格子底部强调色圆点。
+- 月历由客户端脚本在 `astro:page-load` 按访客本地「今天」渲染（构建时间与访问时间
+  解耦）；翻月/回今天纯客户端，不触发软导航。
+
+### 64.2 回归与运维
+
+- smoke 扩容：SHELL_PAGES 加 /calendar/（5 条壳层检查）+ 4 条功能断言
+  （当月渲染 / 「休班角标数=内联数据当月条数」逐月比对 / 倒计时非空 / 可翻月），
+  **64 → 73**；CDP 截图桌面 + 移动双端核验（`_shots/shot-calendar.mjs`）。
+- **数据有效期**：农历与节假日数据覆盖 2025–2027；2027 年官方放假安排公布后，
+  改页面顶部 OFF_RANGES / WORK_DAYS / END_Y 三个常量并顺延即可。

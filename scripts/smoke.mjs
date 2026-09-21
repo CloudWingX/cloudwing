@@ -16,7 +16,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 
-const SHELL_PAGES = ['/posts/', '/blog/', '/log/', '/gallery/', '/nav/', '/about/', '/account/'];
+const SHELL_PAGES = ['/posts/', '/blog/', '/log/', '/calendar/', '/gallery/', '/nav/', '/about/', '/account/'];
 const ALL_PAGES = [ '/', ...SHELL_PAGES, '/404.html'];
 
 const results = [];
@@ -220,11 +220,11 @@ const main = async () => {
     // 热力图：点有记录的色块 → 色块上方浮出简短信息（这天有几次更新、几次修复）
     await evaluate(`document.querySelector('[data-cal-day]')?.click()`);
     await sleep(600);
-    const cal = await evaluate(`(() => { const t = document.querySelector('.heat-tip');
+    const calPage = await evaluate(`(() => { const t = document.querySelector('.heat-tip');
       const cell = document.querySelector('.hc[data-cal-day][aria-expanded]');
       return t ? { text: t.textContent, pinned: !!cell } : null; })()`);
-    check('热力图点击浮出简短信息', !!cal && /这天有/.test(cal.text) && cal.pinned,
-      cal ? cal.text.slice(0, 40) : '无浮层');
+    check('热力图点击浮出简短信息', !!calPage && /这天有/.test(calPage.text) && calPage.pinned,
+      calPage ? calPage.text.slice(0, 40) : '无浮层');
     // 再点同格 → 收起
     await evaluate(`document.querySelector('[data-cal-day]')?.click()`);
     await sleep(400);
@@ -246,6 +246,35 @@ const main = async () => {
       await evaluate(`[...document.querySelectorAll('a')].find((a) => a.getAttribute('href') === ${JSON.stringify(path)})?.click()`);
       await sleep(3500);
     }
+    // §64 日历页回归（2026-09-20 新增页面）：二级菜单进入 → 当月月历 + 节假日角标
+    // + 倒计时 + 可翻月。角标数与内联数据逐月比对（数据会随年份过期，写死数字会假失败）。
+    await evaluate(`[...document.querySelectorAll('a[href="/calendar/"]')][0]?.click()`);
+    await sleep(3000);
+    const calSec = await evaluate(`(() => {
+      const grid = document.getElementById('cal-grid');
+      const title = document.getElementById('cal-title')?.textContent || '';
+      const days = grid ? grid.querySelectorAll('.cal-day:not(.cal-blank)').length : 0;
+      const badges = grid ? grid.querySelectorAll('.cal-badge').length : 0;
+      const count = document.getElementById('cal-count')?.children.length ?? 0;
+      return { title, days, badges, count };
+    })()`);
+    check('日历页渲染当月月历（§64）',
+      /^\d{4} 年 \d{1,2} 月$/.test(calSec.title) && calSec.days >= 28 && calSec.days <= 31,
+      JSON.stringify(calSec));
+    const calExpect = await evaluate(`(() => {
+      const D = JSON.parse(document.getElementById('cw-cal-data').textContent);
+      const n = new Date(); const p = (x) => String(x).padStart(2, '0');
+      const pre = n.getFullYear() + '-' + p(n.getMonth() + 1) + '-';
+      let c = 0; for (const k in D.holiday) if (k.startsWith(pre)) c++;
+      return c;
+    })()`);
+    check('日历页节假日角标与内联数据一致（§64）', calSec.badges === calExpect,
+      `shown=${calSec.badges} expect=${calExpect}`);
+    check('日历页近期节点倒计时非空（§64）', calSec.count > 0, `count=${calSec.count}`);
+    await evaluate(`document.getElementById('cal-next')?.click()`);
+    await sleep(400);
+    const calTitle2 = await evaluate(`document.getElementById('cal-title')?.textContent || ''`);
+    check('日历页可翻月（§64）', calTitle2 !== calSec.title, `${calSec.title} → ${calTitle2}`);
     // 画廊大图（2026-09-20 修复回归）：软导航一圈后再进画廊，点卡片必须能开大图。
     // 修复前：页面脚本缓存了 dialog 节点，软导航换新后 showModal 抛
     // InvalidStateError (not in a Document)，表现为「点卡片没反应」。

@@ -158,6 +158,7 @@ export const NAV: NavItem[] = [
       { href: '/posts/', label: '文章' },
       { href: '/blog/', label: '归档' },
       { href: '/log/', label: '日志' },
+      { href: '/calendar/', label: '日历' },
     ],
   },
   { href: '/gallery/', label: '画廊', no: '02' },
