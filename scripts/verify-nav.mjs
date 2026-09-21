@@ -104,11 +104,11 @@ const subOpen = await ev(`(()=>{const s=document.querySelector('.nav-sub'); if(!
 console.log('  ' + JSON.stringify(subOpen));
 check('悬停后二级菜单浮出', !!subOpen && subOpen.浮出 === true);
 check('浮层落在视口内（顶栏下方）', !!subOpen && subOpen.在顶栏下方 === true);
-check('二级菜单含 文章/归档/日志 三项',
-  !!subOpen && JSON.stringify(subOpen.链接.map(l => l.文字)) === JSON.stringify(['文章', '归档', '日志']),
+check('二级菜单含 文章/归档/日志/日历 四项',
+  !!subOpen && JSON.stringify(subOpen.链接.map(l => l.文字)) === JSON.stringify(['文章', '归档', '日志', '日历']),
   JSON.stringify(subOpen?.链接?.map(l => l.文字)));
-check('二级菜单指向 /posts/ /blog/ /log/',
-  !!subOpen && JSON.stringify(subOpen.链接.map(l => l.href)) === JSON.stringify(['/posts/', '/blog/', '/log/']),
+check('二级菜单指向 /posts/ /blog/ /log/ /calendar/',
+  !!subOpen && JSON.stringify(subOpen.链接.map(l => l.href)) === JSON.stringify(['/posts/', '/blog/', '/log/', '/calendar/']),
   JSON.stringify(subOpen?.链接?.map(l => l.href)));
 await s('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rec.x, y: Math.min(rec.y + 400, 880) });
 await sleep(500);

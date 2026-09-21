@@ -98,6 +98,11 @@
 
   /* ▍布局 */
   --gutter: clamp(1.25rem, 5vw, 3.25rem);
+  /* 内容水平内边距 = 导航容器的 --nav-pad-x（Header.astro：>1100 为 32 / ≤1100 为 24 /
+     ≤768 为 20）。.wrap / .shell / .hero 的左右内边距用它，让各页内容左缘与导航
+     logo 左缘对齐（导航还有 1px 透明边框，残差 1px 不可见）。
+     ⚠️ Header.astro 的三个断点值是动效契约、一律不动；这边只做跟随同步。 */
+  --pad-align: 32px;
   /* 主标题：48–72px（用户指定），只保留一行核心信息 */
   --display-size: clamp(2.75rem, 6.4vw, 4.5rem);
   /* 主内容容器：1300 = 参考站（reactbits.dev）主容器量级（参考 1324，用户要求约 1300）。
@@ -114,6 +119,14 @@
   --w-max: 1300px;
   --w-text: 46em;
   --ease: cubic-bezier(0.2, 0.6, 0.2, 1);
+}
+
+/* --pad-align 的窄屏跟随（与 Header.astro 的 --nav-pad-x 断点逐档同步） */
+@media (max-width: 1100px) {
+  :root { --pad-align: 24px; }
+}
+@media (max-width: 768px) {
+  :root { --pad-align: 20px; }
 }
 
 /* ============ 移动端：降低玻璃模糊 ============
@@ -282,7 +295,7 @@ body::before {
 /* （极淡圆点网格装饰已移除 —— 保持简洁通透） */
 
 /* ============ 布局骨架 ============ */
-.wrap { max-width: var(--w-max); margin: 0 auto; padding: 0 var(--gutter); }
+.wrap { max-width: var(--w-max); margin: 0 auto; padding: 0 var(--pad-align); }
 .section { padding: clamp(2.6rem, 7vw, 4.6rem) 0; }
 .section + .section { border-top: 1px solid var(--line-1); }
 

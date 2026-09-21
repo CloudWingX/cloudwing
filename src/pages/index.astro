@@ -326,18 +326,18 @@ const codeSample = [
   .hero {
     position: relative;
     min-height: 100vh;
-    /* 与全局主内容容器对齐（--w-max 1300 + --gutter 左右内边距），
+    /* 与全局主内容容器对齐（--w-max 1300 + --pad-align 左右内边距），
        否则 hero 会比下方区块窄一圈，看着"上窄下宽"（实测 1440：hero 左缘 133 vs 区块 53）。
        ⚠️ 只改容器本身：内部两栏的 max-width（左栏 700 / 卡片 400）只服务于版式比例，
        容器一变它们就跟着失效，见下面 .hero-content / .code-card 的注释。 */
     max-width: var(--w-max);
     margin: 0 auto;
-    /* 左右内边距改成与全局 .wrap 同一套 --gutter，这样 hero 与下方区块的
-       "内容左缘/右缘"精确重合（实测改前差 80px）。
+    /* 左右内边距与全局 .wrap / 子页面 .shell 同一套 --pad-align（= 导航 --nav-pad-x
+       32/24/20），hero、下方区块、导航 logo 三者左缘精确重合。
        顶部 96px 是"最小呼吸位"：内容比视口矮时居中即可，内容更高时 min-height 失效、
        就靠这 96px 保证徽标不被固定导航栏压住。
        断点里（≤1024 24px、≤768 20px）仍按原值收紧，移动端不变。 */
-    padding: 96px var(--gutter) 48px;
+    padding: 96px var(--pad-align) 48px;
     display: flex;
     /* ★2026-09-18 三轮：用户要求"整块（大标题＋代码卡片）挪到屏幕正中心"★
        行的交叉轴 = 竖直方向，所以这两条决定竖向位置。取值有讲究（试过三版）：

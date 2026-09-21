@@ -2,13 +2,19 @@
    子页面三栏壳层（SidebarLayout 用）
    ------------------------------------------------------------
    左 260px 导航树 / 中间自适应内容 / 右 280px（本页目录 + 最近入库），
-   整壳最大宽度 100rem 居中；≥1025px 才出现左右栏，移动端单列。
+   整壳最大宽度与全站主容器 --w-max（1300px）同源居中 —— 2026-09-22
+   站长拍板「全站统一 1300 网格」：原来 100rem(1600) 在宽屏比导航容器
+   （1300）两侧各宽 150px，切页时导航像"飘"在内容内侧（探针实测）；
+   ≥1025px 才出现左右栏，移动端单列。
    侧栏 sticky 吸顶（顶部让开 64px 的站点头部），内容超高时栏内滚动。
    首页不使用该壳层，保持原全宽版式。
    ============================================================ */
 
 .shell {
-  --shell-max: 100rem;
+  /* 与 header / 首页 hero 同源（global.css --w-max = 1300px）。
+     shell.css 是全局文件，var() 不会被 Astro 作用域编译改写（那是 .astro
+     scoped style 的坑，见 Header.astro 注释），可以放心引用。 */
+  --shell-max: var(--w-max);
   --shell-l: 260px;
   --shell-r: 280px;
   --shell-gap: 1.9rem;
@@ -20,7 +26,7 @@
   /* 2026-09-18：导航改成 position:fixed 后不再占文档流，壳层要自己让出导航高度，
      否则内容会被压在导航栏下面。取值 = 导航高 + 原呼吸位（与 --shell-top 同源），
      这样滚动 0 时侧栏自然位置仍正好等于它的吸顶位置，起滚不跳。 */
-  padding: var(--shell-pad-top, calc(var(--header-h) + 1.15rem)) var(--gutter) 0;
+  padding: var(--shell-pad-top, calc(var(--header-h) + 1.15rem)) var(--pad-align) 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr); /* 移动端：单列 */
   gap: var(--shell-gap);

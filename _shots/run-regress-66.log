@@ -1,0 +1,117 @@
+===== verify-copy ===== PASS
+  ✅ 每一页都有非空 <title>
+  ✅ 每一页都有 description meta
+=== 结果：31/31 通过 ===
+
+===== verify-nav-icons ===== PASS
+[E] SVG 图标在深色卡上必须可见（最亮 fill 的相对亮度 ≥ 0.12）
+  ✅ 所有 SVG 图标都有足够亮的填充色
+=== 结果：9/9 通过 ===
+
+===== smoke ===== PASS
+  ✅ 手机端无横向溢出  —— overflowX=0
+  ✅ 手机端单列（中栏可见）  —— 中栏宽=364
+=== 结果：73/73 通过 ===
+
+===== verify-interaction ===== PASS
+  ✅ 拖过文章正文后能选中文字（例外生效）  —— 选中 15 字
+  ✅ 全程无 JS 异常
+=== 结果：12/12 通过 ===
+
+===== verify-log ===== PASS
+  ✅ E1 页面无运行时异常
+  📸 截图已存 _shots/log-page.png
+🎉 verify-log：15/15 通过
+
+===== verify-shell ===== PASS
+  ✅ /account/ 无横向溢出  —— 溢出=0px
+  ✅ 全程无 JS 异常
+🎉 verify-shell：50/50 通过
+
+===== verify-buildstamp ===== PASS
+  ✅ 刷新后戳已一致
+  ✅ sessionStorage 防环：同一构建只刷一次
+=== 4/4 通过 ===
+
+===== verify-noreload ===== PASS
+  ✅ 软导航 /about/ → /gallery/ 无计划外刷新  —— marker=alive2
+  ✅ 指纹一致（DOM=内存）  —— {"dom":"d3a7a5f3802a3efb2fb9d8ef69160d7117bde281","mem":"d3a7a5f3802a3efb2fb9d8ef69160d7117bde281"}
+=== 3/3 通过 ===
+
+===== verify-hero ===== PASS
+  ✅ 全程无 JS 异常
+  ✓ hero-final.png
+=== 结果：88/88 通过 ===
+
+===== verify-home ===== PASS
+  ✅ 移动端无横向溢出  —— 0
+  ✅ 无 JS 异常
+=== 结果：26/26 通过 ===
+
+===== verify-nav-shrink ===== PASS
+  ✅ 滚动后菜单仍在胶囊下方（几何有效）  —— {"菜单顶":68,"胶囊底":68,"胶囊高":52,"视口":844}
+  ✅ 全程无 JS 异常
+=== 结果：40/40 通过 ===
+
+===== verify-nav ===== FAIL(1)
+=== 结果：19/21 通过 ===
+  ❌ 二级菜单含 文章/归档/日志 三项
+  ❌ 二级菜单指向 /posts/ /blog/ /log/
+
+===== verify-brand ===== PASS
+  ✅ 无 JS 异常
+  ✓ brand.png
+=== 结果：10/10 通过 ===
+
+===== verify-theme ===== PASS
+  ✅ 首帧即为 dark（无空档）  —— dark
+  ✅ 全程无 JS 异常
+=== 结果：11/11 通过 ===
+
+===== verify-redesign ===== PASS
+  ✅ 无 JS 异常
+  ✓ r-final-works.png
+=== 结果：16/16 通过 ===
+
+===== verify-search ===== FAIL(1)
+  ❌ Pagefind UI 已挂载（输入框出现）
+  ❌ 输入框自动获得焦点
+  ❌ 搜索「作品」出结果
+
+===== verify-videobg ===== PASS
+  ✅ 无 JS 异常
+  ✓ videobg-hero-dark.png
+=== 结果：23/23 通过 ===
+
+===== verify-videobg-global ===== PASS
+  ✅ 软导航到 /account/：视频未被重建且仍在播  —— seq=1
+  ✅ 全程无 JS 异常
+=== 结果：37/37 通过 ===
+
+===== contrast-audit ===== PASS
+=== /account/  (theme=dark, 文字节点=182, 平均背景亮度=0.007) ===
+  ✅ 全部达标
+=== 汇总：不达标文字 0 处 ===
+
+===== verify-ghhot ===== FAIL(1)
+  ✅ 软导航换页后热榜卡片仍在当前文档  —— nav=true connected=true
+  ❌ 软导航换页后切回「每日」仍生效  —— period=daily sel=daily n=0
+=== 结果：4/11 通过 ===
+
+===== mobile-shots ===== PASS
+  about    溢出=0  页面高=3898  侧栏=none  汉堡=flex  吊牌容器=374×400 canvas=374×400
+  account  溢出=0  页面高=896  侧栏=none  汉堡=flex
+截图目录：D:\deep seek workplace\_shots\mobile
+
+===== diag-errors ===== PASS
+/about/              异常=0
+/account/            异常=0
+/404.html            异常=0
+
+===== diag-424 ===== PASS
+       - [warning] [giscus] Discussion not found. A new discussion will be created if a comment/reaction is submitted.
+=== 汇总：4 轮里 reportError 命中 0 条、exceptionThrown(#424) 0 条 ===
+本轮未复现 —— 提高轮数或换更快的机器再试（它是时序相关的间歇问题）。
+
+
+总结: 20/23 通过
