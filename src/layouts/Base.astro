@@ -129,6 +129,15 @@ const BUILD_ID = import.meta.env.PROD ? globalThis.__cwBuildId : 'dev';
         });
       })();
     </script>
+    <script is:inline>
+      // §67.8 音频 Range 补丁（Service Worker）：CF Pages 静态资产不支持 Range，
+      // 线上媒体 seek 行为不稳定（点进度条可能被钳回 0）。sw.js 只碰
+      // /music/*.mp3 的 Range 请求（本地缓存整曲后按需切 206），其余流量零参与。
+      // 注册越早接管越早；任何失败静默——最坏退回平台原生行为。
+      if ('serviceWorker' in navigator) {
+        try { navigator.serviceWorker.register('/sw.js').catch(function () {}); } catch (e) {}
+      }
+    </script>
     <ClientRouter />
   </head>
   <body class:list={[bodyClass, { 'bg-particles': withParticles, 'has-video-bg': hasVideoBg }]}>

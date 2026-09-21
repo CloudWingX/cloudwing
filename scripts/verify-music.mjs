@@ -112,10 +112,19 @@ const s4 = await state();
 check('回到第一首', s4.src === 'evolution-era.mp3', String(s4.src));
 check('序号显示 01 / 04', String(s4.序号).trim() === '01 / 04', String(s4.序号));
 
+console.log('\n=== 等待元数据就绪（线上首访 duration 要等网络加载）===');
+let durReady = false;
+for (let i = 0; i < 40; i++) {
+  const d = await ev(`window.__cwMusic?.audio?.duration ?? NaN`);
+  if (Number.isFinite(d) && d > 0) { durReady = true; break; }
+  await sleep(300);
+}
+check('音频元数据就绪（duration 为有限值）', durReady, 'isFinite(duration)');
+
 console.log('\n=== 进度条点击跳转（点 75% 处）===');
 await ev(`(()=>{const b=document.querySelector('[data-mu-bar]'); const r=b.getBoundingClientRect();
   b.dispatchEvent(new MouseEvent('click',{clientX:r.left+r.width*0.75,clientY:r.top+r.height/2,bubbles:true}));})()`);
-await sleep(500);
+await sleep(1200);
 const s5 = await state();
 check('跳转到约 75%（292.1s 的 ≈219s）', s5.当前时间 > 150 && s5.当前时间 < 260, `${s5.当前时间}s / ${s5.时长}s`);
 

@@ -11,7 +11,7 @@
       src: '/music/evolution-era.mp3',
       cover: '/music/covers/evolution-era.jpg',
       instrumental: true,                  // 纯音乐（歌词面板显示「纯音乐」）
-      duration: 280.9,                     // 秒（静态展示；实际以音频元数据为准）
+      duration: 292.11,                    // 秒（静态展示；以 MP3 实测为准，≠ FLAC 标签）
       sizeMB: 11.15,
       bitrate: 320,
       origin: 'FLAC 24bit/192kHz → MP3 320kbps',
@@ -25,3 +25,12 @@
 - 封面放 `covers/<id>.jpg`（当前为自制生成图，源 FLAC 无内嵌封面；换真实封面直接覆盖同名文件）；
 - 歌词放 `lyrics/<id>.lrc` 即自动启用同步高亮（零配置，见 `lyrics/README.md`）；
 - 音乐涉及版权，请只放自己有权使用的内容。
+
+## Range 补丁（§67.8，public/sw.js）
+
+CF Pages 静态资产不支持 Range 请求（`Range:` 一律回 200 整体），浏览器媒体栈对不可
+Range 的资源会把 seek 钳到 0（点进度条≈重头播放），且行为随边缘状态漂移。
+`public/sw.js`（Service Worker，Base.astro head 注册）只拦截同源 `/music/*.mp3` 的
+Range 请求：首播流式回 206 并后台缓存整曲，之后任意分片从缓存秒切 206——seek 恢复
+正常且确定。**换新曲目无需动 SW**（路径正则按 `<id>.mp3` 匹配）；若改 SW 本体记得
+递增文件内 `VER` 以清旧缓存。
