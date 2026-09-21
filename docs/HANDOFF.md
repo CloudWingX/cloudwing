@@ -3425,3 +3425,29 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
 - changelog src/content/changelog/2026-09-22.md 顶部新条目 上线「新增「音乐」子页面并导入四首曲目」。
 - **状态：§67 全部改动在工作区未 commit**（等站长「推送上线」指令）；b90e306（§66.4 留痕）仍因
   github.com:443 不可达滞留本地。
+
+### 67.8 推送上线与「线上 seek 不稳定」根治（2026-09-22，commit 9752720 + 07069df）
+
+- 推送：push-retry 第 1 轮即成（网络已恢复，6–19s）；ls-remote 证伪远端 main=9752720；
+  CF 轮询 `_shots/poll-music-deploy.mjs` 第 3 轮 DEPLOY_VERIFIED（/music/ 404→200 带
+  data-music-page 特征 + 首页导航反查 href="/music/"）。
+- 线上首跑 verify-music（argv 传 BASE 即可打线上）**44/45**：仅「跳转 75%」失败——
+  读数 1.16s/292.11s，处理函数执行了却没 seek。补「元数据就绪」前置断言后仍复现
+  （45/46），排除断言时序单因。
+- 根因（`_shots/probe-seek-live{,2}.mjs` + `probe-range-rate.mjs` 三层探针）：
+  **CF Pages 静态资产不支持 Range 请求**——`Range: bytes=0-0` 一律 200 整体
+  （页面内 fetch 12/12 一致，连小 JPG 都没有 accept-ranges；本地 astro preview 正常 206
+  → 本地全绿、线上翻车的完整解释）。Chromium 对不可 Range 的媒体资源把 seek 钳到
+  seekable 上界：实测同 URL 一次 seekable=[0,0]（点进度条≈重头播放）、另一次 [0,dur]，
+  行为随边缘状态漂移，不可信。
+- 修复（站长三选一拍板 **Service Worker 补丁**，放弃 _worker.js 全站接管与 R2 迁移）：
+  `public/sw.js`（VER cw-audio-v1，Base.astro head 最早注册）只拦截同源 GET
+  `/music/*.mp3` 且带 Range 头的请求——① 缓存命中直接切 206（seek 秒响应）；
+  ② 首播 bytes=0- 流式 206 + 后台 cache.put（不阻塞起播）；③ 中段 seek 未缓存时
+  全量拉取后切片（一次性成本）。其余流量零参与，任何错误回落默认 fetch；
+  **换曲目不用动 SW**（正则按 `<id>.mp3` 匹配），改 SW 本体须递增 VER 清旧缓存。
+- 验证（`_shots/probe-sw-local.mjs` 本地/线上双跑同结果）：SW 接管 activated、206 带
+  SW 指纹头（cache-control `public, max-age=14400`，native 服务器非此值 → 可证伪误判）、
+  后缀分片 bytes=-200 数学正确、播放后缓存填充、seek-150 秒响应且继续播放；
+  线上 verify-music **46/46**（seek 断言前置「元数据就绪」后 45→46 条）。
+- 留痕：本节 + poll-sw-deploy.mjs + 最终线上日志，commit 后随归档提交推送。

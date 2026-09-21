@@ -1,0 +1,49 @@
+[2m07:16:43[22m [34m[content][39m Syncing content
+[2m07:16:43[22m [34m[content][39m Synced content
+[2m07:16:43[22m [34m[types][39m Generated [2m736ms[22m
+[2m07:16:43[22m [34m[build][39m output: [34m"static"[39m
+[2m07:16:43[22m [34m[build][39m mode: [34m"static"[39m
+[2m07:16:43[22m [34m[build][39m directory: [34mD:\deep seek workplace\endfield-blog\dist\[39m
+[2m07:16:43[22m [34m[build][39m Collecting build info...
+[2m07:16:43[22m [34m[build][39m [32m✓ Completed in 798ms.[39m
+[2m07:16:47[22m [34m[build][39m Building static entrypoints...
+[2m07:16:49[22m [34m[vite][39m [32m✓ built in 1.57s[39m
+[33m[1m07:16:52[22m [WARN] [vite][39m [33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[2m07:16:52[22m [34m[vite][39m [32m✓ built in 3.33s[39m
+[2m07:16:52[22m [34m[build][39m Rearranging server assets...
+
+[42m[30m generating static routes [39m[49m
+[2m07:16:53[22m   [34m├─[39m [2m/404.html[22m [31m(+1.13s)[39m 
+[2m07:16:54[22m   [34m├─[39m [2m/about/index.html[22m [31m(+1.00s)[39m 
+[2m07:16:55[22m   [34m├─[39m [2m/account/index.html[22m [2m(+143ms)[22m 
+[2m07:16:55[22m   [34m├─[39m [2m/blog/index.html[22m [2m(+142ms)[22m 
+[2m07:16:55[22m   [34m├─[39m [2m/calendar/index.html[22m [2m(+158ms)[22m 
+[2m07:16:56[22m   [34m├─[39m [2m/gallery/index.html[22m [2m(+139ms)[22m 
+[2m07:16:56[22m   [34m├─[39m [2m/log/index.html[22m [2m(+138ms)[22m 
+[2m07:16:56[22m   [34m├─[39m [2m/music/index.html[22m [2m(+134ms)[22m 
+[2m07:16:56[22m   [34m├─[39m [2m/nav/index.html[22m [2m(+139ms)[22m 
+[2m07:16:56[22m   [34m├─[39m [2m/posts/2025-12-05-log/index.html[22m [2m(+137ms)[22m 
+[2m07:16:56[22m   [34m├─[39m [2m/posts/2025-12-08-headless-regression/index.html[22m [2m(+133ms)[22m 
+[2m07:16:56[22m   [34m├─[39m [2m/posts/2026-06-14-cloudflare-pages-notes/index.html[22m [2m(+133ms)[22m 
+[2m07:16:56[22m   [34m├─[39m [2m/posts/2026-09-07-log/index.html[22m [2m(+133ms)[22m 
+[2m07:16:57[22m   [34m├─[39m [2m/posts/2026-09-08-log/index.html[22m [2m(+139ms)[22m 
+[2m07:16:57[22m   [34m├─[39m [2m/posts/2026-09-09-log/index.html[22m [2m(+143ms)[22m 
+[2m07:16:57[22m   [34m├─[39m [2m/posts/2026-09-10-log/index.html[22m [2m(+135ms)[22m 
+[2m07:16:57[22m   [34m├─[39m [2m/posts/2026-09-11-log/index.html[22m [2m(+135ms)[22m 
+[2m07:16:57[22m   [34m├─[39m [2m/posts/2026-09-14-log/index.html[22m [2m(+136ms)[22m 
+[2m07:16:57[22m   [34m├─[39m [2m/posts/2026-09-15-log/index.html[22m [2m(+148ms)[22m 
+[2m07:16:57[22m   [34m├─[39m [2m/posts/2026-09-18-log/index.html[22m [2m(+133ms)[22m 
+[2m07:16:58[22m   [34m├─[39m [2m/posts/2026-09-19-rebuild-as-blog/index.html[22m [2m(+132ms)[22m 
+[2m07:16:58[22m   [34m├─[39m [2m/posts/index.html[22m [2m(+137ms)[22m 
+[2m07:16:58[22m   [34m├─[39m [2m/rss.xml[22m [2m(+81ms)[22m 
+[2m07:16:58[22m   [34m├─[39m [2m/index.html[22m [2m(+135ms)[22m 
+[2m07:16:58[22m [32m✓ Completed in 5.82s.
+[39m
+[2m07:16:58[22m [34m[build][39m [32m✓ Completed in 11.01s.[39m
+[2m07:16:58[22m [34m[@astrojs/sitemap][39m `sitemap-index.xml` created at `dist`
+[2m07:16:58[22m [34m[build][39m 23 page(s) built in [1m15.51s[22m
+[2m07:16:58[22m [34m[build][39m [1mComplete![22m
