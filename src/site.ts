@@ -73,12 +73,77 @@ export const imgUrl = (p: string) => (p && p.startsWith('/') && IMG_CDN ? IMG_CD
 //   填城市名则可固定城市，例如 '北京'
 export const WEATHER_CITY = '';
 
-// 左侧栏底部音乐播放器（见 components/MusicPlayer.astro）。
-// 歌曲暂定：数组为空时播放器显示「待添加」占位，不发任何网络请求。
-// 加歌只需往里加一条（音频建议放 public/music/，文件名用英文/数字）：
-//   { title: '曲名', artist: '作者（可选）', src: '/music/song.mp3' }
-// 也可填外部直链（注意跨域与稳定性）。多条即为播放列表，支持上一首/下一首。
-export const MUSIC: { title: string; artist?: string; src: string }[] = [];
+// 左侧栏底部音乐播放器（见 components/MusicPlayer.astro）与音乐子页面（pages/music）。
+// ★2026-09-22 音乐导入（§67）：四首曲目由 D:\Download\music 的无损 FLAC 转码而来
+//   （CF Pages 单文件 25MB 上限 → 320kbps MP3，8.8~13MB/首），封面为自制生成图
+//   （源 FLAC 无内嵌封面），想换真实封面直接覆盖 public/music/covers/<id>.jpg。
+// 歌词约定（零配置）：把 <id>.lrc 放进 public/music/lyrics/ 即自动启用同步歌词，
+//   不需要改这里的任何字段；纯音乐曲目标 instrumental: true，歌词面板会显示「纯音乐」。
+export type MusicTrack = {
+  id: string; // 曲目 slug：封面 /music/covers/<id>.jpg、歌词 /music/lyrics/<id>.lrc 都跟它同名
+  title: string;
+  artist?: string;
+  album?: string;
+  src: string; // 音频路径（public 下，建议英文/数字文件名）
+  cover?: string; // 专辑封面（音乐页唱片盘芯 + 曲目列表缩略图）
+  instrumental?: boolean; // 纯音乐（无歌词，面板显示「纯音乐，请欣赏」）
+  duration?: number; // 秒（静态展示用；实际播放以音频元数据为准）
+  sizeMB?: number; // 转码后文件体积
+  bitrate?: number; // kbps
+  origin?: string; // 音源说明（无损转码链路）
+};
+export const MUSIC: MusicTrack[] = [
+  {
+    id: 'evolution-era',
+    title: 'Evolution Era',
+    artist: 'V.K克',
+    album: '『Deemo』Song Collection',
+    src: '/music/evolution-era.mp3',
+    cover: '/music/covers/evolution-era.jpg',
+    instrumental: true,
+    duration: 292.11, // MP3 实测（源 FLAC 标称 280.9s，以浏览器元数据口径为准）
+    sizeMB: 11.15,
+    bitrate: 320,
+    origin: 'FLAC 24bit/192kHz → MP3 320kbps',
+  },
+  {
+    id: 'into-the-sky',
+    title: 'Into the Sky <MODv>',
+    artist: 'SawanoHiroyuki[nZk]',
+    album: 'Avid / Hands Up to the Sky',
+    src: '/music/into-the-sky.mp3',
+    cover: '/music/covers/into-the-sky.jpg',
+    duration: 229.8,
+    sizeMB: 8.77,
+    bitrate: 320,
+    origin: 'FLAC 24bit/192kHz → MP3 320kbps',
+  },
+  {
+    id: 'wings-of-piano',
+    title: 'Wings of Piano',
+    artist: 'V.K克',
+    album: '『Deemo』Song Collection',
+    src: '/music/wings-of-piano.mp3',
+    cover: '/music/covers/wings-of-piano.jpg',
+    instrumental: true,
+    duration: 340.31, // MP3 实测（源 FLAC 标称 331.5s）
+    sizeMB: 12.98,
+    bitrate: 320,
+    origin: 'FLAC 24bit/192kHz → MP3 320kbps',
+  },
+  {
+    id: 'starry-night',
+    title: '星が瞬くこんな夜に',
+    artist: 'supercell',
+    album: '魔法使いの夜 オリジナルサウンドトラック',
+    src: '/music/starry-night.mp3',
+    cover: '/music/covers/starry-night.jpg',
+    duration: 230.5,
+    sizeMB: 8.8,
+    bitrate: 320,
+    origin: 'FLAC 24bit/192kHz → MP3 320kbps',
+  },
+];
 
 // 全站背景视频（见 components/VideoBackground.astro）。
 // 文件放在 public/media/ 随站点打包（不走外部 CDN，避免第三方挂掉/被墙）。
@@ -162,9 +227,10 @@ export const NAV: NavItem[] = [
     ],
   },
   { href: '/gallery/', label: '画廊', no: '02' },
-  { href: '/nav/', label: '导航', no: '03' },
-  { href: '/about/', label: '关于', no: '04' },
-  { href: '/account/', label: '互动', no: '05' },
+  { href: '/music/', label: '音乐', no: '03' },
+  { href: '/nav/', label: '导航', no: '04' },
+  { href: '/about/', label: '关于', no: '05' },
+  { href: '/account/', label: '互动', no: '06' },
 ];
 
 /* ▍网站导航页（/nav/）的条目 —— 按用途分组的站点收藏夹。

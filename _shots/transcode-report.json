@@ -1,0 +1,30 @@
+[
+  {
+    "id": "evolution-era",
+    "mp3_ok": true,
+    "mp3_mb": 11.15,
+    "cover_ok": false,
+    "cover_kb": 0
+  },
+  {
+    "id": "into-the-sky",
+    "mp3_ok": true,
+    "mp3_mb": 8.77,
+    "cover_ok": false,
+    "cover_kb": 0
+  },
+  {
+    "id": "wings-of-piano",
+    "mp3_ok": true,
+    "mp3_mb": 12.98,
+    "cover_ok": false,
+    "cover_kb": 0
+  },
+  {
+    "id": "starry-night",
+    "mp3_ok": true,
+    "mp3_mb": 8.8,
+    "cover_ok": false,
+    "cover_kb": 0
+  }
+]

@@ -17,7 +17,9 @@ const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 
 const SHELL_PAGES = ['/posts/', '/blog/', '/log/', '/calendar/', '/gallery/', '/nav/', '/about/', '/account/'];
-const ALL_PAGES = [ '/', ...SHELL_PAGES, '/404.html'];
+// 全宽页（无三栏壳层）：首页 + 音乐页（§67，/music/ 用 Base 全宽版式）
+const WIDE_PAGES = ['/', '/music/'];
+const ALL_PAGES = [...WIDE_PAGES, ...SHELL_PAGES, '/404.html'];
 
 const results = [];
 const check = (name, ok, detail = '') => {
@@ -115,8 +117,8 @@ const main = async () => {
       await setup(send, 1440, 900);
       await evaluate(`location.replace(${JSON.stringify(BASE + path)})`);
       await sleep(3000);
-      // 首页不套三栏壳层，等 .main-content 即可；子页面还要等两栏被补成等高
-      const isHomePage = path === '/';
+      // 首页/音乐页不套三栏壳层，等 .main-content 即可；子页面还要等两栏被补成等高
+      const isHomePage = WIDE_PAGES.includes(path);
       const waited = await waitForLayout(evaluate, isHomePage ? '.main-content' : '.shell-left');
       if (waited < 0) console.log(`  · ${path} ⚠️ 等待布局超时（40s），下面的断言可能是等待不足而非站点问题`);
       else if (waited > 3000) console.log(`  · ${path} 布局等待 ${(waited / 1000).toFixed(1)}s`);
@@ -130,8 +132,8 @@ const main = async () => {
       })()`);
       check(`${path} 横向溢出 0`, d.ovf === 0, 'overflowX=' + d.ovf);
       check(`${path} 无 JS 异常`, errors.length === 0, errors[0] || '');
-      const isHome = path === '/';
-      check(`${path} ${isHome ? '首页无侧栏' : '子页面有侧栏'}`, isHome ? d.左 === 0 && d.右 === 0 : d.左 > 0 && d.右 > 0);
+      const isHome = WIDE_PAGES.includes(path);
+      check(`${path} ${isHome ? '全宽页无侧栏' : '子页面有侧栏'}`, isHome ? d.左 === 0 && d.右 === 0 : d.左 > 0 && d.右 > 0);
       if (!isHome) {
         check(`${path} 两栏等高`, d.左 === d.右, `${d.左} / ${d.右}`);
         check(`${path} 侧栏无内部滚动条`, !d.左有滚动条);

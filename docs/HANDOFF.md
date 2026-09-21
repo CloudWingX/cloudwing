@@ -3347,3 +3347,81 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   `Base.BH7S552V.css` 与本地同名同哈希、含 pad-align/shell-max；
   生产探针 `_shots/probe-nav-align4-live.mjs`（3 视口 × 5 页）与本地结果
   **逐值一致**（@1920 五页 hc=305–1605、logoL=338；Δ h1=1.0、Δ shell=33.0）。
+
+### 67. 音乐功能全链路 —— 四首曲目 + 侧栏歌词面板 + /music/ 独立子页（2026-09-22）
+
+### 67.1 音源盘点、转码与封面（public/music/）
+- 源：D:\Download\music 四首 FLAC 24bit/192kHz（共约 713MB），超 CF Pages 单文件 25MB 硬限 →
+  static-ffmpeg 转 320kbps MP3（venv python 在
+  `...\.workbuddy\binaries\python\envs\default\Scripts\python.exe`，是 Scripts\python.exe 不是根目录）：
+  evolution-era（V.K克 Deemo·纯音乐）292.11s/11.15MB、into-the-sky（SawanoHiroyuki[nZk]）229.84s/8.77MB、
+  wings-of-piano（V.K克·纯音乐）340.31s/12.98MB、starry-night（supercell·魔法使いの夜）230.52s/8.80MB。
+  报告 `_shots/transcode-report.json`。
+- **MP3 实测时长 ≠ FLAC 标签**（292.11 vs 280.9、340.31 vs 331.5）：site.ts 静态 duration 一律以
+  MP3 实测为准（浏览器元数据口径），verify 断言区间按此校准（如 4:52 段 → 285–300）。
+- 源 FLAC **无内嵌封面**（ffprobe 仅单音频流、-map 0:v:0 无匹配，取证 `_shots/cover-debug.log`）→
+  ImageGen 生成 4×1024×1024 深色系封面（约 20–40 credits）→ PNG 转 JPG（ffmpeg -q:v 4）→
+  底部「AI生成 WORKBUD>」水印 crop=1024:954:0:0 裁掉。封面可整图替换 `public/music/covers/<id>.jpg`。
+
+### 67.2 数据模型与「零配置歌词」约定
+- site.ts 新增 MusicTrack { id,title,artist?,album?,src,cover?,instrumental?,duration?,sizeMB?,bitrate?,origin? }；
+  NAV 增「音乐」no:03（画廊之后），导航/关于/互动顺延 04/05/06。
+- 歌词零配置：`public/music/lyrics/<id>.lrc` 存在即自动启用同步高亮，无需 site.ts 字段；
+  404 缓存进 lrcCache Map；instrumental:true 显「♪ 纯音乐，请欣赏」，无人声无 LRC 显「暂无歌词」；
+  解析器支持一行多个 [mm:ss.xx]。约定文档：public/music/lyrics/README.md、public/music/README.md（全 schema）。
+- 侧栏 MusicPlayer.astro：mu-ctrl 内 mu-no 前插「词」按钮（data-mu-lyrics + aria-expanded），
+  后插 .mu-lyrics 面板（hidden > .mu-lyrics-inner）；shell.css 追加样式——.mu-lyrics-inner
+  max-height:132px + mask 渐变 + **position:relative**（offsetTop 推 scrollTop 依赖它）。
+
+### 67.3 /music/ 独立子页（src/pages/music/index.astro，~500 行）
+- 全宽页（bodyClass=page-music，与首页同列 smoke WIDE_PAGES）；section[data-music-page] 挂全套
+  data-mp-*（ids/srcs/titles/artists/albums/covers/inst/durs/sizes/origins），实例 window.__cwMusicPage。
+- 中心大唱片：沟槽 repeating-radial-gradient + label（内联 backgroundImage=封面）+ 中孔 + 高光
+  （跟随 --shx/--shy）；@keyframes mp-spin 24s linear，.is-playing 时 animation-play-state:running。
+  **视差**：rAF lerp 指针倾斜 perspective(900px) rotateX(-cy*10) rotateY(cx*12)（data-mp-discwrap），
+  settle 即停 rAF，prefers-reduced-motion 下禁用。
+- 信息铺满：参数 dl 10 项（播放状态/曲目序号/格式/时长/大小/音源/文件名/循环/音量/歌词）+
+  进度条时间 + 控制区（循环 chip、音量 range+百分比）+ 歌词区 168px + 曲目列表（data-mp-item + .mp-eq 播放条）。
+- ui.js 新增 musicPage()（~380 行）：单例 Audio；ended 按循环模式（one→重播/shuffle→随机换曲/list→下一曲）；
+  音量持久化 cw-mp-vol、循环持久化 cw-mp-loop；键盘 ←→ ±5s；进度条点击 seek。
+- **双播放器互斥**：各自 play 监听里 pause 对方（__cwMusic.audio.pause() / __cwMusicPage.audio.pause()），
+  verify-music 经软导航往返双向验证。
+
+### 67.4 mpRoot 软导航过期闭包修复（真 bug）
+- 症状：软导航去别页再回 /music/ 后点曲目，src 切了但可见曲名不同步——once 接线的委托闭包捕获
+  boot 时 root，往返后旧 root 已 detach：音频操作正常（单例存活）但 DOM 写入不可见。
+- 修法：**模块级 let mpRoot = null，每次 boot 重新赋值；musicPage 全部 DOM 读写（qs/list/paint/
+  resume/shine-vars 共 8 处）经由 mpRoot**。侧栏播放器靠「每次 boot 重同步」幸存，/music/ 页同思路根治；
+  grep 复核无游离引用。
+
+### 67.5 Number(null)===0 音量坑（真 bug，截图揪出）
+- Number(localStorage.getItem('cw-mp-vol')) 键缺失时得 0，能通过 !isNaN(v)&&v>=0&&v<=1 守卫 →
+  新访客静默 0% 音量。修法：显式 `rawVol == null ? NaN : Number(rawVol)`，null 走默认 1；
+  修后状态转储确认音量 100%。教训：localStorage 读取转数字必须先判 null。
+
+### 67.6 断言同步与环境坑
+- smoke.mjs：WIDE_PAGES = ['/', '/music/']（全宽页无侧栏断言扩展到音乐页）。
+- verify-music.mjs 整体重写为真实曲目断言：时长区间、seek 75%（219.14s）、歌词面板开合与文案、
+  软导航连续性、唱片旋转（is-playing + animationPlayState running）、视差 transform、双向互斥、
+  曲目点击同步曲名、无 JS 错误 —— **45/45**。
+- **9222 双监听坑**：netstat -ano -p tcp 发现 IPv4 127.0.0.1:9222 与 [::1]:9222 各有监听者——
+  残留上轮无头 Edge（无 autoplay 豁免）占 IPv4，新实例只绑上 IPv6 → CDP 脚本打到旧浏览器，
+  合成 .click() 的 play() 被拒、卡片卡 'loading'。taskkill /F /PID <pid> /T（38 子进程）后
+  单实例重启恢复。**本项目无头跑测必须带 --autoplay-policy=no-user-gesture-required**。
+- 顺带加固产品：侧栏 toggle 的 play() catch 补 card.dataset.state='paused'（原为空，play 被拒时 UI 卡 loading）；
+  musicPage toggle catch 补 paint()。
+- pagefind 入口：node ./node_modules/pagefind/lib/runner/bin.cjs --site dist（lib/index.js 静默 no-op，
+  以 package.json bin 字段为准）。
+- astro preview PID 锁：已有实例时新起报 "Another astro preview server is already running"；
+  旧实例从磁盘即时读 dist，新构建不用重启即可见。
+- ⚠️ 再次踩中**同消息双 Edit 同文件互相覆盖**（site.ts wings 340.31 丢失、verify-music 时长断言丢失）
+  —— 同一文件必须串行改 + grep 复核落盘。
+
+### 67.7 回归与状态
+- 最终全绿：verify-music **45/45**、smoke **76/76**（含 /music/ 溢出/JS/无侧栏）、verify-nav **21/21**、
+  verify-nav-shrink **40/40**、verify-copy **31/31**。日志：_shots/verify-music.log、smoke-music.log 等。
+- 截图 QA（CDP，_shots/shot-musicpage.mjs）：musicpage-top-1920 / musicpage-playing-1920（数值转储
+  1.1s↔0.33% 填充一致、音量 100%、唱片倾斜生效）/ musicpage-params-1920 / musicpage-mobile-390。
+- changelog src/content/changelog/2026-09-22.md 顶部新条目 上线「新增「音乐」子页面并导入四首曲目」。
+- **状态：§67 全部改动在工作区未 commit**（等站长「推送上线」指令）；b90e306（§66.4 留痕）仍因
+  github.com:443 不可达滞留本地。

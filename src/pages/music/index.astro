@@ -1,0 +1,619 @@
+---
+// 音乐子页面（§67，2026-09-22 新增）：中央大唱片 + 播放全参数 + 歌词 + 曲目表。
+//   · 唱片：播放时旋转（CSS animation-play-state），悬停 3D 视差（ui.js musicPage()
+//     的 rAF 插值 tilt + 高光跟随）；盘芯封面来自 site.ts MUSIC 的 cover。
+//   · 与左侧栏播放器相互独立但互斥播放（一边开播另一边自动暂停）。
+//   · 数据经 data-mp-*（pipe 分隔）传给 ui.js，与 site.ts 的 MUSIC 同源。
+//   · 歌词零配置：/music/lyrics/<id>.lrc 存在即自动同步高亮；纯音乐显示占位语。
+import Base from '../../layouts/Base.astro';
+import { MUSIC } from '../../site';
+
+const join = (fn: (t: (typeof MUSIC)[number]) => string) => MUSIC.map(fn).join('|');
+const fmtLen = (s?: number) => {
+  if (!s || !isFinite(s)) return '--:--';
+  const m = Math.floor(s / 60);
+  const r = Math.floor(s % 60);
+  return `${m}:${String(r).padStart(2, '0')}`;
+};
+---
+<Base
+  title="音乐"
+  description="云翼的音乐收藏：黑胶唱片、同步歌词与全部播放参数"
+  bodyClass="page-music"
+>
+  <section
+    class="mp"
+    data-music-page
+    data-state="paused"
+    data-mp-ids={join((t) => t.id)}
+    data-mp-srcs={join((t) => t.src)}
+    data-mp-titles={join((t) => t.title)}
+    data-mp-artists={join((t) => t.artist || '未知作者')}
+    data-mp-albums={join((t) => t.album || '')}
+    data-mp-covers={join((t) => t.cover || '')}
+    data-mp-inst={join((t) => (t.instrumental ? '1' : ''))}
+    data-mp-durs={join((t) => String(t.duration || ''))}
+    data-mp-sizes={join((t) => String(t.sizeMB || ''))}
+    data-mp-origins={join((t) => t.origin || '')}
+  >
+    <header class="mp-head" data-ent>
+      <p class="mp-kicker">CLOUDWING · MUSIC</p>
+      <h1>音乐</h1>
+      <p class="mp-sub">四首常驻曲目 · 黑胶唱片 · 同步歌词 · 全部播放参数</p>
+    </header>
+
+    {/* 舞台：左唱片 + 右控制/歌词 */}
+    <div class="mp-stage" data-ent>
+      <div class="mp-discwrap" data-mp-discwrap>
+        <div class="mp-disc" data-mp-disc>
+          <div class="mp-grooves" aria-hidden="true"></div>
+          <div class="mp-label" data-mp-label role="img" aria-label="专辑封面"></div>
+          <div class="mp-hole" aria-hidden="true"></div>
+          <div class="mp-shine" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div class="mp-panel">
+        <p class="mp-no" data-mp-no>01 / {String(MUSIC.length).padStart(2, '0')}</p>
+        <h2 class="mp-title" data-mp-title>{MUSIC[0]?.title ?? '—'}</h2>
+        <p class="mp-artist" data-mp-artist>{MUSIC[0]?.artist ?? '—'}</p>
+        <p class="mp-album" data-mp-album>{MUSIC[0]?.album ?? ''}</p>
+
+        <div
+          class="mp-bar"
+          data-mp-bar
+          role="slider"
+          aria-label="播放进度"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+          tabindex="0"
+        >
+          <span class="mp-fill" data-mp-fill></span>
+        </div>
+        <p class="mp-times"><span data-mp-cur>0:00</span><span data-mp-dur>{fmtLen(MUSIC[0]?.duration)}</span></p>
+
+        <div class="mp-ctrl">
+          <button type="button" class="mp-btn" data-mp-prev aria-label="上一首" title="上一首">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 5v14M6 12l8-7M6 12l8 7" />
+            </svg>
+          </button>
+          <button type="button" class="mp-btn mp-play" data-mp-toggle aria-label="播放" title="播放 / 暂停">
+            <svg class="mp-ico-play" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" /></svg>
+            <svg class="mp-ico-pause" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M7.5 5h3.2v14H7.5zM13.3 5h3.2v14h-3.2z" /></svg>
+          </button>
+          <button type="button" class="mp-btn" data-mp-next aria-label="下一首" title="下一首">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 5v14M18 12L10 5M18 12l-8 7" />
+            </svg>
+          </button>
+          <button type="button" class="mp-chip" data-mp-loop data-mode="list" title="切换循环模式（顺序 / 单曲 / 随机）">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 2l4 4-4 4M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 01-4 4H3" />
+            </svg>
+            <span>顺序循环</span>
+          </button>
+          <div class="mp-vol" role="group" aria-label="音量">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 5L6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13" />
+            </svg>
+            <input type="range" data-mp-vol min="0" max="100" value="100" aria-label="音量" />
+            <span class="mp-volpct" data-mp-volpct>100%</span>
+          </div>
+        </div>
+
+        <div class="mp-lyrics">
+          <div class="mp-lyrics-inner" data-mp-lyrics-inner></div>
+        </div>
+      </div>
+    </div>
+
+    {/* 播放参数全览（当前曲目 + 播放器状态；由 ui.js 全量刷值） */}
+    <div class="mp-params" data-ent>
+      <h3>播放参数</h3>
+      <dl>
+        <div><dt>播放状态</dt><dd data-mp-state>待播放</dd></div>
+        <div><dt>当前曲目</dt><dd data-mp-no>01 / {String(MUSIC.length).padStart(2, '0')}</dd></div>
+        <div><dt>格式 / 比特率</dt><dd data-mp-fmt>MP3 · 320 kbps CBR</dd></div>
+        <div><dt>时长</dt><dd data-mp-length>{fmtLen(MUSIC[0]?.duration)}</dd></div>
+        <div><dt>文件大小</dt><dd data-mp-size>{MUSIC[0]?.sizeMB ? MUSIC[0].sizeMB + ' MB' : '--'}</dd></div>
+        <div><dt>音源</dt><dd data-mp-origin>{MUSIC[0]?.origin ?? '--'}</dd></div>
+        <div><dt>文件名</dt><dd data-mp-file>{(MUSIC[0]?.src ?? '').split('/').pop()}</dd></div>
+        <div><dt>循环模式</dt><dd data-mp-loop-label>顺序循环</dd></div>
+        <div><dt>音量</dt><dd><span data-mp-volpct>100%</span></dd></div>
+        <div><dt>歌词</dt><dd>{MUSIC[0]?.instrumental ? '纯音乐' : 'LRC 自动同步'}</dd></div>
+      </dl>
+    </div>
+
+    {/* 曲目表 */}
+    <div class="mp-listwrap" data-ent>
+      <h3>曲目表</h3>
+      <ol class="mp-list">
+        {MUSIC.map((t, i) => (
+          <li>
+            <button type="button" class="mp-item" data-mp-item={i}>
+              <span class="mp-item-no" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              <span
+                class="mp-item-cover"
+                style={t.cover ? `background-image:url(${t.cover})` : undefined}
+                aria-hidden="true"
+              />
+              <span class="mp-item-main">
+                <span class="mp-item-title">{t.title}</span>
+                <span class="mp-item-sub">{t.artist ?? '未知作者'} · {t.album ?? ''}</span>
+              </span>
+              <span class="mp-eq" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="mp-item-len">{fmtLen(t.duration)}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </div>
+
+    <p class="mp-foot" data-ent>
+      曲目仅供站内欣赏 · 由无损源（FLAC 24bit/192kHz）转码 · 歌词 LRC 放入 <code>/music/lyrics/&lt;id&gt;.lrc</code> 即自动同步
+    </p>
+  </section>
+</Base>
+
+<style is:global>
+  /* ---------- /music/ 音乐页（§67） ----------
+     设计语言与全站一致：深色玻璃 + 强调色令牌 + mono 小标签。
+     is:global 原因：ui.js 动态创建的歌词行没有 Astro 作用域标记；
+     选择器全部以 .mp- 前缀命名空间隔离，不会外泄。 */
+  .mp {
+    width: 100%;
+    max-width: var(--w-max);
+    margin: 0 auto;
+    padding: calc(var(--header-h, 64px) + 2.4rem) var(--pad-align) 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.2rem;
+    --shx: 32%;
+    --shy: 28%;
+  }
+
+  /* 头部 */
+  .mp-kicker {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.32em;
+    color: var(--accent-deep);
+  }
+  .mp-head h1 {
+    margin: 0;
+    font-size: clamp(1.9rem, 4vw, 2.7rem);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+  }
+  .mp-sub {
+    margin: 0.55rem 0 0;
+    font-size: 0.86rem;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+  }
+
+  /* 舞台 */
+  .mp-stage {
+    display: grid;
+    grid-template-columns: minmax(280px, 400px) 1fr;
+    gap: 2.4rem;
+    align-items: center;
+  }
+
+  /* 唱片：wrap 吃 3D 视差（JS transform），disc 吃自转（CSS animation），互不打架 */
+  .mp-discwrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    will-change: transform;
+  }
+  .mp-disc {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%, #262e38 0 16.5%, #12161d 17% 47%, #0a0d12 47.5% 100%);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow:
+      0 26px 70px rgba(0, 0, 0, 0.55),
+      0 6px 18px rgba(0, 0, 0, 0.45),
+      inset 0 0 40px rgba(0, 0, 0, 0.55);
+    animation: mp-spin 24s linear infinite;
+    animation-play-state: paused;
+  }
+  .mp-disc.is-playing { animation-play-state: running; }
+  @keyframes mp-spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mp-disc { animation: none; }
+  }
+  /* 纹理沟槽 */
+  .mp-grooves {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: repeating-radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0 1px,
+      rgba(255, 255, 255, 0) 1px 5px
+    );
+    opacity: 0.7;
+  }
+  /* 盘芯封面（ui.js 按当前曲目换背景图） */
+  .mp-label {
+    position: absolute;
+    inset: 28%;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 6px rgba(8, 10, 14, 0.85), inset 0 0 18px rgba(0, 0, 0, 0.4);
+  }
+  /* 主轴孔 */
+  .mp-hole {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 3.2%;
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: #05070a;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+  }
+  /* 高光：跟随视差变量 --shx/--shy（ui.js 设置） */
+  .mp-shine {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at var(--shx) var(--shy),
+      rgba(255, 255, 255, 0.13),
+      rgba(255, 255, 255, 0.02) 36%,
+      transparent 58%
+    );
+    mix-blend-mode: screen;
+    pointer-events: none;
+  }
+
+  /* 右侧控制面板 */
+  .mp-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 1.7rem 1.8rem;
+    border-radius: var(--r-l);
+    border: 1px solid var(--line-1);
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-sm);
+  }
+  .mp-no {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.22em;
+    color: var(--ink-3);
+  }
+  .mp-title {
+    margin: 0.15rem 0 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .mp-artist {
+    margin: 0.15rem 0 0;
+    font-size: 0.86rem;
+    color: var(--ink-2);
+  }
+  .mp-album {
+    margin: 0.1rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+  }
+
+  /* 进度条 */
+  .mp-bar {
+    position: relative;
+    height: 8px;
+    margin-top: 0.7rem;
+    border-radius: 999px;
+    background: var(--line-1);
+    border: 1px solid var(--line-2);
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .mp-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .mp-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: var(--accent);
+    transition: width 0.12s linear;
+  }
+  .mp-times {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.3rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 控制区 */
+  .mp-ctrl {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 0.5rem;
+  }
+  .mp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 999px;
+    border: var(--line-w-pill) solid var(--line-2);
+    background: var(--glass-soft);
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease, transform 0.16s var(--ease);
+  }
+  .mp-btn:hover { color: var(--accent-deep); border-color: var(--accent); background: var(--accent-soft); }
+  .mp-btn:active { transform: scale(0.94); }
+  .mp-play {
+    width: 52px;
+    height: 52px;
+    border: var(--line-w) solid var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .mp-play:hover { color: var(--on-accent); background: var(--accent-deep); border-color: var(--accent-deep); }
+  .mp-ico-pause { display: none; }
+  .mp-play[aria-label='暂停'] .mp-ico-play { display: none; }
+  .mp-play[aria-label='暂停'] .mp-ico-pause { display: block; }
+  .mp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    height: 34px;
+    padding: 0 0.85rem;
+    margin-left: 0.3rem;
+    border-radius: 999px;
+    border: var(--line-w-pill) solid var(--line-2);
+    background: var(--glass-soft);
+    color: var(--ink-2);
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+  }
+  .mp-chip:hover { color: var(--accent-deep); border-color: var(--accent); background: var(--accent-soft); }
+  .mp-chip[data-mode='one'],
+  .mp-chip[data-mode='shuffle'] {
+    color: var(--accent-deep);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .mp-vol {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    color: var(--ink-3);
+  }
+  .mp-vol input[type='range'] {
+    width: 110px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .mp-volpct {
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+    min-width: 3.2em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 歌词（常驻面板） */
+  .mp-lyrics {
+    margin-top: 0.8rem;
+    border-radius: var(--r-m);
+    border: var(--line-w-pill) solid var(--line-2);
+    background: color-mix(in srgb, var(--glass) 55%, transparent);
+  }
+  .mp-lyrics-inner {
+    position: relative;
+    height: 168px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.9rem 1rem;
+    scrollbar-width: thin;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+  }
+  .mp-lyrics-inner::-webkit-scrollbar { width: 4px; }
+  .mp-lyrics-inner::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; }
+  .mp-ly-line {
+    margin: 0;
+    padding: 0.22rem 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--ink-3);
+    text-align: center;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+  .mp-ly-line.on {
+    color: var(--accent-deep);
+    transform: scale(1.06);
+  }
+  .mp-ly-empty {
+    margin: 0;
+    padding: 2.2rem 0;
+    font-size: 0.84rem;
+    color: var(--ink-3);
+    text-align: center;
+    letter-spacing: 0.06em;
+  }
+
+  /* 参数全览 */
+  .mp-params h3,
+  .mp-listwrap h3 {
+    margin: 0 0 0.9rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+  }
+  .mp-params dl {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.7rem;
+    margin: 0;
+  }
+  .mp-params dl > div {
+    padding: 0.75rem 0.85rem;
+    border-radius: var(--r-s);
+    border: 1px solid var(--line-2);
+    background: var(--glass-soft);
+  }
+  .mp-params dt {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+  .mp-params dd {
+    margin: 0.3rem 0 0;
+    font-size: 0.82rem;
+    color: var(--ink);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  /* 曲目表 */
+  .mp-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .mp-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    width: 100%;
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--r-m);
+    border: 1px solid var(--line-2);
+    background: var(--glass-soft);
+    color: var(--ink-2);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s var(--ease);
+  }
+  .mp-item:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateX(2px); }
+  .mp-item.on { border-color: var(--accent); background: var(--accent-soft); }
+  .mp-item-no {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    width: 1.9em;
+  }
+  .mp-item-cover {
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--line-2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+  .mp-item-main { display: flex; flex-direction: column; min-width: 0; }
+  .mp-item-title {
+    font-size: 0.9rem;
+    color: var(--ink);
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mp-item-sub {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* 播放中的均衡器动画 */
+  .mp-eq { display: none; align-items: flex-end; gap: 2px; height: 14px; flex: none; }
+  .mp-eq i {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+    animation: mp-eq 0.9s ease-in-out infinite;
+  }
+  .mp-eq i:nth-child(1) { height: 60%; }
+  .mp-eq i:nth-child(2) { height: 100%; animation-delay: 0.2s; }
+  .mp-eq i:nth-child(3) { height: 45%; animation-delay: 0.4s; }
+  @keyframes mp-eq {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+  }
+  .mp[data-state='playing'] .mp-item.on .mp-eq { display: flex; }
+  .mp-item-len {
+    flex: none;
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mp-foot {
+    margin: 0.4rem 0 0;
+    font-size: 0.7rem;
+    line-height: 1.7;
+    color: var(--ink-3);
+  }
+  .mp-foot code {
+    font-family: var(--font-code);
+    font-size: 0.95em;
+    background: var(--accent-soft);
+    padding: 0 0.3em;
+    border-radius: 4px;
+  }
+
+  /* 响应式 */
+  @media (max-width: 960px) {
+    .mp-stage { grid-template-columns: 1fr; gap: 1.6rem; }
+    .mp-discwrap { max-width: 300px; margin: 0 auto; }
+    .mp-params dl { grid-template-columns: repeat(2, 1fr); }
+    .mp-vol { margin-left: 0; }
+  }
+</style>

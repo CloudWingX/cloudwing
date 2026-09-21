@@ -157,6 +157,7 @@ function boot() {
     weatherWidget,      // 左侧栏天气小帖（uapis.cn，浏览器端拉取 + 30 分钟缓存）
     githubTrending,     // 右侧栏 GitHub 热榜（日/周/月/年，Search API + 时间桶缓存，§56）
     musicPlayer,        // 左侧栏音乐播放器（歌曲见 site.ts 的 MUSIC）
+    musicPage,          // 音乐子页面 /music/：大唱片旋转+视差、全参数、歌词（§67）
     searchModal,        // 全站搜索悬浮窗（Pagefind，首次打开才加载）
     // motionToggle 已移除：2026-09-18 按用户要求删掉导航栏的「暂停背景动态」按钮，
     // 背景视频默认播放；减少动态仍由 prefers-reduced-motion 自动处理。
@@ -1777,6 +1778,43 @@ function githubTrending() {
    歌曲列表在 site.ts 的 MUSIC（为空则只有占位，直接返回）。
    ⚠️ <audio> 必须挂在 document.body 上、而不是侧栏里：软导航会整个换掉侧栏 DOM，
       挂在里面的话一切页面音乐就断。同理状态存 window 单例、监听走 document 委托。 */
+/* ---------- 歌词加载（侧栏播放器与音乐页共用，§67）----------
+   零配置约定：把 <id>.lrc 放进 public/music/lyrics/ 即自动启用同步歌词。
+   解析结果按曲目 id 缓存（404 也缓存，避免反复请求）。 */
+const lrcCache = new Map();
+function parseLRC(text) {
+  const out = [];
+  for (const raw of String(text || '').split(/\r?\n/)) {
+    // 一行可带多个时间戳：[mm:ss.xx][mm:ss.xx]歌词
+    const stamps = [...raw.matchAll(/\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g)];
+    if (!stamps.length) continue;
+    const line = raw.replace(/\[[^\]]*\]/g, '').trim();
+    if (!line) continue;
+    for (const m of stamps) {
+      const frac = m[3] ? parseInt(m[3].padEnd(3, '0'), 10) / 1000 : 0;
+      out.push({ t: parseInt(m[1], 10) * 60 + parseInt(m[2], 10) + frac, text: line });
+    }
+  }
+  out.sort((a, b) => a.t - b.t);
+  return out;
+}
+async function loadLyrics(id) {
+  if (!id) return null;
+  if (lrcCache.has(id)) return lrcCache.get(id);
+  try {
+    const res = await fetch(`/music/lyrics/${encodeURIComponent(id)}.lrc`);
+    let val = null;
+    if (res.ok) {
+      const lines = parseLRC(await res.text());
+      if (lines.length) val = { lines };
+    }
+    lrcCache.set(id, val);
+    return val;
+  } catch (e) {
+    return null;
+  }
+}
+
 function musicPlayer() {
   const card = document.querySelector('[data-music]');
   if (!card) return;
@@ -1790,6 +1828,10 @@ function musicPlayer() {
       index: 0,
       wired: false,
       restored: false,
+      lyricsOpen: false, // 歌词面板是否展开（软导航后据此恢复）
+      lyricsFor: -1, // 已加载歌词的曲目下标
+      lyricsLines: null, // 当前曲目的 LRC 行（null = 纯音乐/暂无）
+      lyricsPtr: 0, // 当前高亮行指针
     });
 
   // ---- 音频元素：全局单例，挂 body 上，切页不中断 ----
@@ -1798,6 +1840,7 @@ function musicPlayer() {
     a.preload = 'metadata';
     a.addEventListener('timeupdate', () => {
       paintProgress();
+      syncLyrics();
       if (st.audio.duration && !st.audio.paused) {
         // 记录播放位置：整页刷新后可以接着放
         try {
@@ -1818,6 +1861,9 @@ function musicPlayer() {
     a.addEventListener('play', () => {
       card.dataset.state = 'playing';
       setToggleLabel(true);
+      // 双播放器互斥：音乐页的唱片机在响时，侧栏这边一开播就把它暂停
+      const mp = window.__cwMusicPage;
+      if (mp && mp.audio && !mp.audio.paused) mp.audio.pause();
     });
     a.addEventListener('pause', () => {
       card.dataset.state = 'paused';
@@ -1869,6 +1915,68 @@ function musicPlayer() {
     }
   };
 
+  /* ---- 歌词面板（「词」按钮弹出；LRC 零配置，见文件顶部 loadLyrics 注释）---- */
+  const ids = () => (card.dataset.musicIds || '').split('|');
+  const insts = () => (card.dataset.musicInst || '').split('|');
+  const lyPanel = () => card.querySelector('[data-mu-lyrics-panel]');
+  const lyInner = () => card.querySelector('[data-mu-lyrics-inner]');
+
+  const lyricsPaint = (data) => {
+    const inner = lyInner();
+    if (!inner) return;
+    st.lyricsFor = st.index;
+    st.lyricsLines = data && data.lines ? data.lines : null;
+    st.lyricsPtr = 0;
+    if (!st.lyricsLines) {
+      const isInst = insts()[st.index] === '1';
+      inner.innerHTML = `<p class="mu-ly-empty">${isInst ? '♪ 纯音乐，请欣赏' : '暂无歌词'}</p>`;
+      return;
+    }
+    inner.innerHTML = st.lyricsLines
+      .map((l) => `<p class="mu-ly-line">${l.text.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`)
+      .join('');
+    syncLyrics();
+  };
+
+  const ensureLyrics = () => {
+    if (st.lyricsFor === st.index && lyInner() && lyInner().childNodes.length) return;
+    const inner = lyInner();
+    if (inner && !inner.childNodes.length) inner.innerHTML = '<p class="mu-ly-empty">歌词加载中…</p>';
+    const reqIdx = st.index;
+    loadLyrics(ids()[reqIdx]).then((data) => {
+      // 加载期间可能已切歌/收起面板：不再渲染（下次打开会重新加载）
+      if (st.index !== reqIdx || !st.lyricsOpen) return;
+      lyricsPaint(data);
+    });
+  };
+
+  const syncLyrics = () => {
+    if (!st.lyricsOpen || !st.lyricsLines) return;
+    const t = audio.currentTime || 0;
+    let p = st.lyricsPtr;
+    if (p < st.lyricsLines.length && t + 0.2 < st.lyricsLines[p].t) p = 0; // 回退（拖动进度条）
+    while (p + 1 < st.lyricsLines.length && st.lyricsLines[p + 1].t <= t) p++;
+    st.lyricsPtr = p;
+    const inner = lyInner();
+    if (!inner) return;
+    const nodes = inner.querySelectorAll('.mu-ly-line');
+    nodes.forEach((n, i) => n.classList.toggle('on', i === p));
+    const cur = nodes[p];
+    if (cur) {
+      const top = cur.offsetTop - inner.clientHeight / 2 + cur.offsetHeight / 2;
+      if (Math.abs(inner.scrollTop - top) > 2) inner.scrollTop = top;
+    }
+  };
+
+  const toggleLyrics = () => {
+    st.lyricsOpen = !st.lyricsOpen;
+    const panel = lyPanel();
+    const btn = card.querySelector('[data-mu-lyrics]');
+    if (panel) panel.hidden = !st.lyricsOpen;
+    if (btn) btn.setAttribute('aria-expanded', String(st.lyricsOpen));
+    if (st.lyricsOpen) ensureLyrics();
+  };
+
   const load = (i, autoplay) => {
     const list = srcs();
     if (!list.length) return;
@@ -1888,6 +1996,20 @@ function musicPlayer() {
       sessionStorage.setItem('cw-music-idx', String(st.index));
     } catch (e) {
       /* ignore */
+    }
+    // 切歌：歌词状态重置（面板开着就自动加载新词）
+    st.lyricsLines = null;
+    st.lyricsPtr = 0;
+    if (st.lyricsOpen) {
+      const inner = lyInner();
+      if (inner) inner.innerHTML = '<p class="mu-ly-empty">歌词加载中…</p>';
+      const reqIdx = st.index;
+      loadLyrics(ids()[reqIdx]).then((data) => {
+        if (st.index !== reqIdx || !st.lyricsOpen) return;
+        lyricsPaint(data);
+      });
+    } else {
+      st.lyricsFor = -1;
     }
     paintProgress();
     if (autoplay) {
@@ -1936,6 +2058,15 @@ function musicPlayer() {
     if (!audio.paused) card.dataset.state = 'playing';
   }
 
+  // 歌词面板若在软导航前是展开的：在新 DOM 上恢复展开态并重渲染当前词
+  if (st.lyricsOpen) {
+    const panel = lyPanel();
+    const btn = card.querySelector('[data-mu-lyrics]');
+    if (panel) panel.hidden = false;
+    if (btn) btn.setAttribute('aria-expanded', 'true');
+    ensureLyrics();
+  }
+
   if (st.wired) return;
   st.wired = true;
 
@@ -1951,13 +2082,18 @@ function musicPlayer() {
         if (!audio.src) load(st.index, true);
         else {
           const p = audio.play();
-          if (p && typeof p.catch === 'function') p.catch(() => {});
+          if (p && typeof p.catch === 'function')
+            p.catch(() => {
+              // 自动播放被策略拦截（无手势/无头环境）：归位为暂停态，别卡在 loading
+              card.dataset.state = 'paused';
+            });
         }
       } else audio.pause();
       return;
     }
     if (el.closest('[data-mu-prev]')) return step(-1, true);
     if (el.closest('[data-mu-next]')) return step(1, true);
+    if (el.closest('[data-mu-lyrics]')) return toggleLyrics();
 
     const bar = el.closest('[data-mu-bar]');
     if (bar && isFinite(audio.duration) && audio.duration > 0) {
@@ -1980,6 +2116,398 @@ function musicPlayer() {
       Math.max(0, audio.currentTime + (ev.key === 'ArrowRight' ? 5 : -5)),
     );
     paintProgress();
+  });
+}
+
+/* ---------- 音乐页 /music/（§67）：中央大唱片 + 全参数 + 歌词 + 曲目表 ----------
+   与侧栏播放器相互独立（各自 window 单例、各自 <audio>），但**互斥播放**：
+   任一边开播都会把另一边暂停。唱片播放时旋转（CSS animation + play-state），
+   悬停 3D 视差（rAF 插值 tilt + 高光跟随）。数据全部来自页面 data-*（site.ts 渲染）。
+   ⚠️ 委托监听器只绑一次，但它调到的 load/paint 必须查询「当前文档」的节点：
+   软导航往返 /music/ 后旧 root 已脱离 DOM，写进去用户看不见 —— 所以 DOM 一律经
+   mpRoot（每次 boot 更新为当前文档的页面容器）取，音频/状态仍走 window 单例。 */
+let mpRoot = null;
+
+function musicPage() {
+  const root = document.querySelector('[data-music-page]');
+  if (!root) return;
+  mpRoot = root;
+
+  const st =
+    window.__cwMusicPage ||
+    (window.__cwMusicPage = {
+      audio: null,
+      index: 0,
+      wired: false,
+      restored: false,
+      loop: 'list', // list 顺序循环 | one 单曲循环 | shuffle 随机
+      lyFor: -1,
+      lyLines: undefined, // undefined=加载中 null=无歌词 数组=已就绪
+      lyPtr: 0,
+      vol: 1,
+    });
+
+  // ---- 数据（页面容器 data-*，pipe 分隔；与 site.ts 的 MUSIC 同源；一律读当前 mpRoot）----
+  const list = (k) => ((mpRoot && mpRoot.dataset[k]) || '').split('|');
+  const ids = () => list('mpIds');
+  const srcs = () => list('mpSrcs');
+  const titles = () => list('mpTitles');
+  const artists = () => list('mpArtists');
+  const albums = () => list('mpAlbums');
+  const covers = () => list('mpCovers');
+  const insts = () => list('mpInst');
+  const durs = () => list('mpDurs');
+  const sizes = () => list('mpSizes');
+  const origins = () => list('mpOrigins');
+
+  const qs = (sel) => (mpRoot ? mpRoot.querySelector(sel) : null);
+  const fmt = (s) => {
+    if (!isFinite(s) || s <= 0) return '0:00';
+    const m = Math.floor(s / 60);
+    const r = Math.floor(s % 60);
+    return `${m}:${String(r).padStart(2, '0')}`;
+  };
+  const LOOP_LABEL = { list: '顺序循环', one: '单曲循环', shuffle: '随机播放' };
+
+  // ---- 音频单例：挂 body，软导航不中断 ----
+  if (!st.audio) {
+    const a = new Audio();
+    a.preload = 'metadata';
+    a.addEventListener('loadedmetadata', () => {
+      paint();
+      const at = Number(mpRoot && mpRoot.dataset.mpResume) || 0;
+      if (at > 0 && at < (a.duration || Infinity)) a.currentTime = at;
+      if (mpRoot) delete mpRoot.dataset.mpResume;
+    });
+    a.addEventListener('timeupdate', () => {
+      paint();
+      syncLyrics();
+      if (a.duration && !a.paused) {
+        try {
+          sessionStorage.setItem('cw-mp-at', String(Math.floor(a.currentTime)));
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    });
+    a.addEventListener('play', () => {
+      // 双播放器互斥：侧栏在响就先掐掉
+      const side = window.__cwMusic;
+      if (side && side.audio && !side.audio.paused) side.audio.pause();
+      paint();
+    });
+    a.addEventListener('pause', paint);
+    a.addEventListener('playing', paint);
+    a.addEventListener('waiting', paint);
+    a.addEventListener('ended', () => {
+      const n = srcs().length;
+      if (st.loop === 'one') {
+        a.currentTime = 0;
+        const p = a.play();
+        if (p && p.catch) p.catch(() => {});
+      } else if (st.loop === 'shuffle' && n > 1) {
+        let next = st.index;
+        while (next === st.index) next = Math.floor(Math.random() * n);
+        load(next, true);
+      } else {
+        load(st.index + 1, true);
+      }
+    });
+    a.addEventListener('error', paint);
+    st.audio = a;
+  }
+  const audio = st.audio;
+
+  // ---- 渲染：进度/时间/状态/唱片/列表/参数 全量刷 ----
+  function paint() {
+    const d = audio.duration;
+    const t = audio.currentTime;
+    const fill = qs('[data-mp-fill]');
+    if (fill && isFinite(d) && d > 0) fill.style.width = `${(t / d) * 100}%`;
+    const bar = qs('[data-mp-bar]');
+    if (bar && isFinite(d) && d > 0) {
+      bar.setAttribute('aria-valuenow', String(Math.round((t / d) * 100)));
+      bar.setAttribute('aria-valuetext', `${fmt(t)} / ${fmt(d)}`);
+    }
+    const cur = qs('[data-mp-cur]');
+    if (cur) cur.textContent = fmt(t);
+    const dur = qs('[data-mp-dur]');
+    if (dur) dur.textContent = isFinite(d) && d > 0 ? fmt(d) : durs()[st.index] || '--:--';
+
+    const playing = !audio.paused && !audio.ended && audio.readyState > 2;
+    const err = audio.error;
+    const stateTxt = err ? '播放出错' : audio.paused ? (t > 0 ? '已暂停' : '待播放') : '播放中';
+    if (mpRoot) mpRoot.dataset.state = err ? 'error' : playing ? 'playing' : audio.paused ? 'paused' : 'loading';
+    const disc = qs('[data-mp-disc]');
+    if (disc) disc.classList.toggle('is-playing', playing);
+    const stEl = qs('[data-mp-state]');
+    if (stEl) stEl.textContent = stateTxt;
+    const loopEl = qs('[data-mp-loop]');
+    if (loopEl) {
+      loopEl.textContent = LOOP_LABEL[st.loop] || LOOP_LABEL.list;
+      loopEl.dataset.mode = st.loop;
+    }
+    const loopLabel = qs('[data-mp-loop-label]');
+    if (loopLabel) loopLabel.textContent = LOOP_LABEL[st.loop] || LOOP_LABEL.list;
+    // 音量百分比在控制区与参数区各有一份，全量刷
+    if (mpRoot) mpRoot.querySelectorAll('[data-mp-volpct]').forEach((n) => {
+      n.textContent = `${Math.round(st.vol * 100)}%`;
+    });
+    const noEl = qs('[data-mp-no]');
+    if (noEl) noEl.textContent = `${String(st.index + 1).padStart(2, '0')} / ${String(srcs().length).padStart(2, '0')}`;
+    // 曲目表活动态
+    const items = mpRoot ? mpRoot.querySelectorAll('[data-mp-item]') : [];
+    items.forEach((n, i) => n.classList.toggle('on', i === st.index));
+    const toggle = qs('[data-mp-toggle]');
+    if (toggle) toggle.setAttribute('aria-label', playing ? '暂停' : '播放');
+  }
+
+  // ---- 歌词（页面常驻面板；加载/渲染/同步）----
+  function renderLyrics() {
+    const inner = qs('[data-mp-lyrics-inner]');
+    if (!inner) return;
+    if (st.lyLines === undefined) {
+      inner.innerHTML = '<p class="mp-ly-empty">歌词加载中…</p>';
+      return;
+    }
+    if (!st.lyLines) {
+      const isInst = insts()[st.index] === '1';
+      inner.innerHTML = isInst
+        ? '<p class="mp-ly-empty">♪ 这是一首纯音乐 · 请尽情欣赏</p>'
+        : '<p class="mp-ly-empty">暂无歌词</p>';
+      return;
+    }
+    inner.innerHTML = st.lyLines
+      .map((l) => `<p class="mp-ly-line">${l.text.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>`)
+      .join('');
+    syncLyrics(true);
+  }
+  function ensureLyrics() {
+    if (st.lyFor === st.index) {
+      renderLyrics();
+      return;
+    }
+    const reqIdx = st.index;
+    st.lyLines = undefined;
+    renderLyrics();
+    loadLyrics(ids()[reqIdx]).then((data) => {
+      if (st.index !== reqIdx) return; // 加载期间已切歌
+      st.lyFor = reqIdx;
+      st.lyLines = data && data.lines ? data.lines : null;
+      st.lyPtr = 0;
+      renderLyrics();
+    });
+  }
+  function syncLyrics(force) {
+    if (!st.lyLines || !st.lyLines.length) return;
+    const inner = qs('[data-mp-lyrics-inner]');
+    if (!inner) return;
+    const t = audio.currentTime || 0;
+    let p = st.lyPtr;
+    if (p < st.lyLines.length && t + 0.2 < st.lyLines[p].t) p = 0; // 拖动回退
+    while (p + 1 < st.lyLines.length && st.lyLines[p + 1].t <= t) p++;
+    st.lyPtr = p;
+    const nodes = inner.querySelectorAll('.mp-ly-line');
+    nodes.forEach((n, i) => n.classList.toggle('on', i === p));
+    const cur = nodes[p];
+    if (cur && (force || !audio.paused)) {
+      const top = cur.offsetTop - inner.clientHeight / 2 + cur.offsetHeight / 2;
+      inner.scrollTop = top;
+    }
+  }
+
+  // ---- 装载曲目 ----
+  function load(i, autoplay) {
+    const n = srcs().length;
+    if (!n) return;
+    st.index = ((i % n) + n) % n;
+    audio.src = srcs()[st.index];
+    const t = qs('[data-mp-title]');
+    if (t) t.textContent = titles()[st.index] || '未命名曲目';
+    const ar = qs('[data-mp-artist]');
+    if (ar) ar.textContent = artists()[st.index] || '未知作者';
+    const al = qs('[data-mp-album]');
+    if (al) al.textContent = albums()[st.index] || '';
+    // 盘芯封面
+    const label = qs('[data-mp-label]');
+    const cov = covers()[st.index];
+    if (label) label.style.backgroundImage = cov ? `url("${cov}")` : 'none';
+    // 静态参数
+    const setP = (k, v) => {
+      const el = qs(k);
+      if (el) el.textContent = v;
+    };
+    setP('[data-mp-fmt]', 'MP3 · 320 kbps CBR');
+    setP('[data-mp-size]', sizes()[st.index] ? sizes()[st.index] + ' MB' : '--');
+    setP('[data-mp-length]', durs()[st.index] ? fmt(Number(durs()[st.index])) : '--:--');
+    setP('[data-mp-origin]', origins()[st.index] || '--');
+    setP('[data-mp-file]', (srcs()[st.index] || '').split('/').pop() || '--');
+    // 歌词
+    st.lyFor = -1;
+    st.lyLines = undefined;
+    st.lyPtr = 0;
+    ensureLyrics();
+    try {
+      sessionStorage.setItem('cw-mp-idx', String(st.index));
+    } catch (e) {
+      /* ignore */
+    }
+    paint();
+    if (autoplay) {
+      const p = audio.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    }
+  }
+
+  // ---- 首次进入：恢复上次曲目/进度/音量/循环（不自动播放）----
+  if (!st.restored) {
+    st.restored = true;
+    let idx = 0;
+    let at = 0;
+    try {
+      idx = Number(sessionStorage.getItem('cw-mp-idx') || '0') || 0;
+      at = Number(sessionStorage.getItem('cw-mp-at') || '0') || 0;
+      // ⚠️ Number(null) === 0：键不存在会被误读成「音量 0」（静音），
+      // 必须先判 null 再转数字（§67 截图实测踩坑）。
+      const rawVol = localStorage.getItem('cw-mp-vol');
+      const v = rawVol == null ? NaN : Number(rawVol);
+      if (!isNaN(v) && v >= 0 && v <= 1) st.vol = v;
+      const l = localStorage.getItem('cw-mp-loop');
+      if (l && LOOP_LABEL[l]) st.loop = l;
+    } catch (e) {
+      /* ignore */
+    }
+    st.index = idx;
+    if (mpRoot) mpRoot.dataset.mpResume = String(at);
+    const volInput = qs('[data-mp-vol]');
+    if (volInput) volInput.value = String(Math.round(st.vol * 100));
+    if (!audio.src) load(idx, false);
+  }
+
+  // ---- 悬停视差：rAF 插值 tilt + 高光跟随（减少动态时完全关闭）----
+  const wrap = qs('[data-mp-discwrap]');
+  if (wrap && !reduced) {
+    let cx = 0, cy = 0, tx = 0, ty = 0, rafOn = false;
+    const tick = () => {
+      cx += (tx - cx) * 0.12;
+      cy += (ty - cy) * 0.12;
+      wrap.style.transform = `perspective(900px) rotateX(${(-cy * 10).toFixed(2)}deg) rotateY(${(cx * 12).toFixed(2)}deg)`;
+      if (mpRoot) {
+        mpRoot.style.setProperty('--shx', `${(50 + cx * 34).toFixed(1)}%`);
+        mpRoot.style.setProperty('--shy', `${(50 + cy * 34).toFixed(1)}%`);
+      }
+      if (Math.abs(tx - cx) > 0.0008 || Math.abs(ty - cy) > 0.0008) {
+        requestAnimationFrame(tick);
+      } else {
+        rafOn = false;
+      }
+    };
+    const kick = () => {
+      if (!rafOn) {
+        rafOn = true;
+        requestAnimationFrame(tick);
+      }
+    };
+    wrap.addEventListener('pointermove', (ev) => {
+      const r = wrap.getBoundingClientRect();
+      tx = Math.min(1, Math.max(-1, ((ev.clientX - r.left) / r.width) * 2 - 1));
+      ty = Math.min(1, Math.max(-1, ((ev.clientY - r.top) / r.height) * 2 - 1));
+      kick();
+    });
+    wrap.addEventListener('pointerleave', () => {
+      tx = 0;
+      ty = 0;
+      kick();
+    });
+  }
+  // 软导航回来：新 DOM 全量重刷一遍 + 歌词重渲染
+  paint();
+  if (st.lyFor === st.index) renderLyrics();
+
+  if (st.wired) return;
+  st.wired = true;
+
+  // ---- 事件（document 委托，软导航后依然有效）----
+  document.addEventListener('click', (ev) => {
+    const el = ev.target instanceof Element ? ev.target : null;
+    if (!el) return;
+    const inPage = el.closest('[data-music-page]');
+    if (!inPage) return;
+
+    if (el.closest('[data-mp-toggle]')) {
+      if (audio.paused) {
+        if (!audio.src) load(st.index, true);
+        else {
+          const p = audio.play();
+          if (p && typeof p.catch === 'function')
+            p.catch(() => {
+              paint(); // 自动播放被拦截：按当前真实状态重刷（保持「待播放」而非 loading）
+            });
+        }
+      } else audio.pause();
+      return;
+    }
+    if (el.closest('[data-mp-prev]')) return load(st.index - 1, true);
+    if (el.closest('[data-mp-next]')) return load(st.index + 1, true);
+    if (el.closest('[data-mp-loop]')) {
+      st.loop = st.loop === 'list' ? 'one' : st.loop === 'one' ? 'shuffle' : 'list';
+      try {
+        localStorage.setItem('cw-mp-loop', st.loop);
+      } catch (e) {
+        /* ignore */
+      }
+      return paint();
+    }
+    const item = el.closest('[data-mp-item]');
+    if (item) {
+      const i = Number(item.dataset.mpItem || '0');
+      if (i === st.index && !audio.paused) {
+        audio.pause();
+      } else if (i === st.index && audio.paused) {
+        const p = audio.play();
+        if (p && p.catch) p.catch(() => {});
+      } else {
+        load(i, true);
+      }
+      return;
+    }
+    const bar = el.closest('[data-mp-bar]');
+    if (bar && isFinite(audio.duration) && audio.duration > 0) {
+      const r = bar.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width));
+      audio.currentTime = ratio * audio.duration;
+      paint();
+      syncLyrics(true);
+    }
+  });
+
+  // 音量滑杆（input 事件）
+  document.addEventListener('input', (ev) => {
+    const el = ev.target;
+    if (!(el instanceof Element) || !el.matches('[data-mp-vol]')) return;
+    const v = Math.min(100, Math.max(0, Number(el.value || '100')));
+    st.vol = v / 100;
+    audio.volume = st.vol;
+    try {
+      localStorage.setItem('cw-mp-vol', String(st.vol));
+    } catch (e) {
+      /* ignore */
+    }
+    paint();
+  });
+
+  // 进度条键盘 ←/→（与侧栏一致：各 5 秒）
+  document.addEventListener('keydown', (ev) => {
+    const bar = ev.target instanceof Element ? ev.target.closest('[data-mp-bar]') : null;
+    if (!bar) return;
+    if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+    ev.preventDefault();
+    if (!isFinite(audio.duration)) return;
+    audio.currentTime = Math.min(
+      audio.duration,
+      Math.max(0, audio.currentTime + (ev.key === 'ArrowRight' ? 5 : -5)),
+    );
+    paint();
   });
 }
 

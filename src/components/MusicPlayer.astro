@@ -1,8 +1,10 @@
 ---
 // 左侧栏底部「音乐播放器」。
-//   歌曲列表来自 site.ts 的 MUSIC（当前为空 = 显示「待添加」占位）。
+//   歌曲列表来自 site.ts 的 MUSIC（§67 起为真实曲目）。
 //   交互逻辑在 src/scripts/ui.js 的 musicPlayer()：document 事件委托 + window 单例，
 //   软导航换页后依然有效（侧栏会被重建，委托不受影响）。
+//   歌词：点「词」按钮在播放器下方弹出歌词面板；.lrc 按约定路径
+//   /music/lyrics/<id>.lrc 自动加载（零配置），纯音乐曲目显示「纯音乐」。
 import { MUSIC } from '../site';
 
 const tracks = MUSIC.map((t, i) => ({ ...t, index: i }));
@@ -14,9 +16,11 @@ const join = (fn: (t: (typeof tracks)[number]) => string) => tracks.map(fn).join
   class="sidecard music-card"
   data-music
   data-music-count={tracks.length}
+  data-music-ids={join((t) => t.id)}
   data-music-srcs={join((t) => t.src)}
   data-music-titles={join((t) => t.title)}
   data-music-artists={join((t) => t.artist || '未知作者')}
+  data-music-inst={join((t) => (t.instrumental ? '1' : ''))}
   aria-label="音乐播放器"
 >
   <h2>MUSIC / 音乐</h2>
@@ -48,7 +52,24 @@ const join = (fn: (t: (typeof tracks)[number]) => string) => tracks.map(fn).join
               <path d="M6 5v14M18 12L10 5M18 12l-8 7" />
             </svg>
           </button>
+          <button
+            type="button"
+            class="mu-btn mu-lybtn"
+            data-mu-lyrics
+            aria-label="歌词"
+            aria-expanded="false"
+            title="歌词"
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 5h16M4 10h16M4 15h10" />
+            </svg>
+          </button>
           <span class="mu-no" data-mu-no>01 / {String(tracks.length).padStart(2, '0')}</span>
+        </div>
+
+        <!-- 歌词面板：默认收起，点「词」展开；内容与高亮由 ui.js 的 musicPlayer() 接管 -->
+        <div class="mu-lyrics" data-mu-lyrics-panel hidden>
+          <div class="mu-lyrics-inner" data-mu-lyrics-inner></div>
         </div>
       </>
     ) : (

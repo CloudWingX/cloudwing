@@ -1354,3 +1354,47 @@
   padding: 0 0.25em;
   border-radius: 4px;
 }
+
+/* 歌词面板（§67：「词」按钮弹出，ui.js musicPlayer() 同步高亮） */
+.mu-lybtn[aria-expanded='true'] {
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.mu-lyrics {
+  margin-top: 0.4rem;
+  border-radius: var(--r-s);
+  border: var(--line-w-pill) solid var(--line-2);
+  background: color-mix(in srgb, var(--glass) 55%, transparent);
+  overflow: hidden;
+}
+/* inner 即滚动容器；position:relative 让歌词行的 offsetTop 以它为基准（scrollTop 数学依赖） */
+.mu-lyrics-inner {
+  position: relative;
+  max-height: 132px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.55rem 0.6rem;
+  scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+}
+.mu-lyrics-inner::-webkit-scrollbar { width: 4px; }
+.mu-lyrics-inner::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; }
+.mu-ly-line {
+  margin: 0;
+  padding: 0.14rem 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+  text-align: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+.mu-ly-line.on { color: var(--accent-deep); transform: scale(1.05); }
+.mu-ly-empty {
+  margin: 0.2rem 0;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+  text-align: center;
+  letter-spacing: 0.05em;
+}
