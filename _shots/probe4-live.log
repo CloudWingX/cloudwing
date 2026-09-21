@@ -1,0 +1,66 @@
+[1280] /           cw=1270 sc=0 hc{l=0,r=1270,w=1270} logoL=33 nav1L=396.91
+           anchors: h1{l=32,r=732,w=700} | .wrap{l=0,r=1270,w=1270} | main > div{l=0,r=1270,w=1270}
+           mainKids: DIV.home{l=0,w=1270}
+[1280] /gallery/   cw=1270 sc=0 hc{l=0,r=1270,w=1270} logoL=33 nav1L=396.91
+           anchors: h1{l=322.39,r=927.61,w=605.22} | .shell{l=0,r=1270,w=1270} | .wrap{l=322.39,r=927.61,w=605.22}
+           mainKids: DIV.wrap{l=322.39,w=605.22} | DIALOG.gal-dialog{l=0,w=0}
+[1280] /posts/     cw=1270 sc=0 hc{l=0,r=1270,w=1270} logoL=33 nav1L=396.91
+           anchors: h1{l=322.39,r=927.61,w=605.22} | .shell{l=0,r=1270,w=1270} | .wrap{l=322.39,r=927.61,w=605.22} | main > div{l=322.39,r=927.61,w=605.22}
+           mainKids: DIV.posts-root{l=322.39,w=605.22}
+[1280] /log/       cw=1270 sc=0 hc{l=0,r=1270,w=1270} logoL=33 nav1L=396.91
+           anchors: h1{l=322.39,r=927.61,w=605.22} | .shell{l=0,r=1270,w=1270} | .wrap{l=322.39,r=927.61,w=605.22} | main > div{l=322.39,r=927.61,w=605.22}
+           mainKids: DIV.log-root{l=322.39,w=605.22}
+[1280] /calendar/  cw=1270 sc=0 hc{l=0,r=1270,w=1270} logoL=33 nav1L=396.91
+           anchors: h1{l=322.39,r=927.61,w=605.22} | .shell{l=0,r=1270,w=1270} | .wrap{l=322.39,r=927.61,w=605.22} | main > div{l=322.39,r=927.61,w=605.22}
+           mainKids: DIV.cal-root{l=322.39,w=605.22} | SCRIPT.{l=0,w=0}
+[1536] /           cw=1526 sc=0 hc{l=113,r=1413,w=1300} logoL=146 nav1L=524.91
+           anchors: h1{l=145,r=845,w=700} | .wrap{l=113,r=1413,w=1300} | main > div{l=0,r=1526,w=1526}
+           mainKids: DIV.home{l=0,w=1526}
+[1536] /gallery/   cw=1526 sc=0 hc{l=113,r=1413,w=1300} logoL=146 nav1L=524.91
+           anchors: h1{l=435.39,r=1070.61,w=635.22} | .shell{l=113,r=1413,w=1300} | .wrap{l=435.39,r=1070.61,w=635.22}
+           mainKids: DIV.wrap{l=435.39,w=635.22} | DIALOG.gal-dialog{l=0,w=0}
+[1536] /posts/     cw=1526 sc=0 hc{l=113,r=1413,w=1300} logoL=146 nav1L=524.91
+           anchors: h1{l=435.39,r=1070.61,w=635.22} | .shell{l=113,r=1413,w=1300} | .wrap{l=435.39,r=1070.61,w=635.22} | main > div{l=435.39,r=1070.61,w=635.22}
+           mainKids: DIV.posts-root{l=435.39,w=635.22}
+[1536] /log/       cw=1526 sc=0 hc{l=113,r=1413,w=1300} logoL=146 nav1L=524.91
+           anchors: h1{l=435.39,r=1070.61,w=635.22} | .shell{l=113,r=1413,w=1300} | .wrap{l=435.39,r=1070.61,w=635.22} | main > div{l=435.39,r=1070.61,w=635.22}
+           mainKids: DIV.log-root{l=435.39,w=635.22}
+[1536] /calendar/  cw=1526 sc=0 hc{l=113,r=1413,w=1300} logoL=146 nav1L=524.91
+           anchors: h1{l=435.39,r=1070.61,w=635.22} | .shell{l=113,r=1413,w=1300} | .wrap{l=435.39,r=1070.61,w=635.22} | main > div{l=435.39,r=1070.61,w=635.22}
+           mainKids: DIV.cal-root{l=435.39,w=635.22} | SCRIPT.{l=0,w=0}
+[1920] /           cw=1910 sc=0 hc{l=305,r=1605,w=1300} logoL=338 nav1L=716.91
+           anchors: h1{l=337,r=1037,w=700} | .wrap{l=305,r=1605,w=1300} | main > div{l=0,r=1910,w=1910}
+           mainKids: DIV.home{l=0,w=1910}
+[1920] /gallery/   cw=1910 sc=0 hc{l=305,r=1605,w=1300} logoL=338 nav1L=716.91
+           anchors: h1{l=627.39,r=1262.61,w=635.22} | .shell{l=305,r=1605,w=1300} | .wrap{l=627.39,r=1262.61,w=635.22}
+           mainKids: DIV.wrap{l=627.39,w=635.22} | DIALOG.gal-dialog{l=0,w=0}
+[1920] /posts/     cw=1910 sc=0 hc{l=305,r=1605,w=1300} logoL=338 nav1L=716.91
+           anchors: h1{l=627.39,r=1262.61,w=635.22} | .shell{l=305,r=1605,w=1300} | .wrap{l=627.39,r=1262.61,w=635.22} | main > div{l=627.39,r=1262.61,w=635.22}
+           mainKids: DIV.posts-root{l=627.39,w=635.22}
+[1920] /log/       cw=1910 sc=0 hc{l=305,r=1605,w=1300} logoL=338 nav1L=716.91
+           anchors: h1{l=627.39,r=1262.61,w=635.22} | .shell{l=305,r=1605,w=1300} | .wrap{l=627.39,r=1262.61,w=635.22} | main > div{l=627.39,r=1262.61,w=635.22}
+           mainKids: DIV.log-root{l=627.39,w=635.22}
+[1920] /calendar/  cw=1910 sc=0 hc{l=305,r=1605,w=1300} logoL=338 nav1L=716.91
+           anchors: h1{l=627.39,r=1262.61,w=635.22} | .shell{l=305,r=1605,w=1300} | .wrap{l=627.39,r=1262.61,w=635.22} | main > div{l=627.39,r=1262.61,w=635.22}
+           mainKids: DIV.cal-root{l=627.39,w=635.22} | SCRIPT.{l=0,w=0}
+
+===== 差值表：logoL - 锚点l（正值=logo在锚点右侧）=====
+--- viewport 1280 ---
+/           logoL=33  Δ h1: 1.0  .wrap: 33.0  main > div: 33.0
+/gallery/   logoL=33  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4
+/posts/     logoL=33  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4  main > div: -289.4
+/log/       logoL=33  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4  main > div: -289.4
+/calendar/  logoL=33  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4  main > div: -289.4
+--- viewport 1536 ---
+/           logoL=146  Δ h1: 1.0  .wrap: 33.0  main > div: 146.0
+/gallery/   logoL=146  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4
+/posts/     logoL=146  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4  main > div: -289.4
+/log/       logoL=146  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4  main > div: -289.4
+/calendar/  logoL=146  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4  main > div: -289.4
+--- viewport 1920 ---
+/           logoL=338  Δ h1: 1.0  .wrap: 33.0  main > div: 338.0
+/gallery/   logoL=338  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4
+/posts/     logoL=338  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4  main > div: -289.4
+/log/       logoL=338  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4  main > div: -289.4
+/calendar/  logoL=338  Δ h1: -289.4  .shell: 33.0  .wrap: -289.4  main > div: -289.4
+DONE rows=15

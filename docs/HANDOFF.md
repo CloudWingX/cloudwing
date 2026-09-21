@@ -3328,3 +3328,22 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   §64 日历上线时「记录」组从 3 个子链接变 4 个，断言没跟上（与本次改动无关的遗留）。
 - ⚠️ 后续约定：`--pad-align` 的三个值（32/24/20）必须与 Header.astro
   `--nav-pad-x` 的三个断点值保持同步；Header 是动效契约不许动，改对齐只动这边。
+
+### 66.4 推送上线与线上确认（2026-09-22 凌晨，commit bc3d3ae）
+
+- L3 全量：`run-regress.mjs` 21 脚本串行（10m34s）全绿 —— 途中抓到 verify-nav
+  19/21（「记录」下拉断言仍是旧口径 3 项），按 §64 事实修正为 4 项（含 /calendar/）
+  后 21/21。**日历上线共留下两处过期断言**（verify-nav-shrink 抽屉 + verify-nav 下拉），
+  都属"断言没跟上功能事实"，非站点缺陷。
+- 部署特征：have `--pad-align:32px` / `--shell-max:var(--w-max)` / changelog
+  「全站统一 1300 网格」、not `100rem`。
+- ⚠️ 新坑：**Bash 工具会把单引号里的 `\s` 吃成 `/s`**（poll66.log 回显可证）——
+  poll-deploy 的正则特征经命令行传递时不要用反斜杠类（`\s`/`\(` 等），
+  改用零反斜杠写法（`--pad-align:32px`、`--shell-max:var.--w-max.`）。
+  另一个坑：**poll-deploy 只抓目标页 HTML 引用的 CSS chunk**——首页不引用
+  Base chunk（--pad-align 住在里面），首页取样测 CSS token 会恒红；
+  换 /gallery/ 取样或用 `_shots/fetch-live-css.mjs` 直取证据。
+- 线上确认：65s 构建切换（changelog 条目出现、100rem 消失）；线上
+  `Base.BH7S552V.css` 与本地同名同哈希、含 pad-align/shell-max；
+  生产探针 `_shots/probe-nav-align4-live.mjs`（3 视口 × 5 页）与本地结果
+  **逐值一致**（@1920 五页 hc=305–1605、logoL=338；Δ h1=1.0、Δ shell=33.0）。

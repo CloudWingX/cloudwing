@@ -1,0 +1,37 @@
+[1s] HTML+CSS 共 96513 字节 / 2 个 chunk；未通过 4 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/) , have 全站统一 1300 网格 , not  100rem
+[17s] HTML+CSS 共 96513 字节 / 2 个 chunk；未通过 4 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/) , have 全站统一 1300 网格 , not  100rem
+[33s] HTML+CSS 共 96513 字节 / 2 个 chunk；未通过 4 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/) , have 全站统一 1300 网格 , not  100rem
+[49s] HTML+CSS 共 96513 字节 / 2 个 chunk；未通过 4 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/) , have 全站统一 1300 网格 , not  100rem
+[65s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[81s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[97s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[114s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[130s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[146s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[162s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[178s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[194s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[210s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[226s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[242s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[258s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[274s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[290s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[306s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[322s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[338s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[354s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[370s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[387s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[403s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[419s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[435s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[451s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+[467s] HTML+CSS 共 96638 字节 / 2 个 chunk；未通过 2 项 → have --pad-align:/s*32px , have --shell-max:/s*var/(--w-max/)
+
+⏱ 480s 内没等到全部特征。最后一次：
+   ❌ have --pad-align:/s*32px
+   ❌ have --shell-max:/s*var/(--w-max/)
+   ✅ have 全站统一 1300 网格
+   ✅ not  100rem
+（CF 构建通常 30~90 秒；先确认推送真的成功：git ls-remote origin main）
