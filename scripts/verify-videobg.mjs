@@ -87,6 +87,8 @@ const v = await ev(`(()=>{const el=document.querySelector('.video-bg__el');
     视频层z:cs.zIndex, objectFit:vs.objectFit, 视频透明度:vs.opacity,
     body背景图值:(bodyCs.backgroundImage||'none'),
     body背景色:(bodyCs.backgroundColor||''),
+    bodyAfter背景图值:getComputedStyle(document.body,'::after').backgroundImage||'none',
+    html背景色:getComputedStyle(document.documentElement).backgroundColor||'',
     body底色动画:bodyCs.animationName,
     body类:document.body.className,
     粒子z:part?getComputedStyle(part).zIndex:'无',
@@ -100,8 +102,10 @@ check('视频静音且循环', v.muted === true && v.loop === true);
 check('视频铺满视口', Math.abs(parseInt(v.视口覆盖.split('×')[0]) - parseInt(v.视口.split('×')[0])) <= 2, v.视口覆盖 + ' vs ' + v.视口);
 check('视频层在粒子/光晕之下', parseInt(v.视频层z) < parseInt(v.粒子z) && parseInt(v.视频层z) < parseInt(v.光晕z), `视频${v.视频层z} 粒子${v.粒子z} 光晕${v.光晕z}`);
 check('body 已加 has-video-bg', /has-video-bg/.test(v.body类), v.body类);
-// 页面底色保持各主题本来的（不透明渐变）——这是"不改文字颜色也能读清"的前提
-check('页面底色仍是主题本色（未被清空）', /gradient/.test(v.body背景图值), v.body背景图值.slice(0, 44));
+// §62：底色渐变从 body 迁到 body::after（z:-5，视频之下），html 持有不透明深色底 ——
+// "视频加载失败时页面仍有主题本色降级底"的保障点随之迁移（原检查 body 背景图）。
+check('页面底色仍是主题本色（未被清空，body::after 承载）', /gradient/.test(v.bodyAfter背景图值 || ''), (v.bodyAfter背景图值 || '').slice(0, 44));
+check('html 深色画布兜底（§62）', v.html背景色 === 'rgb(3, 6, 10)', v.html背景色);
 // 视频必须真的"看得见"：透明度在 (0, 1) 之间
 const op = parseFloat(v.视频透明度);
 check('视频半透明且可见（0 < 不透明度 < 1）', op > 0.05 && op < 1, `opacity=${v.视频透明度}`);

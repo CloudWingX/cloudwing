@@ -147,19 +147,36 @@ html {
   scrollbar-gutter: stable;
 }
 html, body { margin: 0; }
+/* §62（2026-09-21）：html 持有不透明深色背景 —— 空白导航期/硬加载首绘的
+   「浏览器默认白底」由此根治（meta color-scheme 救不了所有浏览器）。
+   代价是 body 背景不再传播到画布，所以底色渐变必须挪到 body::after
+   （z-index:-5，排在视频 -4 之下，视觉层序与原 canvas 传播完全一致）。
+   ⚠️ body 自身从此必须保持无背景：不透明 body 背景会盖住一切负 z-index 层。 */
+html {
+  background: var(--bg-deep);
+}
 body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background:
-    radial-gradient(120% 80% at 78% -10%, rgba(255, 255, 255, 0.5), transparent 60%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 140%);
-  background-attachment: fixed;
+  background: none;
   color: var(--ink);
   font-family: var(--font-body);
   font-size: 16.5px;
   line-height: 1.8;
   -webkit-font-smoothing: antialiased;
+}
+/* 原body 的底色渐变（画布层）：fixed 伪元素承载，位于视频之下 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 50% -10%, #0d151c, transparent 60%),
+    linear-gradient(180deg, #070b0f 0%, #03060a 100%);
+  background-size: 100% 100%;
 }
 /* 主内容弹性撑开：内容不满一屏时也占满视口高度 */
 .main-content { flex: 1 0 auto; }

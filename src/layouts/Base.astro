@@ -36,13 +36,11 @@ const hasVideoBg = Boolean(VIDEO_BG.src);
 const BUILD_ID = import.meta.env.PROD ? Date.now().toString(36) : 'dev';
 ---
 <!doctype html>
-<!-- ⚠️ 绝不能给 <html> 设不透明背景（2026-09-21 §61 实测回归）：
-     本站背景视频层是 position:fixed; z-index:-4，它的可见性依赖
-     「html 无背景 → body 的深色渐变传播到画布（视口最底层）→ 负 z-index 层画在画布之上」。
-     一旦 html 有了不透明背景，body 渐变不再传播、留在 body 上，
-     绘制顺序就会盖住一切负 z-index 层 → 背景视频/网格全部隐身。
-     「CSS 未就绪白屏闪」的防护只靠下面的 meta color-scheme + theme-color（足够，见 §61.2）。 -->
-<html lang="zh-CN">
+<!-- §62（2026-09-21）：html 行内深色背景 = 空白导航期/硬加载首绘的防白屏根治。
+     ⚠️ 前提：body 的底色渐变已迁移到 body::after（z:-5，视频之下，见 global.css §62），
+     body 自身保持无背景 —— 否则不透明 body 背景会按绘制顺序盖住 z:-4 的背景视频层
+     （§61.3 实测回归）。ClientRouter 换页同步新文档 html 属性，本样式软导航后不丢。 -->
+<html lang="zh-CN" style="background:#03060a">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -81,13 +79,10 @@ const BUILD_ID = import.meta.env.PROD ? Date.now().toString(36) : 'dev';
     <meta name="color-scheme" content="dark" />
     <meta name="cw-build" content={BUILD_ID} />
     <style is:inline>
-      /* §61.4 pre-CSS 深色画布（2026-09-21）：部分浏览器（Safari/Windows 内核等）
-         pre-CSS 首绘画布就是白，meta color-scheme 救不了它们的画布 —— 这里直接给 body
-         打深色。两条铁律：① html 必须保持无背景（body 背景传播到画布是 z:-4 背景
-         视频层可见的前提，§61.3）；② 本块必须排在全局样式表之前（Astro 按授权顺序
-         输出，样式表载入后即覆盖本规则，它只兜「CSS 未就绪」的窗口）。 */
+      /* §61.4/§62 pre-CSS 深色画布：meta color-scheme 救不了所有浏览器的画布
+         （Safari/Windows 内核 pre-CSS 首绘就是白）。html 的行内背景已由上方
+         style 属性承担；这里只补 color-scheme（表单控件/滚动条等暗色化）。 */
       html { color-scheme: dark; }
-      body { background: #070b0f; }
     </style>
     <script is:inline>
       // 主题：全站只有一套**暗色**（亮色主题与切换按钮已删除）。

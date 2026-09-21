@@ -453,28 +453,13 @@ html.js .sli.in {
 
 /* ============================================================
    V16 — 全站动态背景（黑白灰：整页中性渐变缓慢流动 + 灰晕漂移）
-   注：这条规则会盖掉 global.css 里 body 的底色，所以"浅色页底色"的
-   真实取值在这里（改底色务必连同这里一起改，否则不生效）。
+   §62（2026-09-21）：body 自身从此**必须无背景**——html 持有不透明
+   深色背景后（空白导航期防白屏，见 global.css §62 注），body 若再背
+   不透明渐变就会按绘制顺序盖住 z:-4 的背景视频层。原"浅色页底色"
+   与暗色底色渐变一并迁移到 body::after（z:-5，视频之下），见 global.css。
    ============================================================ */
 body {
-  background:
-    /* 右上斜向柔光：给纯色底一点方向感，避免整页死平 */
-    radial-gradient(120% 80% at 78% -10%, rgba(255, 255, 255, 0.42), transparent 60%),
-    linear-gradient(
-      115deg,
-      #eceef1 0%,
-      #e4e7ea 20%,
-      #eaecf0 45%,
-      #e0e3e8 70%,
-      #eceef1 100%
-    );
-  background-size: 100% 100%, 260% 260%;
-  background-attachment: fixed;
-  animation: bg-flow 32s ease-in-out infinite alternate;
-}
-@keyframes bg-flow {
-  0%   { background-position: 0% 0%; }
-  100% { background-position: 100% 100%; }
+  background: none;
 }
 /* ============================================================
    背景视频模式（body.has-video-bg，见 components/VideoBackground.astro）
@@ -556,12 +541,11 @@ html[data-theme='dark'] {
   --glass-nav: rgba(9, 12, 16, 0.28);
   --glass-nav-solid: rgba(9, 12, 16, 0.62);
 }
-/* 页面底色：暗色渐变（视频加载失败 / 减少动态时的降级底） */
+/* 页面底色：暗色渐变（视频加载失败 / 减少动态时的降级底）
+   §62：底色渐变已迁至 global.css 的 body::after（z:-5，视频之下），
+   body 自身保持无背景（见上）。这里仅保留防御性声明。 */
 html[data-theme='dark'] body {
-  background: radial-gradient(120% 90% at 50% -10%, #0d151c, transparent 60%),
-    linear-gradient(180deg, #070b0f 0%, #03060a 100%);
-  background-size: 100% 100%;
-  background-attachment: fixed;
+  background: none;
 }
 html[data-theme='dark'] body::before {
   background-image:

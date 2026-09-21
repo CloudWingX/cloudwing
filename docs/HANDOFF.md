@@ -1507,7 +1507,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 | `verify-theme.mjs` | 单主题不变量：默认暗色/系统浅色仍暗色/历史偏好切不回浅色/无开关/首屏逐帧无浅色帧 | **11/11** |
 | `verify-redesign.mjs` | 暗色电影感：玻璃令牌取值、**无暂停按钮 + 视频默认在播 + 旧暂停接口已移除 + reduced-motion 仍不播**、导航滚动过渡 | **16/16**（2026-09-18 暂停按钮删除后由 14 条改为此 6 条） |
 | `verify-search.mjs` | 搜索悬浮窗：懒加载、开关、出结果、快捷键、软导航后仍可用 | **17/17** |
-| `verify-videobg.mjs` | 背景视频：播放/层级/透明度/遮罩 + hero 文字在视频上的**实际像素**对比度（用"隐藏文字的对照页"取样，并自检对照页版式与真实页一致）+ **主容器左右边缘无分界线（逐 72px 段、8bit 灰度口径、三帧取最小）** + **结构判定：与容器同宽的元素不得有绝对定位的渐变伪元素** | **22/22** |
+| `verify-videobg.mjs` | 背景视频：播放/层级/透明度/遮罩 + hero 文字在视频上的**实际像素**对比度（用"隐藏文字的对照页"取样，并自检对照页版式与真实页一致）+ **主容器左右边缘无分界线（逐 72px 段、8bit 灰度口径、三帧取最小）** + **结构判定：与容器同宽的元素不得有绝对定位的渐变伪元素** + **降级底断言（§62 迁移）：底色渐变由 body::after 承载、html 持有不透明深色画布** | **23/23**（2026-09-21 早 §62 断言迁移 22 → 23） |
 | `verify-videobg-global.mjs` | 全站背景一致性：逐页硬刷新 + 软导航一圈，视频未被重建、旧背景仍在（含 `/nav/` 与 `/log/`） | **37/37**（2026-09-19 晚 `/log/` 加入后 33 → 37） |
 | `verify-copy.mjs` | ★**文案断言**：① 禁用词（浅色通透 / 双主题 / 主题切换 / 开灯… 等"描述已删除功能"的措辞）不得出现在任何页面的可见文案与 meta；② 占位词（TODO/待补/lorem…）不得出现；③ 文案锚点 —— `site.ts` 的 notice/tagline 非空且不含禁用词，notice 必须出现在关于页可见文案、tagline 必须出现在 meta description；④ 每页都有非空 title/description。**只扫页面固定文案与 meta，不扫文章正文**（历史文章合法会提"浅色主题/作品库"） | **31/31** |
 | `verify-nav-icons.mjs` | ★**图标静态断言**（纯 Node，不需要浏览器）：① `SITE_NAV` 每个 `icon` 路径在 `public/` 下真实存在且形如 `/nav/<slug>.png\|svg`；② `public/nav/` 无孤儿文件；③ 已构建时每个 icon 都进了 `dist/nav/`、页面引用集合与声明一致；④ **带 `--ico` 的图标位内无文本**（防 §48.6 "图标与首字圆牌重叠"复发）；⑤ **[E] SVG 最亮 `fill` 相对亮度 ≥ 0.12**（防 §48.3 "近黑 logo 在暗卡上等于没画"）。⚠️ ⑤ 只查 SVG，PNG 是已知盲区 | **9/9** |
@@ -1906,7 +1906,7 @@ node scripts/run-regress.mjs          # 期望「总结: 21/21 通过」
 git ls-remote origin main
 node scripts/poll-deploy.mjs --have '--w-max:\s*1300px' --not 'hero::before'   # 通了才继续
 node scripts/smoke.mjs https://cloudwing.pages.dev                 # 期望 64/64（#424 已修复，见 §37）
-node scripts/verify-videobg.mjs https://cloudwing.pages.dev dark   # 期望 22/22（含"容器边缘无分界线"）
+node scripts/verify-videobg.mjs https://cloudwing.pages.dev dark   # 期望 23/23（§62 断言迁移 +1，见 §62.2）
 node scripts/verify-copy.mjs https://cloudwing.pages.dev           # 期望 31/31（走 sitemap 枚举全站页面）
 
 # 5) 可选：改过 hero / 容器宽度 / 背景层时，量一遍"容器边缘逐段偏差"
@@ -3154,4 +3154,43 @@ PNG 算亮度（`_shots/probe-whiteflash.mjs` + `measure-flash.mjs`）：**无�
   全局样式表载入后按文档序覆盖它 —— 它只兜「CSS 未就绪」的窗口。
 - 验证：构建产物顺序断言 ✓、smoke **64/64** ✓、视频层截图亮度 32.0 不变 ✓。
 - 若站长环境**仍**白闪：那就只剩「软导航回退硬导航」或录屏级信息才可定位 ——
-  需要站长提供浏览器/设备/整屏还是局部。
+  需要站长提供浏览器/设备/整屏还是局部。（→ 站长复测仍白，见 §62。）
+
+## 62. 白屏闪根治：画布分层重排（html 深色 + 渐变迁至 body::after）（2026-09-21 早）★★
+
+**站长反馈**：§61.4 后白闪仍在，且升级为「**所有页面加载都会闪白屏**」，要求全面排查修复。
+**根因链完整版**：空白导航期（硬加载/刷新/回退到未缓存页/ClientRouter 回退）浏览器要画
+一个「空画布」，其颜色取自**根元素的背景**——html 无背景时画 UA 默认白。
+`meta color-scheme` 只对 Chromium 系画布生效（且各版本行为不一），**救不了全部浏览器**。
+唯一可靠手段是给 `<html>` 一个不透明深色背景。但 §61.3 证明：html 一旦有背景，
+body 背景不再传播到画布、留在 body 上，绘制顺序（CSS 2.1 Appendix E：根背景 →
+负 z-index → 块级背景）就会让 body 的不透明渐变**盖住 z:-4 的视频层**。
+→ 结论：**必须把底色渐变从 body 迁到独立的负 z-index 伪元素**，两个目标才能同时成立。
+
+### 62.1 新分层（自下而上，与旧视觉逐层等价）
+
+| 层 | 旧 | 新 |
+|---|---|---|
+| 画布最底 | body 渐变**传播到画布**（依赖 html 无背景） | `html { background: var(--bg-deep) }` + html 行内 `style="background:#03060a"`（pre-CSS） |
+| 底色渐变 | （就是画布本身） | **`body::after`**：`position:fixed; inset:0; z-index:-5`，载原暗色渐变（radial #0d151c + linear #070b0f→#03060a） |
+| 背景视频 | `.video-bg` z:-4 | 不变（-5 < -4，视频仍在渐变之上） |
+| 光斑层 | `body::before` z:-3 | 不变 |
+| 网格 | `.grid-bg` z:-2 | 不变 |
+
+配套改动：`global.css` body 规则去掉 background（`background:none`）；`motion.css`
+V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `html[data-theme='dark'] body`
+暗色渐变**一并改为 `background:none`**（否则任何一条都会盖回视频层——这两条就是
+§61.3 回归的埋点）。`bg-flow` 位移动画随之失效移除（has-video-bg 下本来就停）。
+
+### 62.2 验证
+
+- 构建产物断言：html 行内背景 ✓、`body{background:none}` ✓、`body:after{...z-index:-5...
+  position:fixed;inset:0}` ✓（Lightning CSS 会把 `::after` 压成 `:after`、`background:none`
+  压成 `background-color:#0000`，断言脚本别按源码字面找）。
+- 视觉：首页/画廊截图亮度均值 **32.0 / 36.0**（视频纹理在，与重排前一致）；
+  软导航连帧 90 帧 0 亮帧；硬加载（禁缓存+50Kbps 弱网）连帧 197 帧 0 亮帧。
+- smoke **64/64**；全量 22 脚本 **21/22**（唯一 FAIL 仍是 ghhot 凌晨空窗伪失败，§59.4）。
+  `verify-videobg` 断言随架构迁移更新：底色降级断言改查 body::after + 新增 html 画布断言
+  （22 → **23**，23/23 全绿）。
+- **新铁律（取代 §61.3 的旧表述）**：`html` 必须持有不透明深色背景（防白），
+  `body` 必须无背景（防盖视频）；底色渐变住在 `body::after`（z:-5）。三者绑定，动一改三。
