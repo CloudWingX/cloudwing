@@ -157,8 +157,10 @@ const quote = QUOTES[dayIndex % QUOTES.length];
 ---
 
 <aside class="shell-right">
-  <!-- GitHub 热榜（§56）：日/周/月/年四个周期（默认每日），客户端拉 GitHub Search API
-       （期间内新建仓库按 star 排序），缓存键=时间桶——桶滚动即「每日24点/周月年最后一天24点」自动换新 -->
+  <!-- GitHub 热榜（§56；§69 数据源改造 2026-09-22）：日/周/月/年四个周期（默认每日），
+       客户端只请求同域构建快照 /api/gh-hot.json（scripts/fetch-ghhot.mjs 构建时拉
+       GitHub Search API 生成：期间内新建仓库按 star 排序），缓存键=时间桶——桶滚动即
+       「每日24点/周月年最后一天24点」自动重拉；不再直连 api.github.com（限流+跨境不稳） -->
   <section class="sidecard sw-hot" data-ghhot data-ghhot-state="idle">
     <h2>GITHUB / 热榜</h2>
     <div class="sw-hot-tabs" role="tablist" aria-label="热榜周期">

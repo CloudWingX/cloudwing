@@ -6,7 +6,7 @@
   "description": "CloudWing / 云翼 —— 个人学习与作品档案站（Astro 静态站 · 磨砂玻璃扁平化 UI）。",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && pagefind --site dist",
+    "build": "node scripts/fetch-ghhot.mjs && astro build && pagefind --site dist",
     "build:fast": "astro build",
     "og": "node scripts/gen-og.mjs",
     "preview": "astro preview"

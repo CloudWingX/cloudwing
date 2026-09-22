@@ -3539,3 +3539,40 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
     Evolution Era 01/04」—— 共享音频单例在生产生效。
 - 留痕日志：`_shots/live-nav-shrink.log`、`live-nav-shrink-2.log`、`live-hero.log`、
   `live-music.log`、`push-679-68.log`、`poll-679-68.log`。
+
+## §69 热榜数据源改造：直连 GitHub → 同域构建快照（2026-09-22 上午）
+
+- 需求：站长「侧边栏 GitHub 热榜换一个国内容易访问的 api，不要再出现接口限流和网络
+  问题」。原实现（§56）前端运行时直连 `api.github.com/search/repositories`：无鉴权
+  search 配额 10 次/分极易 403，跨境链路也不稳（访客侧网络问题不受站点控制）。
+- 选型：**没有比同域静态文件更「国内易访问」的 API**——访客只请求与博客正文同一条
+  CF Pages 链路的 `/api/gh-hot.json`，站点能开热榜就能开；GitHub 请求挪到构建期
+  （CF 数据中心 → GitHub 每次部署仅 4 个请求，远低于任何限流阈值）。第三方公共
+  trending API（ossinsight 等）语义不符、自有限流，不采用。
+- 新脚本 `scripts/fetch-ghhot.mjs`（构建前置，`package.json build` 已挂）：
+  - 拉四周期（查询语义与原前端完全一致：`created:>=<start> stars:>10 sort=stars
+    per_page=8`），桶起点按北京时间 GMT+8 计算；产物 `public/api/gh-hot.json`
+    （generatedAt + periods 四周期，items 字段 name/url/stars/lang/desc 与渲染直连）。
+  - **永不失败**：逐周期更新、失败保留旧数据、退出码恒 0，绝不阻塞构建。
+  - 坑 ①（假阳性）：fetchPeriod 是 async，调用处漏 await → items 恒为 Promise（truthy）
+    → 「ok 4/4」但 JSON.stringify 把 Promise 序列化成 undefined，四周期 items 全丢。
+    症状：ok 4/4 与 e.items undefined 并存。已改 `await`。
+  - 坑 ②（真实数据稀疏）：daily 查询当天凌晨/上午可能真没有「新建且 star>10」的仓库
+    （UTC 才过 2.8h，三轮 empty 不是故障）→ **daily 空榜自动回退昨日**重拉（榜单语义
+    = 最近一天新建即爆）；403 限流轮间等待拉长到 25s 等窗口滚动。
+  - 本机实测：api.github.com 无鉴权 search 限流很紧（4 周期 × 3 轮的请求量就能把自己
+    打进 403），**等 65–70s 窗口重置再跑**即可过 —— 这正是要换掉直连的实证。
+- 前端 `ui.js githubTrending()`（§56 逻辑保留）：数据源换成同域 `/api/gh-hot.json`
+  （3s 超时），一次快照**全周期写桶缓存**（切 tab 零请求零等待）；时间桶刷新语义不变
+  （桶滚动 → 重拉同域文件拿部署新版）；错误文案改「热榜暂时不可用（数据加载失败）」；
+  删除死变量 N（条数由快照决定）。SidebarWidgets 头注释同步。
+- SW 兼容核查：sw.js 只拦带 Range 的音频请求，`/api/gh-hot.json` 走默认网络行为，
+  不会被缓存劫持；`src/pages/api/` 不存在，public/api 无路由冲突。
+- verify-ghhot 更新：新增断言「站内快照 /api/gh-hot.json 存在且含四周期」；渲染等待
+  9000→4000ms（同域秒级）；头注释移除限流警告（可放心重复跑）。
+- 回归：verify-ghhot **12/12**（本地 preview，快照断言+渲染+桶缓存+软导航全过）、
+  smoke **76/76**、verify-interaction **12/12**。产物：`dist/api/gh-hot.json` 7392B
+  四周期各 8 条。
+- 数据新鲜度语义：榜单 = 最近一次部署的快照（博客日更节奏下偏差 ≤1 天）；
+  时间桶滚动会重拉快照文件，部署过就有新数据。种子快照（2026-09-22 生成）随 git 入库，
+  本地构建拉不动时站点仍有完整数据。

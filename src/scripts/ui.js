@@ -1587,18 +1587,20 @@ function weatherWidget() {
   load(false);
 }
 
-/* ---------- 右侧栏「GitHub 热榜」（§56，2026-09-20）----------
-   日/周/月/年四个周期（默认每日），数据 = GitHub Search API：期间内新建仓库按 star 排序
-   （官方接口、无需鉴权、允许 CORS）。刷新语义按站长要求实现为「时间桶」：
-   缓存键 = 当前桶（日桶=当天 / 周桶=本周周一 / 月桶 / 年桶），桶一滚动即等价于
-   「每日 24 点 / 周、月、年最后一天 24 点」自动换新一版；页面驻留时每分钟比对桶 ID，
-   过点即自动重拉（不用等用户切页）。 */
+/* ---------- 右侧栏「GitHub 热榜」（§56，2026-09-20；§69 数据源改造 2026-09-22）----------
+   日/周/月/年四个周期（默认每日），数据 = 构建时快照 /api/gh-hot.json（同域静态文件，
+   由 scripts/fetch-ghhot.mjs 在构建时拉 GitHub Search API 生成：期间内新建仓库按 star
+   排序）。访客端不再直连 api.github.com —— 无鉴权搜索接口 10 次/分限流 + 跨境网络
+   不稳的问题从根上消除，站点能开热榜就能开。
+   刷新语义按站长要求保留「时间桶」：缓存键 = 当前桶（日桶=当天 / 周桶=本周周一 /
+   月桶 / 年桶，访客本地时区），桶一滚动即等价于「每日 24 点 / 周、月、年最后一天
+   24 点」自动重拉同域快照；页面驻留时每分钟比对桶 ID，过点即自动重拉。 */
 function githubTrending() {
   const card = document.querySelector('[data-ghhot]');
   if (!card) return;
 
   const KEY = '__cwGhHot_v1';
-  const N = 8;
+  /* 每周期条数由构建快照决定（scripts/fetch-ghhot.mjs 的 N=8），前端不再拼查询 */
   const LANG_COLORS = {
     JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572a5', Rust: '#dea584',
     Go: '#00add8', 'C++': '#f34b7d', C: '#555555', Java: '#b07219', 'C#': '#178600',
@@ -1685,7 +1687,7 @@ function githubTrending() {
     if ((card.dataset.ghhotPeriod || 'daily') !== period) return;
     card.dataset.ghhotState = 'error';
     el('[data-ghhot-note]').innerHTML = '';
-    el('[data-ghhot-note]').textContent = '热榜暂时不可用（GitHub 接口限流或网络异常）';
+    el('[data-ghhot-note]').textContent = '热榜暂时不可用（数据加载失败）';
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'sw-hot-refresh';
@@ -1695,30 +1697,35 @@ function githubTrending() {
   };
 
   const inflight = {};
+  const PERIODS = ['daily', 'weekly', 'monthly', 'yearly'];
+  /* 数据源 = 同域构建快照（§69）。一次拉全量四周期、按各周期访客当前桶写缓存：
+     之后切 tab 命中缓存零请求零等待；桶滚动后重拉同域文件拿部署新版。 */
   const fetchBucket = (period, bucket) => {
     if (inflight[period]) return;
     inflight[period] = true;
     card.dataset.ghhotState = 'loading';
-    const q = encodeURIComponent(`created:>=${bucket.start} stars:>10`);
     const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-    const timer = ctrl ? window.setTimeout(() => ctrl.abort(), 9000) : null;
-    fetch(`https://api.github.com/search/repositories?q=${q}&sort=stars&order=desc&per_page=${N}`,
-      { signal: ctrl.signal, headers: { Accept: 'application/vnd.github+json' } })
+    const timer = ctrl ? window.setTimeout(() => ctrl.abort(), 3000) : null;
+    fetch('/api/gh-hot.json', { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('http ' + r.status))))
-      .then((res) => {
+      .then((snap) => {
         window.clearTimeout(timer);
-        const items = (res.items || []).map((it) => ({
-          name: it.full_name,
-          url: it.html_url,
-          stars: it.stargazers_count || 0,
-          lang: it.language || '',
-          desc: it.description || '',
-        }));
-        if (!items.length) throw new Error('empty');
+        const list = snap && snap.periods;
         const all = readStore();
-        all[period] = { bucket: bucket.id, items, t: Date.now() };
+        let hitAny = false;
+        PERIODS.forEach((p) => {
+          const entry = list && list[p];
+          if (!entry || !Array.isArray(entry.items) || !entry.items.length) return;
+          hitAny = true;
+          all[p] = { bucket: bucketOf(p).id, items: entry.items, t: Date.now() };
+        });
+        if (!hitAny) throw new Error('empty');
         writeStore(all);
-        render(period, items);
+        const cur = all[period];
+        if (!(cur && cur.bucket === bucket.id && cur.items && cur.items.length)) {
+          throw new Error('empty');
+        }
+        render(period, cur.items);
       })
       .catch(() => {
         window.clearTimeout(timer);
