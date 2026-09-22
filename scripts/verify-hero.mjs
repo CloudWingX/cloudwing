@@ -173,9 +173,9 @@ check('左栏 ≈ 700px（放大标题后的取值）', d.content.w >= 660 && d.
 
 /* ── 竖向居中（2026-09-18 三轮：用户要求"整块挪到屏幕正中心"）──
    口径（实测 1440×900）：主内容块 [239,610] 中心 424 ≈ 视口中心 450；
-   卡片因"与标题顶齐平"被下移 60px（标题顶 299 / 卡片 [299,769]），
-   顶部留白 299 = 卡片底留白 131 + 60×2 + (610−239−470)…… 所以只断言：
-   ① 主内容块居中；② 卡片相对主内容块居中（允许那 60px 的齐平位移）；
+   卡片齐平锚点 2026-09-22 起改为徽标胶囊顶（= 行盒自然顶，--card-shift 归 0；
+   此前对齐大标题顶、被下移 60px）。所以只断言：
+   ① 主内容块居中；② 卡片相对主内容块居中（容差覆盖齐平位移的历史取值）；
    ③ 标题顶与卡片底都在视口内、且标题顶不再是"贴顶的 96px"。 */
 const vc = JSON.parse(await ev(`(function(){
   var q=function(s){return document.querySelector(s);};
@@ -259,15 +259,19 @@ check('标签组 gap 8px', d.tags.gap === '8px', d.tags.gap);
 check('标签数量 ≥ 4（来自作品 tools）', d.tagCount >= 4, String(d.tagCount));
 
 check('卡片已收窄（≤410，左栏让出 40px 给大标题）', d.card.w <= 410 && d.card.w >= 360, String(d.card.w));
-/* 用户要求"大标题与卡片顶部齐平"（左栏第一块是徽标胶囊，标题在其下方，
-   所以卡片要下移一个 badge 高度 + 其下边距）。 */
+/* ★2026-09-22 用户要求：卡片上移到与「上线·新增音乐…」徽标胶囊顶对齐（此前
+   2026-09-18 三轮的目标是大标题顶，badge 在标题上方，等于上移一个 badge 高 +
+   其下边距）。锚点 = .hero-badge 顶（hero-theme.js alignCard 用绝对坐标收敛）。 */
 const alignState = JSON.parse(await ev(`(function(){
   var q=function(s){return document.querySelector(s);};
-  return JSON.stringify({titleTop:Math.round(q('.hero-title').getBoundingClientRect().top),
+  var b=q('.hero-badge');
+  return JSON.stringify({badgeTop:b?Math.round(b.getBoundingClientRect().top):null,
+    titleTop:Math.round(q('.hero-title').getBoundingClientRect().top),
     cardTop:Math.round(q('.code-card').getBoundingClientRect().top),
     cardAlign:getComputedStyle(document.documentElement).getPropertyValue('--card-shift').trim()});})()`));
-check('大标题与卡片顶部齐平', Math.abs(alignState.titleTop - alignState.cardTop) <= 1,
-  `标题顶=${alignState.titleTop} 卡片顶=${alignState.cardTop}（--card-shift=${alignState.cardAlign}）`);check('卡片圆角 12px', d.card.radius === '12px', d.card.radius);
+check('徽标胶囊与卡片顶部齐平',
+  alignState.badgeTop !== null && Math.abs(alignState.badgeTop - alignState.cardTop) <= 1,
+  `徽标顶=${alignState.badgeTop} 卡片顶=${alignState.cardTop}（--card-shift=${alignState.cardAlign}）`);check('卡片圆角 12px', d.card.radius === '12px', d.card.radius);
 check('卡片头有文件名', (await ev(`!!document.querySelector('.code-filename')`)) === true);
 check('卡片三色圆点', (await ev(`document.querySelectorAll('.code-dot').length`)) === 3);
 /* ★代码卡片 = 磨砂玻璃★（2026-09-18 材质升级）：

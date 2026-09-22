@@ -194,18 +194,20 @@ export function initHeroTheme() {
 
   if (!st.wired) {
     st.wired = true;
-    /* "大标题与卡片顶部齐平"（视觉对齐）：
-       目标 = 标题自身的顶；卡片当前顶 = 自然顶 + 当前位移。
-       所以需要的新位移 = 当前位移 + (标题顶 − 卡片顶)，用**绝对坐标**算，
-       与"上一轮补了多少"无关。
+    /* "徽标胶囊与卡片顶部齐平"（视觉对齐，★2026-09-22 用户要求：卡片上移到与
+       「上线·新增音乐子页面…」徽标顶对齐，其他不动；2026-09-18 三轮的原目标是
+       大标题顶，badge 在标题上方，故本次等于把卡片上移一个"badge 高 + 间距"）：
+       目标 = .hero-badge 自身的顶（badge 不存在时回退标题顶）；卡片当前顶 =
+       自然顶 + 当前位移。所以需要的新位移 = 当前位移 + (badge 顶 − 卡片顶)，
+       用**绝对坐标**算，与"上一轮补了多少"无关。
        ⚠️ 位移走的是 `--card-shift` + CSS 的 `position: relative; top`，
        **不能用 margin-top**：外边距会参与 flex 行盒高度，"居中"结果又被推下去，
        形成正反馈（实测 5 轮越漂越远，卡片最终跑到 438）。
-       ⚠️ 不要用 badge.bottom 当目标：那是徽标底，标题顶还要再往下 28px（踩过）。
        ⚠️ 布局会二次变化（WebFont 到位、视频层插入），rAF 里复核到收敛为止。 */
     const alignCard = () => {
       const root2 = document.documentElement;
       const hero = document.querySelector('.hero');
+      const badge = document.querySelector('.hero-badge');
       const title = document.querySelector('.hero-title');
       const card = document.querySelector('.code-card');
       if (!hero || !title || !card) return;
@@ -213,9 +215,10 @@ export function initHeroTheme() {
         root2.style.setProperty('--card-shift', '0px');
         return;
       }
+      const anchor = badge || title; /* 对齐锚点：徽标胶囊顶（缺徽标回退标题顶） */
       const settle = (pass) => {
         const cur = parseFloat(getComputedStyle(root2).getPropertyValue('--card-shift')) || 0;
-        const want = Math.max(0, Math.round(cur + (title.getBoundingClientRect().top - card.getBoundingClientRect().top)));
+        const want = Math.max(0, Math.round(cur + (anchor.getBoundingClientRect().top - card.getBoundingClientRect().top)));
         root2.style.setProperty('--card-shift', want + 'px');
         if (pass < 3 && Math.abs(want - cur) > 1) {
           requestAnimationFrame(() => settle(pass + 1));
