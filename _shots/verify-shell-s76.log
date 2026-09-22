@@ -1,0 +1,66 @@
+
+── /posts/ ──
+  ✅ /posts/ 内容顶与侧栏首卡顶对齐（≤1px）  —— 偏差=0px
+  ✅ /posts/ 标题到内容的间距符合全站节奏（1.6rem）  —— 间距=25.6 目标=25.6（box口径）
+  ✅ /posts/ kicker 是「EN / 中文」格式  —— "POSTS / 文章"
+  ✅ /posts/ kicker 英文词在 <b> 里  —— POSTS
+  ✅ /posts/ 标题下无描述简介
+  ✅ /posts/ h1 非空  —— 文章
+  ✅ /posts/ 无横向溢出  —— 溢出=0px
+
+── /blog/ ──
+  ✅ /blog/ 内容顶与侧栏首卡顶对齐（≤1px）  —— 偏差=0px
+  ✅ /blog/ 标题到内容的间距符合全站节奏（1.6rem）  —— 间距=25.6 目标=25.6（box口径）
+  ✅ /blog/ kicker 是「EN / 中文」格式  —— "ARCHIVE / 归档"
+  ✅ /blog/ kicker 英文词在 <b> 里  —— ARCHIVE
+  ✅ /blog/ 标题下无描述简介
+  ✅ /blog/ h1 非空  —— 归档
+  ✅ /blog/ 无横向溢出  —— 溢出=0px
+
+── /log/ ──
+  ✅ /log/ 内容顶与侧栏首卡顶对齐（≤1px）  —— 偏差=0px
+  ✅ /log/ 标题到内容的间距符合全站节奏（1.6rem）  —— 间距=25.6 目标=25.6（box口径）
+  ✅ /log/ kicker 是「EN / 中文」格式  —— "LOG / 日志"
+  ✅ /log/ kicker 英文词在 <b> 里  —— LOG
+  ✅ /log/ 标题下无描述简介
+  ✅ /log/ h1 非空  —— 日志
+  ✅ /log/ 无横向溢出  —— 溢出=0px
+
+── /gallery/ ──
+  ✅ /gallery/ 内容顶与侧栏首卡顶对齐（≤1px）  —— 偏差=0px
+  ✅ /gallery/ 标题到内容的间距符合全站节奏（1.6rem）  —— 间距=0 目标=0（box口径）
+  ✅ /gallery/ kicker 是「EN / 中文」格式  —— "GALLERY / 画廊"
+  ✅ /gallery/ kicker 英文词在 <b> 里  —— GALLERY
+  ✅ /gallery/ 标题下无描述简介
+  ✅ /gallery/ h1 非空  —— 画廊
+  ✅ /gallery/ 无横向溢出  —— 溢出=0px
+
+── /nav/ ──
+  ✅ /nav/ 内容顶与侧栏首卡顶对齐（≤1px）  —— 偏差=0px
+  ✅ /nav/ 标题到内容的间距符合全站节奏（1.6rem）  —— 间距=0 目标=0（box口径）
+  ✅ /nav/ kicker 是「EN / 中文」格式  —— "SITES / 网站导航"
+  ✅ /nav/ kicker 英文词在 <b> 里  —— SITES
+  ✅ /nav/ 标题下无描述简介
+  ✅ /nav/ h1 非空  —— 网站导航
+  ✅ /nav/ 无横向溢出  —— 溢出=0px
+
+── /about/ ──
+  ✅ /about/ 内容顶与侧栏首卡顶对齐（≤1px）  —— 偏差=0px
+  ✅ /about/ 标题到内容的间距符合全站节奏（1.6rem）  —— 间距=25.6 目标=25.6（visual口径）
+  ✅ /about/ kicker 是「EN / 中文」格式  —— "PROFILE / 档案"
+  ✅ /about/ kicker 英文词在 <b> 里  —— PROFILE
+  ✅ /about/ 标题下无描述简介
+  ✅ /about/ h1 非空  —— 档案
+  ✅ /about/ 无横向溢出  —— 溢出=0px
+
+── /account/ ──
+  ✅ /account/ 内容顶与侧栏首卡顶对齐（≤1px）  —— 偏差=0px
+  ✅ /account/ 标题到内容的间距符合全站节奏（1.6rem）  —— 间距=25.6 目标=25.6（box口径）
+  ✅ /account/ kicker 是「EN / 中文」格式  —— "ROOM / 留言板"
+  ✅ /account/ kicker 英文词在 <b> 里  —— ROOM
+  ✅ /account/ 标题下无描述简介
+  ✅ /account/ h1 非空  —— 互动
+  ✅ /account/ 无横向溢出  —— 溢出=0px
+  ✅ 全程无 JS 异常
+
+🎉 verify-shell：50/50 通过

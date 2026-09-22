@@ -3712,3 +3712,28 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   绝对路径导入；ws 已用系统 node 的 npm-cli 装进托管 workspace。另：
   `/json/new` 自新版 Edge 要求 **PUT** 动词（GET 报 unsafe verb），
   且带 url 参数可能不导航 —— 探针统一显式 `Page.navigate`。
+
+## §76 档案页瘦身：删 MagicBento / 吊牌 / 悬浮动效（2026-09-22 傍晚）
+
+- 需求：站长「删除档案页面下方的黑色信息组件，删除吊牌，删除档案页面文字
+  鼠标悬浮动效」—— 三项全在 `/about/`（about.astro，529 行）。
+- 删除明细：
+  ① 黑色信息组件 = 底部 `AboutMagicBento`（ReactBits MagicBento 深色卡片网格，
+  mb-shell 区块 + 专属 CSS + about-route 第 4 卡布局覆盖）；
+  ② 吊牌 = `Lanyard` 挂绳工牌（ly-floater 桌面绝对定位 + 移动端 400px 区 +
+  整段拖拽「拉绳手感」script）；
+  ③ 文字悬浮动效 = `ProximityText` 邻近字重（h1「档案」与两个 track-title 换回
+  纯文本）+ 正文拉丁词「光标邻近可变字重」脚本（cw-pxw/cw-pxc 包装 +
+  pointermove 插值，整块删除）。
+- 保留：正文（who/track/skills）、`.note` 页脚（verify-copy 断言 /about/ 含
+  SITE.notice）、`bodyClass="about-route"` 一并移除（全站无其他引用）。
+  组件文件（Lanyard.jsx / MagicBento.jsx / ProximityText.jsx 等）留在仓库
+  未删——仅页面不再引用，回滚或复用零成本。
+- 探针：`_shots/about-s76-probe.mjs`（BASE 可传参）——断言 bento 卡片/吊牌/
+  邻近特效/拉丁词 span **四项为不存在**，正文结构（h1 文本、时间线 3 行、
+  技能组 4 行、note 存在）完好。
+- 回归：本地探针 **ABOUT_CHECK=PASS** + 截图目检（页面干净，右侧栏不受影响）+
+  verify-shell **50/50**（含 /about/ 首段间距 25.6 断言，h1 换纯文本后不变）+
+  smoke **76/76**。
+- **§76 部署上线（同日）**：提交 `cc6f484`（1 文件，+9/−390）推送成功；线上
+  探针第 3 轮 PASS（CF 构建约 40–60s）；归档提交见 §76 末。
