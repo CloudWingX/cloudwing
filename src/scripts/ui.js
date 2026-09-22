@@ -1817,8 +1817,13 @@ async function loadLyrics(id) {
 
 function musicPlayer() {
   const card = document.querySelector('[data-music]');
-  if (!card) return;
-  const total = Number(card.dataset.musicCount || '0');
+  if (!card) {
+    musicCard = null; // 软导航到无侧栏卡页面：旧引用已脱离 DOM，置空防误写
+    return;
+  }
+  musicCard = card;
+  musicEndedOwner = 'side'; // 当前页侧栏连着：曲终推进归侧管（音乐页会覆盖为 'page'）
+  const total = Number(musicCard.dataset.musicCount || '0');
   if (!total) return; // 歌曲未添加：只有占位内容，无需交互
 
   const st =
@@ -1834,55 +1839,57 @@ function musicPlayer() {
       lyricsPtr: 0, // 当前高亮行指针
     });
 
-  // ---- 音频元素：全局单例，挂 body 上，切页不中断 ----
-  if (!st.audio) {
-    const a = new Audio();
-    a.preload = 'metadata';
-    a.addEventListener('timeupdate', () => {
+  // ---- 音频元素：全站共享单例（侧栏与 /music/ 页同一元素，状态天然同步）----
+  const audio = getSharedAudio();
+  if (!audio.__sideBound) {
+    audio.__sideBound = true;
+    audio.addEventListener('timeupdate', () => {
       paintProgress();
       syncLyrics();
-      if (st.audio.duration && !st.audio.paused) {
+      if (audio.duration && !audio.paused) {
         // 记录播放位置：整页刷新后可以接着放
         try {
-          sessionStorage.setItem('cw-music-at', String(Math.floor(st.audio.currentTime)));
+          sessionStorage.setItem('cw-music-at', String(Math.floor(audio.currentTime)));
         } catch (e) {
           /* ignore */
         }
       }
     });
-    a.addEventListener('loadedmetadata', () => {
+    audio.addEventListener('loadedmetadata', () => {
       paintProgress();
-      if (card.dataset.musicResume) {
-        const at = Number(card.dataset.musicResume) || 0;
-        if (at > 0 && at < (a.duration || Infinity)) a.currentTime = at;
-        delete card.dataset.musicResume;
+      if (musicCard && musicCard.dataset.musicResume) {
+        const at = Number(musicCard.dataset.musicResume) || 0;
+        if (at > 0 && at < (audio.duration || Infinity)) audio.currentTime = at;
+        delete musicCard.dataset.musicResume;
       }
     });
-    a.addEventListener('play', () => {
-      card.dataset.state = 'playing';
+    audio.addEventListener('play', () => {
+      // §67.9：与音乐页共用同一元素，不再互斥；只刷本视图 UI
+      if (musicCard) musicCard.dataset.state = 'playing';
       setToggleLabel(true);
-      // 双播放器互斥：音乐页的唱片机在响时，侧栏这边一开播就把它暂停
-      const mp = window.__cwMusicPage;
-      if (mp && mp.audio && !mp.audio.paused) mp.audio.pause();
     });
-    a.addEventListener('pause', () => {
-      card.dataset.state = 'paused';
+    audio.addEventListener('pause', () => {
+      if (musicCard) musicCard.dataset.state = 'paused';
       setToggleLabel(false);
     });
-    a.addEventListener('ended', () => step(1, true));
-    a.addEventListener('error', () => {
-      card.dataset.state = 'error';
+    // 曲终推进：只有「所有权视图」才推进，防止两个监听器双跳
+    audio.addEventListener('ended', () => {
+      if (musicEndedOwner === 'side') step(1, true);
+    });
+    audio.addEventListener('error', () => {
+      if (!musicCard) return;
+      musicCard.dataset.state = 'error';
       setToggleLabel(false);
-      const dur = card.querySelector('[data-mu-dur]');
+      const dur = musicCard.querySelector('[data-mu-dur]');
       if (dur) dur.textContent = '--:--';
     });
-    st.audio = a;
   }
-  const audio = st.audio;
+  st.audio = audio;
 
   // ---- 取曲目信息（从侧栏的 DOM 上读，避免在 ui.js 里再引一份 MUSIC）----
+  // ⚠️ 共享监听器在 /music/ 页也会触发，此时 musicCard 为 null：一律守卫
   const srcs = () => {
-    const raw = card.dataset.musicSrcs || '';
+    const raw = (musicCard && musicCard.dataset.musicSrcs) || '';
     return raw ? raw.split('|') : [];
   };
 
@@ -1894,16 +1901,18 @@ function musicPlayer() {
   };
 
   const setToggleLabel = (playing) => {
-    const btn = card.querySelector('[data-mu-toggle]');
+    if (!musicCard) return;
+    const btn = musicCard.querySelector('[data-mu-toggle]');
     if (!btn) return;
     btn.setAttribute('aria-label', playing ? '暂停' : '播放');
   };
 
   const paintProgress = () => {
-    const bar = card.querySelector('[data-mu-bar]');
-    const fill = card.querySelector('[data-mu-fill]');
-    const cur = card.querySelector('[data-mu-cur]');
-    const dur = card.querySelector('[data-mu-dur]');
+    if (!musicCard) return;
+    const bar = musicCard.querySelector('[data-mu-bar]');
+    const fill = musicCard.querySelector('[data-mu-fill]');
+    const cur = musicCard.querySelector('[data-mu-cur]');
+    const dur = musicCard.querySelector('[data-mu-dur]');
     const d = audio.duration;
     const t = audio.currentTime;
     if (fill && isFinite(d) && d > 0) fill.style.width = `${(t / d) * 100}%`;
@@ -1916,10 +1925,10 @@ function musicPlayer() {
   };
 
   /* ---- 歌词面板（「词」按钮弹出；LRC 零配置，见文件顶部 loadLyrics 注释）---- */
-  const ids = () => (card.dataset.musicIds || '').split('|');
-  const insts = () => (card.dataset.musicInst || '').split('|');
-  const lyPanel = () => card.querySelector('[data-mu-lyrics-panel]');
-  const lyInner = () => card.querySelector('[data-mu-lyrics-inner]');
+  const ids = () => (musicCard && musicCard.dataset.musicIds ? musicCard.dataset.musicIds : '').split('|');
+  const insts = () => (musicCard && musicCard.dataset.musicInst ? musicCard.dataset.musicInst : '').split('|');
+  const lyPanel = () => (musicCard ? musicCard.querySelector('[data-mu-lyrics-panel]') : null);
+  const lyInner = () => (musicCard ? musicCard.querySelector('[data-mu-lyrics-inner]') : null);
 
   const lyricsPaint = (data) => {
     const inner = lyInner();
@@ -1971,26 +1980,27 @@ function musicPlayer() {
   const toggleLyrics = () => {
     st.lyricsOpen = !st.lyricsOpen;
     const panel = lyPanel();
-    const btn = card.querySelector('[data-mu-lyrics]');
+    const btn = musicCard.querySelector('[data-mu-lyrics]');
     if (panel) panel.hidden = !st.lyricsOpen;
     if (btn) btn.setAttribute('aria-expanded', String(st.lyricsOpen));
     if (st.lyricsOpen) ensureLyrics();
   };
 
   const load = (i, autoplay) => {
+    if (!musicCard) return; // 共享监听器场景下的安全网（正常路径 srcs 空已拦）
     const list = srcs();
     if (!list.length) return;
     st.index = ((i % list.length) + list.length) % list.length;
     audio.src = list[st.index];
-    card.dataset.state = 'loading';
+    musicCard.dataset.state = 'loading';
     // 曲名/作者：由页面按 index 渲染成 data 属性太啰嗦，这里直接读 DOM 上的列表
-    const titles = (card.dataset.musicTitles || '').split('|');
-    const artists = (card.dataset.musicArtists || '').split('|');
-    const tEl = card.querySelector('[data-mu-title]');
-    const aEl = card.querySelector('[data-mu-artist]');
+    const titles = (musicCard.dataset.musicTitles || '').split('|');
+    const artists = (musicCard.dataset.musicArtists || '').split('|');
+    const tEl = musicCard.querySelector('[data-mu-title]');
+    const aEl = musicCard.querySelector('[data-mu-artist]');
     if (tEl) tEl.textContent = titles[st.index] || '未命名曲目';
     if (aEl) aEl.textContent = artists[st.index] || '未知作者';
-    const no = card.querySelector('[data-mu-no]');
+    const no = musicCard.querySelector('[data-mu-no]');
     if (no) no.textContent = `${String(st.index + 1).padStart(2, '0')} / ${String(list.length).padStart(2, '0')}`;
     try {
       sessionStorage.setItem('cw-music-idx', String(st.index));
@@ -2017,7 +2027,7 @@ function musicPlayer() {
       if (p && typeof p.catch === 'function') {
         p.catch(() => {
           // 浏览器拦截自动播放：保持暂停，等用户点一下
-          card.dataset.state = 'paused';
+          musicCard.dataset.state = 'paused';
         });
       }
     }
@@ -2028,40 +2038,51 @@ function musicPlayer() {
     load(st.index + delta, autoplay);
   };
 
+  // ---- 共享单例对齐：audio.src 可能已由 /music/ 页装载（软导航往返）----
+  // 按文件名对齐曲目下标；对得上就不动音频（进度/播放态就是实况）。
+  if (audio.src) {
+    const cur = decodeURIComponent((audio.currentSrc || audio.src || '').split('/').pop() || '');
+    const found = srcs().findIndex((s) => decodeURIComponent(s.split('/').pop() || '') === cur);
+    if (found >= 0) st.index = found;
+  }
+
   // ---- 首次进入：恢复上次的曲目与播放位置（不自动播放，避免被拦截）----
+  // audio.src 已有曲目（从另一视图带过来）时跳过恢复：index 已按 src 对齐。
   if (!st.restored) {
     st.restored = true;
-    let idx = 0;
-    let at = 0;
-    try {
-      idx = Number(sessionStorage.getItem('cw-music-idx') || '0') || 0;
-      at = Number(sessionStorage.getItem('cw-music-at') || '0') || 0;
-    } catch (e) {
-      /* ignore */
+    if (!audio.src) {
+      let idx = 0;
+      let at = 0;
+      try {
+        idx = Number(sessionStorage.getItem('cw-music-idx') || '0') || 0;
+        at = Number(sessionStorage.getItem('cw-music-at') || '0') || 0;
+      } catch (e) {
+        /* ignore */
+      }
+      st.index = idx;
+      // 位置通过 dataset 传给 loadedmetadata 里使用
+      musicCard.dataset.musicResume = String(at);
+      load(idx, false);
     }
-    st.index = idx;
-    // 位置通过 dataset 传给 loadedmetadata 里使用
-    card.dataset.musicResume = String(at);
-    if (!audio.src) load(idx, false);
   }
 
   // 软导航后侧栏被重建：把 UI 重新同步到正在播放的音频
   paintProgress();
   setToggleLabel(!audio.paused);
   if (audio.src) {
-    const no = card.querySelector('[data-mu-no]');
+    const no = musicCard.querySelector('[data-mu-no]');
     const list = srcs();
     if (no) no.textContent = `${String(st.index + 1).padStart(2, '0')} / ${String(list.length).padStart(2, '0')}`;
-    const titles = (card.dataset.musicTitles || '').split('|');
-    const tEl = card.querySelector('[data-mu-title]');
+    const titles = (musicCard.dataset.musicTitles || '').split('|');
+    const tEl = musicCard.querySelector('[data-mu-title]');
     if (tEl && titles[st.index]) tEl.textContent = titles[st.index];
-    if (!audio.paused) card.dataset.state = 'playing';
+    if (!audio.paused) musicCard.dataset.state = 'playing';
   }
 
   // 歌词面板若在软导航前是展开的：在新 DOM 上恢复展开态并重渲染当前词
   if (st.lyricsOpen) {
     const panel = lyPanel();
-    const btn = card.querySelector('[data-mu-lyrics]');
+    const btn = musicCard.querySelector('[data-mu-lyrics]');
     if (panel) panel.hidden = false;
     if (btn) btn.setAttribute('aria-expanded', 'true');
     ensureLyrics();
@@ -2085,7 +2106,7 @@ function musicPlayer() {
           if (p && typeof p.catch === 'function')
             p.catch(() => {
               // 自动播放被策略拦截（无手势/无头环境）：归位为暂停态，别卡在 loading
-              card.dataset.state = 'paused';
+              if (musicCard) musicCard.dataset.state = 'paused';
             });
         }
       } else audio.pause();
@@ -2120,18 +2141,37 @@ function musicPlayer() {
 }
 
 /* ---------- 音乐页 /music/（§67）：中央大唱片 + 全参数 + 歌词 + 曲目表 ----------
-   与侧栏播放器相互独立（各自 window 单例、各自 <audio>），但**互斥播放**：
-   任一边开播都会把另一边暂停。唱片播放时旋转（CSS animation + play-state），
-   悬停 3D 视差（rAF 插值 tilt + 高光跟随）。数据全部来自页面 data-*（site.ts 渲染）。
+   唱片播放时旋转（CSS animation + play-state），悬停 3D 视差（rAF 插值 tilt +
+   高光跟随）。数据全部来自页面 data-*（site.ts 渲染）。
    ⚠️ 委托监听器只绑一次，但它调到的 load/paint 必须查询「当前文档」的节点：
    软导航往返 /music/ 后旧 root 已脱离 DOM，写进去用户看不见 —— 所以 DOM 一律经
-   mpRoot（每次 boot 更新为当前文档的页面容器）取，音频/状态仍走 window 单例。 */
+   mpRoot（每次 boot 更新为当前文档的页面容器）取，音频/状态仍走 window 单例。
+
+   §67.9 状态同步：侧栏与音乐页共用同一个 <audio>（getSharedAudio 单例），
+   曲目/进度/播放态天然一致，不再有「互斥播放」。两套监听器经 __sideBound /
+   __pageBound 各绑一次；UI 刷新一律经 musicCard / mpRoot（当前文档）；曲终
+   推进由 musicEndedOwner 决定归哪个视图管（每次 boot 按视图连通性更新）。 */
 let mpRoot = null;
+let musicCard = null; // 侧栏音乐卡（每次 boot 更新为当前文档节点，仿 mpRoot）
+let musicEndedOwner = null; // 'side' | 'page'：曲终推进归谁（boot 按连通性定）
+let sharedAudio = null;
+
+function getSharedAudio() {
+  if (sharedAudio) return sharedAudio;
+  const a = new Audio();
+  a.preload = 'metadata';
+  sharedAudio = a;
+  return a;
+}
 
 function musicPage() {
   const root = document.querySelector('[data-music-page]');
-  if (!root) return;
+  if (!root) {
+    mpRoot = null; // 软导航离开 /music/：旧 root 已脱离 DOM，置空防误写
+    return;
+  }
   mpRoot = root;
+  musicEndedOwner = 'page'; // 音乐页连着：曲终按页面循环模式推进（覆盖侧栏的 'side'）
 
   const st =
     window.__cwMusicPage ||
@@ -2169,41 +2209,39 @@ function musicPage() {
   };
   const LOOP_LABEL = { list: '顺序循环', one: '单曲循环', shuffle: '随机播放' };
 
-  // ---- 音频单例：挂 body，软导航不中断 ----
-  if (!st.audio) {
-    const a = new Audio();
-    a.preload = 'metadata';
-    a.addEventListener('loadedmetadata', () => {
+  // ---- 音频单例：全站共享（与侧栏同一元素，状态天然同步，§67.9）----
+  const audio = getSharedAudio();
+  if (!audio.__pageBound) {
+    audio.__pageBound = true;
+    audio.addEventListener('loadedmetadata', () => {
       paint();
       const at = Number(mpRoot && mpRoot.dataset.mpResume) || 0;
-      if (at > 0 && at < (a.duration || Infinity)) a.currentTime = at;
+      if (at > 0 && at < (audio.duration || Infinity)) audio.currentTime = at;
       if (mpRoot) delete mpRoot.dataset.mpResume;
     });
-    a.addEventListener('timeupdate', () => {
+    audio.addEventListener('timeupdate', () => {
       paint();
       syncLyrics();
-      if (a.duration && !a.paused) {
+      if (audio.duration && !audio.paused) {
         try {
-          sessionStorage.setItem('cw-mp-at', String(Math.floor(a.currentTime)));
+          sessionStorage.setItem('cw-mp-at', String(Math.floor(audio.currentTime)));
         } catch (e) {
           /* ignore */
         }
       }
     });
-    a.addEventListener('play', () => {
-      // 双播放器互斥：侧栏在响就先掐掉
-      const side = window.__cwMusic;
-      if (side && side.audio && !side.audio.paused) side.audio.pause();
-      paint();
-    });
-    a.addEventListener('pause', paint);
-    a.addEventListener('playing', paint);
-    a.addEventListener('waiting', paint);
-    a.addEventListener('ended', () => {
+    // §67.9：与侧栏共用同一元素，不再互斥；只刷本视图 UI
+    audio.addEventListener('play', paint);
+    audio.addEventListener('pause', paint);
+    audio.addEventListener('playing', paint);
+    audio.addEventListener('waiting', paint);
+    // 曲终推进：只有「所有权视图」才按自己的循环模式推进，防止双跳
+    audio.addEventListener('ended', () => {
+      if (musicEndedOwner !== 'page') return;
       const n = srcs().length;
       if (st.loop === 'one') {
-        a.currentTime = 0;
-        const p = a.play();
+        audio.currentTime = 0;
+        const p = audio.play();
         if (p && p.catch) p.catch(() => {});
       } else if (st.loop === 'shuffle' && n > 1) {
         let next = st.index;
@@ -2213,10 +2251,9 @@ function musicPage() {
         load(st.index + 1, true);
       }
     });
-    a.addEventListener('error', paint);
-    st.audio = a;
+    audio.addEventListener('error', paint);
   }
-  const audio = st.audio;
+  st.audio = audio;
 
   // ---- 渲染：进度/时间/状态/唱片/列表/参数 全量刷 ----
   function paint() {
@@ -2316,32 +2353,33 @@ function musicPage() {
     }
   }
 
+  // ---- 静态参数区（标题/作者/专辑/封面/格式/大小/时长/来源/文件名）----
+  // load() 与 boot 尾（共享单例按 src 对齐 index 后）都会刷
+  function paintStatics() {
+    const setP = (k, v) => {
+      const el = qs(k);
+      if (el) el.textContent = v;
+    };
+    setP('[data-mp-title]', titles()[st.index] || '未命名曲目');
+    setP('[data-mp-artist]', artists()[st.index] || '未知作者');
+    setP('[data-mp-album]', albums()[st.index] || '');
+    const label = qs('[data-mp-label]');
+    const cov = covers()[st.index];
+    if (label) label.style.backgroundImage = cov ? `url("${cov}")` : 'none';
+    setP('[data-mp-fmt]', 'MP3 · 320 kbps CBR');
+    setP('[data-mp-size]', sizes()[st.index] ? sizes()[st.index] + ' MB' : '--');
+    setP('[data-mp-length]', durs()[st.index] ? fmt(Number(durs()[st.index])) : '--:--');
+    setP('[data-mp-origin]', origins()[st.index] || '--');
+    setP('[data-mp-file]', (srcs()[st.index] || '').split('/').pop() || '--');
+  }
+
   // ---- 装载曲目 ----
   function load(i, autoplay) {
     const n = srcs().length;
     if (!n) return;
     st.index = ((i % n) + n) % n;
     audio.src = srcs()[st.index];
-    const t = qs('[data-mp-title]');
-    if (t) t.textContent = titles()[st.index] || '未命名曲目';
-    const ar = qs('[data-mp-artist]');
-    if (ar) ar.textContent = artists()[st.index] || '未知作者';
-    const al = qs('[data-mp-album]');
-    if (al) al.textContent = albums()[st.index] || '';
-    // 盘芯封面
-    const label = qs('[data-mp-label]');
-    const cov = covers()[st.index];
-    if (label) label.style.backgroundImage = cov ? `url("${cov}")` : 'none';
-    // 静态参数
-    const setP = (k, v) => {
-      const el = qs(k);
-      if (el) el.textContent = v;
-    };
-    setP('[data-mp-fmt]', 'MP3 · 320 kbps CBR');
-    setP('[data-mp-size]', sizes()[st.index] ? sizes()[st.index] + ' MB' : '--');
-    setP('[data-mp-length]', durs()[st.index] ? fmt(Number(durs()[st.index])) : '--:--');
-    setP('[data-mp-origin]', origins()[st.index] || '--');
-    setP('[data-mp-file]', (srcs()[st.index] || '').split('/').pop() || '--');
+    paintStatics();
     // 歌词
     st.lyFor = -1;
     st.lyLines = undefined;
@@ -2359,14 +2397,21 @@ function musicPage() {
     }
   }
 
+  // ---- 共享单例对齐：audio.src 可能已由侧栏装载（首页→/music/ 软导航）----
+  // 侧栏切歌只更新它自己的 st.index 与 audio.src；页面 boot 必须按 src
+  // 对齐自己的 st.index，否则曲目表高亮/曲名/进度会停在旧曲目上。
+  if (audio.src) {
+    const cur = decodeURIComponent((audio.currentSrc || audio.src || '').split('/').pop() || '');
+    const found = srcs().findIndex((s) => decodeURIComponent(s.split('/').pop() || '') === cur);
+    if (found >= 0) st.index = found;
+  }
+
   // ---- 首次进入：恢复上次曲目/进度/音量/循环（不自动播放）----
+  // audio.src 已有曲目（侧栏带过来）时跳过曲目恢复：index 已按 src 对齐、
+  // 位置就是实况；音量/循环偏好始终恢复。
   if (!st.restored) {
     st.restored = true;
-    let idx = 0;
-    let at = 0;
     try {
-      idx = Number(sessionStorage.getItem('cw-mp-idx') || '0') || 0;
-      at = Number(sessionStorage.getItem('cw-mp-at') || '0') || 0;
       // ⚠️ Number(null) === 0：键不存在会被误读成「音量 0」（静音），
       // 必须先判 null 再转数字（§67 截图实测踩坑）。
       const rawVol = localStorage.getItem('cw-mp-vol');
@@ -2377,11 +2422,24 @@ function musicPage() {
     } catch (e) {
       /* ignore */
     }
-    st.index = idx;
-    if (mpRoot) mpRoot.dataset.mpResume = String(at);
     const volInput = qs('[data-mp-vol]');
     if (volInput) volInput.value = String(Math.round(st.vol * 100));
-    if (!audio.src) load(idx, false);
+    // 音量是共享音频的全局属性：恢复时真正应用到元素（原先只改 st.vol，
+    // 实际音量要等用户动滑杆才生效 —— §67.9 顺手修正）
+    if (!isNaN(st.vol)) audio.volume = st.vol;
+    if (!audio.src) {
+      let idx = 0;
+      let at = 0;
+      try {
+        idx = Number(sessionStorage.getItem('cw-mp-idx') || '0') || 0;
+        at = Number(sessionStorage.getItem('cw-mp-at') || '0') || 0;
+      } catch (e) {
+        /* ignore */
+      }
+      st.index = idx;
+      if (mpRoot) mpRoot.dataset.mpResume = String(at);
+      load(idx, false);
+    }
   }
 
   // ---- 悬停视差：rAF 插值 tilt + 高光跟随（减少动态时完全关闭）----
@@ -2421,8 +2479,11 @@ function musicPage() {
     });
   }
   // 软导航回来：新 DOM 全量重刷一遍 + 歌词重渲染
+  // （ensureLyrics：index 与已加载歌词一致就直接渲染，不一致（共享单例对齐
+  //  了新曲目）就自动加载，加载完成有 index 守卫，安全）
+  paintStatics(); // index 可能已按 audio.src 对齐：静态参数区跟着新曲目刷
   paint();
-  if (st.lyFor === st.index) renderLyrics();
+  ensureLyrics();
 
   if (st.wired) return;
   st.wired = true;

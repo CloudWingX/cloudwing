@@ -1,7 +1,8 @@
 // 播放器功能验证（§67 起对真实曲目断言）：
 //   播放/暂停、进度、下一首/上一首、切页不中断、进度条跳转、
 //   歌词面板（词按钮弹出/纯音乐占位）、/music/ 页（唱片旋转+视差+曲目表+参数）、
-//   侧栏播放器与音乐页播放器互斥。
+//   侧栏播放器与音乐页共享同一音频（§67.9 状态同步：单例同一性/软导航往返
+//   曲目与播放态保持/任一视图控制同一音频）。
 // 用法：node scripts/verify-music.mjs [baseUrl]
 import { setTimeout as sleep } from 'node:timers/promises';
 
@@ -171,24 +172,46 @@ await sleep(500);
 const m2b = await mpState();
 check('视差 tilt 已生效（transform 非空）', !!m2b.tilt && m2b.tilt !== 'none', String(m2b.tilt || '').slice(0, 60));
 
-console.log('\n=== 双播放器互斥（经软导航跨页双向验证）===');
-// /music/ 页没有侧栏 → 侧栏只能出现在软导航到壳层页之后；
-// 窗口单例跨软导航存活，正好一起验证「页面播放器切页不中断」。
+console.log('\n=== 状态同步：共享音频单例（§67.9，软导航往返验证）===');
+// /music/ 页没有侧栏 → 侧栏只能出现在软导航到壳层页之后。§67.9 起两个视图
+// 共用同一个 <audio>（getSharedAudio 单例）：曲目/进度/播放态天然一致，
+// 不再有互斥播放。断言改为「状态连续性」语义：
+//   单例同一性 / 软导航往返曲目与播放态保持 / 任一视图控制同一音频。
+const w1 = await ev(`window.__cwMusicPage && window.__cwMusicPage.audio ? !window.__cwMusicPage.audio.paused : null`);
+console.log('  /music/ 页在播（软导航前）: ' + JSON.stringify(w1));
+check('软导航前音乐页音频仍在播放', w1 === true, JSON.stringify(w1));
+
+// /music/（播放中）→ 壳层页：侧栏接管显示，实况不丢
 await ev(`document.querySelector('.site-header a[href="/gallery/"]')?.click()`);
 await sleep(4500);
-const w1 = await ev(`({侧栏存在: !!window.__cwMusic, 页播放器存活: !!(window.__cwMusicPage&&window.__cwMusicPage.audio), 页在播: window.__cwMusicPage&&window.__cwMusicPage.audio?!window.__cwMusicPage.audio.paused:null})`);
-console.log('  ' + JSON.stringify(w1));
-check('软导航后音乐页音频仍存活且继续播放', w1.页播放器存活 === true && w1.页在播 === true, JSON.stringify(w1));
+const w2 = await ev(`(()=>{const c=document.querySelector('[data-music]'); const a=window.__cwMusic&&window.__cwMusic.audio;
+  return { 同一元素: !!(window.__cwMusic && window.__cwMusicPage && a && window.__cwMusic.audio === window.__cwMusicPage.audio),
+    卡片状态: c?c.dataset.state:null, 曲名: c?c.querySelector('[data-mu-title]')?.textContent:null,
+    序号: c?c.querySelector('[data-mu-no]')?.textContent:null,
+    在播: a?!a.paused:null, src: a?a.src.split('/').pop():null };})()`);
+console.log('  ' + JSON.stringify(w2));
+check('侧栏与音乐页指向同一 <audio>（共享单例同一性）', w2.同一元素 === true, JSON.stringify(w2));
+check('软导航后音频继续播放且仍是原曲', w2.在播 === true && w2.src === 'evolution-era.mp3', JSON.stringify(w2));
+check('侧栏卡片自动同步为播放中', w2.卡片状态 === 'playing', JSON.stringify(w2));
+check('侧栏曲名/序号与实况一致', String(w2.曲名).includes('Evolution') && String(w2.序号).trim() === '01 / 04', JSON.stringify(w2));
+
+// 侧栏控制同一音频：点暂停 → 全局暂停（不再是「暂停另一边的独立实例」）
 await ev(`document.querySelectorAll('[data-mu-toggle]')[0].click()`);
 await sleep(1000);
-const w2 = await ev(`({侧栏在播: window.__cwMusic&&!window.__cwMusic.audio.paused, 页已暂停: window.__cwMusicPage&&window.__cwMusicPage.audio?window.__cwMusicPage.audio.paused:null})`);
-check('侧栏开播后音乐页自动暂停（方向 1）', w2.侧栏在播 === true && w2.页已暂停 === true, JSON.stringify(w2));
+const w3 = await ev(`(()=>{const a=window.__cwMusic&&window.__cwMusic.audio;
+  return { 暂停: a?a.paused:null, 当前时间: a?+(a.currentTime||0).toFixed(1):null };})()`);
+console.log('  ' + JSON.stringify(w3));
+check('侧栏点暂停即全局暂停（同一元素被控）', w3.暂停 === true, JSON.stringify(w3));
+check('暂停时进度已保留（不是重置）', w3.当前时间 > 0, `${w3.当前时间}s`);
+
+// 回 /music/：页面 UI 应同步为已暂停实况（曲目/进度/状态三连对齐）
 await ev(`document.querySelector('.site-header a[href="/music/"]')?.click()`);
 await sleep(4500);
-await ev(`document.querySelector('[data-mp-toggle]').click()`);
-await sleep(1000);
-const w3 = await ev(`({页在播: window.__cwMusicPage&&window.__cwMusicPage.audio?!window.__cwMusicPage.audio.paused:null, 侧栏已暂停: window.__cwMusic&&window.__cwMusic.audio?window.__cwMusic.audio.paused:null})`);
-check('音乐页开播后侧栏自动暂停（方向 2）', w3.页在播 === true && w3.侧栏已暂停 === true, JSON.stringify(w3));
+const w4 = await mpState();
+console.log('  ' + JSON.stringify({ 页状态: w4.页状态, 暂停: w4.暂停, src: w4.src, 曲名: w4.曲名 }));
+check('回 /music/ 后页面同步为暂停态', w4.暂停 === true && w4.页状态 === 'paused', JSON.stringify({ 页状态: w4.页状态, 暂停: w4.暂停 }));
+check('回 /music/ 后曲目仍是暂停时那一首', w4.src === 'evolution-era.mp3', String(w4.src));
+check('回 /music/ 后唱片未旋转（暂停态）', w4.盘旋转类 === false && w4.盘动画 === 'paused', `${w4.盘旋转类}/${w4.盘动画}`);
 
 console.log('\n=== 音乐页曲目表点选 ===');
 await ev(`document.querySelectorAll('[data-mp-item]')[2].click()`);
