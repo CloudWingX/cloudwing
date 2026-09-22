@@ -3642,3 +3642,18 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
 - 环境备忘：本次发现旧 preview（残留 PID 32168）已退出，重启 `astro preview` 后
   它绑定在 **localhost(IPv6 ::1)** 而非 127.0.0.1 —— verify 脚本 BASE 传
   `http://localhost:4321` 即可，不必改脚本（127.0.0.1 会 ECONNREFUSED）。
+
+## §73 新增「黑暗之魂2」图集（2026-09-22 中午）
+
+- 需求：站长提供 6 张 Steam 截图（AppID 335300，`D:\steam\userdata\...\335300
+  \screenshots`，1920×1080 JPG，文件名 = 拍摄时间戳 2025-06-28/29），新建图集。
+- 管线：同 §72 模板（Pillow → webp q80），新目录 `public/shots/ds2/`，编号
+  `ds2-001 ~ ds2-006`；条目 `game: 黑暗之魂2`（schema 为自由字符串，文件夹墙
+  标签直接显示），date 取文件名时间戳。gallery 全自动分组 → 第三个文件夹
+  「黑暗之魂2 6 张 · 最近 2025-06-29」。
+- 体积：源 JPG 462–620KB → webp 84–314KB（约省 55%）。
+- changelog：+1 条（截图总数 93 → 99）。
+- 回归：构建产物校验（folders meta + dist webp）+ smoke **76/76**。
+- **§73 部署上线（同日）**：提交 `d68b60e`（13 文件）推送成功；线上 /gallery/
+  「黑暗之魂2 6 张 · 最近 2025-06-29」+ `/shots/ds2/ds2-006.webp` 200，第 1 轮
+  命中；探针 tab 已清理。
