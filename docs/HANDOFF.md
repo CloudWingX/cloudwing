@@ -3657,3 +3657,29 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
 - **§73 部署上线（同日）**：提交 `d68b60e`（13 文件）推送成功；线上 /gallery/
   「黑暗之魂2 6 张 · 最近 2025-06-29」+ `/shots/ds2/ds2-006.webp` 200，第 1 轮
   命中；探针 tab 已清理。
+
+## §74 新增「壁纸」「AI生成」图集（2026-09-22 下午）
+
+- 需求：站长一次性给两个新图集喂图：①「壁纸」← `D:\Download\WeiXin`（微信收藏
+  壁纸 14 张，竖图为主，源最大长边 5712px）；②「AI生成」←
+  `D:\Download\Chatgpt Stickers`（AI 生成贴纸 9 张，~390px 方形 PNG，可能含透明）。
+- 管线：`_shots/wp-ai-transcode.py`（双任务版，承接 §72/§73 模板）：长边≤1920
+  缩放、`RGBA` 保留 alpha（AI 贴纸透明底无损）、aspect 取 `16:9|4:3|3:2|1:1`
+  最接近枚举（壁纸多为 9:19.5 竖屏 → 归 3:2 或 1:1，按比例就近）。
+  产物：`public/shots/wp/wp-001~014.webp`（48–579KB）、
+  `public/shots/ai/ai-001~009.webp`（27–36KB，透明保留）；映射表
+  `_shots/wp-ai-map.txt`。
+- 条目：`wp-001~014-shot.md`（game: 壁纸，date=文件 mtime 日，最新 2026-09-22）、
+  `ai-001~009-shot.md`（game: AI生成，最新 2026-09-11）。gallery 全自动分组 →
+  「壁纸 14 张 · 最近 2026-09-22」「AI生成 9 张 · 最近 2026-09-11」。
+- changelog：+1 条（截图总数 99 → 122）。
+  ⚠️ 环境坑复现：内联 `node -e` 写中文长字符串第三次栽在引号配平（字符 `长按`
+  处漏闭合 → SyntaxError）→ 改独立文件 `_shots/wp-ai-changelog.mjs` 写入。
+  **中文长文案一律独立 .mjs 脚本，不再内联。**
+- 回归：构建产物校验（WP_META=14张/2026-09-22、AI_META=9张/2026-09-11、
+  wp-014/ai-009 在 dist）+ smoke **76/76**。
+- **§74 部署上线（同日）**：提交 `38f5430`（47 文件）经 push-retry 推送成功
+  （PUSH_EXIT=0）；线上探针 `_shots/wp-ai-online-check.mjs`：/gallery/ 含
+  「壁纸」「AI生成」、wp refs 31 / ai refs 21、`wp-014.webp`(86KB)/
+  `ai-009.webp`(35KB) 均 200 → ONLINE_CHECK=PASS；CDP 残留 tab（2 个
+  about:blank）已清理。
