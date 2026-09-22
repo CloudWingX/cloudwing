@@ -3520,3 +3520,22 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   `max-width:1600px`（header 未滚动）、`max-width:1440px`（滚动后）。
 - 回归：verify-nav-shrink **40/40**、verify-nav **21/21**、verify-hero **88/88**、
   verify-videobg **23/23**、smoke **76/76**。
+
+## §67.9/§68 部署上线（2026-09-22 深夜）
+
+- 提交链：`d0b96bb`（music: 共享音频单例 §67.9）→ `13337fa`（layout: --w-max 1600 §68）
+  → `189688b`（docs: 归档 HANDOFF + 回归日志），`push-retry.mjs` 第 1 轮即成功。
+- `ls-remote` 反证：origin/main = `189688b`。注意：裸 `ls-remote` 会走失效代理
+  127.0.0.1:33210 报 connect refused，须加 `-c http.proxy= -c https.proxy=` 直连。
+- 部署轮询 `_shots/poll-679-68.mjs`（HTML→CSS→JS→对照四层特征，禁 chunk 哈希）：
+  第 1 轮命中 —— CSS 含 `--w-max:1600px` + `max-width:1600px` + `max-width:1440px`
+  且无 `--w-max:1300px` 残留；JS chunk 含 `__sideBound`；对照页 /music/
+  `data-music-page` 存在。日志 `_shots/poll-679-68.log`。
+- 线上探针（BASE=https://cloudwing.pages.dev）：
+  - verify-nav-shrink **40/40**（首跑 34/40：6 失败全在移动端汉堡段，点击时菜单
+    未开 —— CDP 移动视口切换后点击过快的偶发时序，重跑全绿，非代码问题）；
+  - verify-hero **88/88**；
+  - verify-music **53/53**，软导航后「同一元素:true / 卡片状态 playing /
+    Evolution Era 01/04」—— 共享音频单例在生产生效。
+- 留痕日志：`_shots/live-nav-shrink.log`、`live-nav-shrink-2.log`、`live-hero.log`、
+  `live-music.log`、`push-679-68.log`、`poll-679-68.log`。
