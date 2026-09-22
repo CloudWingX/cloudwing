@@ -1,0 +1,26 @@
+
+=== 交互策略验收：http://127.0.0.1:4321 ===
+
+[A] 鼠标拖选正文：应选不中（含对照组，证明拖拽本身有效）
+  ✅ 拖过正文后没有选中文字  —— 选中 0 字
+  ✅ 对照组：放行 user-select 后同样拖拽能选中（证明拖拽有效）  —— 选中 12 字
+
+[B] 鼠标点击控件：不出现轮廓
+  ✅ 点圆形头像后不出现轮廓  —— a.pf-avatar outline=none 3px
+  ✅ 点导航卡片后不出现轮廓  —— a.nvc outline=none 3px
+  ✅ 点卡片图标位后不出现轮廓  —— a.nvc outline=none 3px
+
+[C] 键盘 Tab：轮廓必须保留
+  ✅ Tab 聚焦过的 4 个元素里，有可见轮廓  —— a.nvc:2px a.nvc:2px a.nvc:2px a.nvc:2px
+  ✅ 键盘聚焦的元素不带 data-pointer-focus 标记  —— 无
+
+[D] 文本输入框：指针点击后仍要有可见轮廓（"在哪儿打字"要看得见）
+  ✅ 指针点击文本输入框后仍有轮廓  —— outline=solid 2px pointerFocus=false
+  ✅ body 关闭了拖选（user-select: none）  —— body=none
+  ✅ 输入框放行了选中（user-select: text）  —— input=text
+
+[F] 文章正文：必须仍能选中复制（刻意保留的例外）
+  ✅ 拖过文章正文后能选中文字（例外生效）  —— 选中 15 字
+  ✅ 全程无 JS 异常
+
+=== 结果：12/12 通过 ===

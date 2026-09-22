@@ -1,0 +1,13 @@
+  ✅ 卡片存在且位于站点统计卡上方
+  ✅ 四个周期 tab（日/周/月/年）
+  ✅ 默认选中「每日」
+  ✅ 站内快照 /api/gh-hot.json 存在且含四周期  —— daily,weekly,monthly,yearly
+  ✅ 每日榜渲染出条目（≥5）  —— state=ready n=8
+  ✅ 条目链接跳转 github.com 仓库  —— https://github.com/jev-chat/jev-chat-jarvis
+  ✅ 条目带 star 数  —— ★ 1.4k
+  ✅ 切「每周」后正常渲染  —— state=ready sel=weekly n=8
+  ✅ 每日缓存桶 = 当天（跨 24 点自动失效）
+  ✅ 每周缓存桶 = 本周周一（周末 24 点跨桶）
+  ✅ 软导航换页后热榜卡片仍在当前文档  —— nav=true connected=true
+  ✅ 软导航换页后切回「每日」仍生效  —— period=daily sel=daily n=8
+=== 结果：12/12 通过 ===
