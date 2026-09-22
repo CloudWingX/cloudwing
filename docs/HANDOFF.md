@@ -3451,3 +3451,72 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   后缀分片 bytes=-200 数学正确、播放后缓存填充、seek-150 秒响应且继续播放；
   线上 verify-music **46/46**（seek 断言前置「元数据就绪」后 45→46 条）。
 - 留痕：本节 + poll-sw-deploy.mjs + 最终线上日志，commit 后随归档提交推送。
+
+### 67.9 侧栏播放器与 /music/ 页状态同步：共享音频单例（2026-09-22）
+
+- 需求：原先侧栏与音乐页是两个独立 window 单例（`__cwMusic` / `__cwMusicPage`），
+  各自 `new Audio()`、互斥播放——切页即丢曲目/进度/播放态，只靠 cross-pause 互停。
+- 新架构（ui.js）：
+  - `getSharedAudio()` 模块级共享 `<audio>` 单例：两视图读写同一元素，
+    `window.__cwMusic.audio === window.__cwMusicPage.audio`，状态天然同步，互斥代码删除。
+  - `musicCard` 模块级 let（仿 `mpRoot` 模式）：每次 boot 更新为当前文档的侧栏卡；
+    音乐页离开时 `mpRoot = null`、壳层页离开时 `musicCard = null`，防写 detached DOM。
+  - 两套监听器经 `audio.__sideBound` / `audio.__pageBound` 各绑一次（共享元素只创建一次，
+    不能按「st.audio 是否已存在」判断绑定）；UI 刷新一律经 musicCard/mpRoot 间接引用，
+    首次绑定的闭包从此永不过期（顺带修复侧栏委托/监听器捕获首次 card 的旧隐患）。
+  - 曲终推进所有权 `musicEndedOwner`：musicPlayer boot 置 'side'、musicPage boot 置 'page'
+    （后注册覆盖）；两个 ended 监听器都常驻，只有 owner 才 act，防双跳。两视图
+    不同时在页面（/music/ 无侧栏卡），按连通性判定即正确。
+  - boot 派生（两侧对称）：`audio.src` 按文件名对齐 `st.index`（两侧列表同源、
+    decodeURIComponent 保险）；对齐后跳过 sessionStorage 曲目恢复（恢复逻辑收拢进
+    `!audio.src` 分支，mpResume/musicResume 也只在该分支设置，防陈旧 dataset 被下次
+    loadedmetadata 误消费）。
+- 顺手修正三处旧账：① 页面音量恢复只改 `st.vol` 未应用 `audio.volume`（共享后音量是
+  全局属性，boot 时真正应用）；② 页面静态参数区（标题/专辑/封面/格式/大小/时长/来源/
+  文件名）只在 load() 刷新，抽 `paintStatics()` 并在 boot 尾补刷（派生改变 index 后
+  参数区跟着新曲目走）；③ 页面 boot 尾歌词渲染改 `ensureLyrics()`（覆盖派生后 index
+  变化，加载完成有 index 守卫）。
+- null 安全（共享监听器在另一视图页面也会触发）：srcs/ids/insts/lyPanel/lyInner/
+  setToggleLabel/paintProgress/load 全组补 musicCard 空守卫；loadLyrics(!id) 本就返回 null。
+- verify-music 断言语义升级（§7.6 rule 3：先改断言、确认新语义在旧架构下必挂）：
+  旧「双播放器互斥」3 断言描述的行为在新架构下**按设计不复存在**，改写为状态连续性
+  11 断言——共享单例同一性、软导航往返曲目/播放态/序号保持、侧栏点暂停即全局暂停
+  （进度保留非重置）、回 /music/ 同步为暂停态且唱片停转。注意：/music/ 页无侧栏卡，
+  `__cwMusic` 在该页不存在，「同一元素」断言必须在软导航到壳层页后做。
+- 回归：verify-music **53/53**（46→53，全程无 JS 异常）、smoke 76/76、verify-nav 21/21。
+  产物特征：`dist/_astro/*.js` 含 `__sideBound`（minifier 会重命名 getSharedAudio，
+  断言/轮询别按函数名找）。
+
+## §68 宽屏容器放宽：--w-max 1300 → 1600（2026-09-22 晚）
+
+- 需求：站长「整个网页布局容器总宽改为在宽屏下 1600px」。当天上午刚收的 1300 网格
+  （§ 版面统一）当晚放宽 —— 之前 100rem(1600) 的「导航像飘」问题在**全站同步**下
+  不复现（当时是壳层 1600 vs 导航 1300 不同步造成的）。
+- 令牌与引用：
+  - `global.css --w-max: 1300px → 1600px`；视口 <1600 时容器 = 视口满宽
+    （与 1300 时代中等屏观感一致），≥1600 才出现上限 → 「宽屏下 1600」天然成立，
+    无需新增断点。
+  - 引用方全部自动跟随：`.wrap`、`.shell(--shell-max)`、首页 `.hero`、
+    account.astro、music/index.astro（都走 var(--w-max)）。
+  - ⚠️ Header.astro 的 max-width **必须手工同步**（Astro 作用域编译把 var() 变成
+    calc(%) 的历史坑）：`.header-container` 1300→1600；滚动胶囊 1140→1440
+    （保持 160 收缩差）。`--nav-w / --nav-w-scrolled` 注释性令牌同步。
+- verify 脚本同步（几何断言全部跟着容器走）：
+  - verify-nav-shrink：断言 1600/1440/恢复 1600；**视口 1440→1920** —— 1440 视口下
+    容器满宽 1430（= 1440 − 滚动条），1600/1440 两条硬等值断言必挂（实测 37/40）。
+  - verify-nav：胶囊断言 `min(1440, 视口)`；视口同步 1920 —— 1440 下胶囊与未滚动
+    容器都满宽，断言退化成恒真（巧合通过不是语义通过）。
+  - verify-hero：max-width '1600px' / hero 同宽 / 1920 档锁 1600（原有 1440+1920
+    两档设计正好覆盖）。
+  - verify-videobg：`CONTAINER_W = 1600`（bandWidth/offX/右缘/容器匹配四处引用）；
+    **主 tab 与对照页 bg tab 视口必须一致**（都 1920）—— 主 tab 1440 + bg tab 1920
+    时 hero 文字框坐标 32 vs 187 对不上（实测）；误报修复：`/music/*.mp3` 的
+    ERR_ABORTED 过滤 —— §67 起侧栏 audio 请求也记 Media 类型，切页销毁 audio 是
+    正常取消（§67 以来潜伏，今天首跑 L2 才暴露，与 1600 无关）。
+  - diag-edges：默认 W 1920 + CONTAINER_W=1600。
+- changelog：今天上午「全站统一 1300 网格」条目更新为「宽屏版面放宽至 1600」
+  （访客视角只留最终态）。
+- 产物特征（部署轮询用）：`Base.CPIDXiyJ.css` 含 `--w-max:1600px`、
+  `max-width:1600px`（header 未滚动）、`max-width:1440px`（滚动后）。
+- 回归：verify-nav-shrink **40/40**、verify-nav **21/21**、verify-hero **88/88**、
+  verify-videobg **23/23**、smoke **76/76**。
