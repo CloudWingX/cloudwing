@@ -3620,3 +3620,25 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   verify-videobg **23/23**、smoke **76/76**。
 - **§71 部署上线（同日）**：提交 `cf520ee` 推送成功；线上 verify-hero 第 1 轮
   即 **88/88**；探针 tab 已清理。
+
+## §72 Minecraft 图集扩容：35 张新截图（2026-09-22 中午）
+
+- 需求：站长把 `F:\MC\.minecraft\versions\乌托邦探险之旅\screenshots` 的截图加入
+  MC 图集。源 = 35 张 PNG（2560×1440 2K，命名 = 拍摄时间戳），接续编号
+  `mc-041 ~ mc-075`。
+- 管线：Anaconda Python（Pillow 12.3，托管 3.13 无 PIL）转 1920 宽 webp
+  quality=80（与既有 mc-001~040 规格/观感一致，均 ~80KB，总量 240MB → ~2.8MB）；
+  脚本 `_shots/mc-transcode.py` + 产物映射 `_shots/mc-transcode-map.txt`。
+- 条目：`mc-041~075-shot.md`（title/date=拍摄日、game: Minecraft、aspect 16:9）。
+  ⚠️ `2026-08-26_1/2/3.png` 三张 mtime 是复制日（09-22），按文件名语义归
+  2026-08-26。gallery 页全自动按 game 分组 → 文件夹 meta 自动变「75 张 · 最近
+  2026-08-26」，无需改页面代码。
+- changelog：+1 条（截图总数 58 → 93）。
+- 回归：构建产物校验（dist 75 webp + gallery meta）+ smoke **76/76** +
+  verify-nav **21/21**。
+- **§72 部署上线（同日）**：提交 `fb53084`（71 文件）推送成功；线上 /gallery/
+  「Minecraft 75 张 · 最近 2026-08-26」+ `/shots/mc/mc-075.webp` 200，第 1 轮命中；
+  探针 tab 已清理。
+- 环境备忘：本次发现旧 preview（残留 PID 32168）已退出，重启 `astro preview` 后
+  它绑定在 **localhost(IPv6 ::1)** 而非 127.0.0.1 —— verify 脚本 BASE 传
+  `http://localhost:4321` 即可，不必改脚本（127.0.0.1 会 ECONNREFUSED）。
