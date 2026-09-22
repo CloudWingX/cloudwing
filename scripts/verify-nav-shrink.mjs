@@ -1,9 +1,10 @@
 // 导航验收（照 ReactBits 的 shrink-on-scroll + mobile-menu）：
-//   未滚动：贴顶通栏（padding-top 0、1300 宽、64 高、无圆角、透明）
-//   滚动后：下沉 16px 收成胶囊（1140 宽、56 高、圆角 999px、玻璃底 + 模糊 + 阴影）
+//   未滚动：贴顶通栏（padding-top 0、1600 宽、64 高、无圆角、透明）
+//   滚动后：下沉 16px 收成胶囊（1440 宽、56 高、圆角 999px、玻璃底 + 模糊 + 阴影）
 //   移动端：汉堡按钮 + 顶部下拉玻璃菜单（淡入 + 下移）
-// ⚠️ 1300 = global.css 的 --w-max（主内容容器盒宽，header/main/footer 一致）；
-//    滚动后的 1140 = 1300 − 160，保持与上一版（1280 → 1120）相同的收缩幅度。
+// ⚠️ 1600 = global.css 的 --w-max（主内容容器盒宽，header/main/footer 一致；
+//    2026-09-22 晚从 1300 放宽）；
+//    滚动后的 1440 = 1600 − 160，保持与上一版（1300 → 1140）相同的收缩幅度。
 // 用法：node scripts/verify-nav-shrink.mjs [baseUrl]
 import { setTimeout as sleep } from 'node:timers/promises';
 import { writeFileSync } from 'node:fs';
@@ -40,7 +41,9 @@ const cap = () => ev(`(()=>{const h=document.querySelector('.site-header'), d=do
    scrolled:document.documentElement.dataset.scrolled};})()`);
 
 await s('Page.enable'); await s('Runtime.enable');
-await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
+// 2026-09-22：容器 --w-max 1300 → 1600，视口须 > 1600 才能看到"容器 1600"上限
+// （1440 视口下容器满宽 1430，1600/1440 两条断言必挂 —— 实测踩过）。
+await s('Emulation.setDeviceMetricsOverride', { width: 1920, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
 await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.querySelector('.header-container')`);
@@ -54,7 +57,7 @@ console.log('=== 未滚动：贴顶通栏 ===');
 const top = await cap();
 console.log('  ' + JSON.stringify(top));
 check('外层 padding-top = 0', top.外层paddingTop === '0px', top.外层paddingTop);
-check('容器宽 1300（= --w-max，与主内容容器同宽）', top.宽 === 1300, String(top.宽));
+check('容器宽 1600（= --w-max，与主内容容器同宽）', top.宽 === 1600, String(top.宽));
 check('容器高 64', top.高 === 64, String(top.高));
 check('无圆角（贴顶通栏）', parseFloat(top.圆角) === 0, top.圆角);
 check('背景透明', /rgba\(0, 0, 0, 0\)|transparent/.test(top.背景), top.背景);
@@ -67,7 +70,7 @@ await sleep(1300);
 const sc = await cap();
 console.log('  ' + JSON.stringify(sc));
 check('外层下沉 16px', sc.外层paddingTop === '16px', sc.外层paddingTop);
-check('容器宽收到 1140', sc.宽 === 1140, String(sc.宽));
+check('容器宽收到 1440（= 1600 − 160 收缩差）', sc.宽 === 1440, String(sc.宽));
 check('容器高收到 56（参考实测值）', sc.高 === 56, String(sc.高));
 check('圆角 999px', parseFloat(sc.圆角) >= 900, sc.圆角);
 check('玻璃底 + 模糊', /rgba\(10, 10, 15, 0\.7\)/.test(sc.背景) && /blur\(12px\)/.test(String(sc.模糊)), `${sc.背景} | ${sc.模糊}`);
@@ -81,7 +84,7 @@ console.log('\n=== 回顶恢复 ===');
 await ev(`window.scrollTo(0, 0)`);
 await sleep(1300);
 const back = await cap();
-check('恢复 1300/64/无圆角/透明', back.宽 === 1300 && back.高 === 64 && parseFloat(back.圆角) === 0 && /rgba\(0, 0, 0, 0\)/.test(back.背景),
+check('恢复 1600/64/无圆角/透明', back.宽 === 1600 && back.高 === 64 && parseFloat(back.圆角) === 0 && /rgba\(0, 0, 0, 0\)/.test(back.背景),
   `${back.宽}/${back.高}/${back.圆角}/${back.背景}`);
 check('桌面无横向溢出', back.溢出 === 0, String(back.溢出));
 /* 2026-09-18 二轮：导航容器必须与主内容容器"同宽 + 同左缘 + 各自居中"，
@@ -110,7 +113,7 @@ if (navAlign.mode === 'shell') {
   check('导航容器自身水平居中（shell 页无标准 wrap，退化为居中校验）', Math.abs(navAlign.导航居中差) <= 1.5,
     `居中差 ${navAlign.导航居中差} / 导航宽 ${navAlign.导航宽}`);
 } else {
-check('导航容器与主内容容器同宽（都用 1300）', navAlign.ok && Math.abs(navAlign.宽差) <= 1.5,
+check('导航容器与主内容容器同宽（都用 1600）', navAlign.ok && Math.abs(navAlign.宽差) <= 1.5,
   navAlign.ok ? `宽差 ${navAlign.宽差}` : JSON.stringify(navAlign));
 check('导航容器与主内容容器同左缘', navAlign.ok && Math.abs(navAlign.左缘差) <= 1.5,
   navAlign.ok ? `左缘差 ${navAlign.左缘差}` : JSON.stringify(navAlign));
@@ -215,7 +218,7 @@ check('滚动后菜单仍在胶囊下方（几何有效）',
 
 check('全程无 JS 异常', errs.length === 0, errs[0] || '');
 
-await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
+await s('Emulation.setDeviceMetricsOverride', { width: 1920, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Page.navigate', { url: BASE + '/blog/' });
 await sleep(3000);
 // 顶部形态截图

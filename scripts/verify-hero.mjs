@@ -93,8 +93,8 @@ check('hero 内容左缘与区块内容左缘重合（对齐主栅格）',
   Math.abs(edgeState.heroContentLeft - edgeState.sectionContentLeft) <= 1,
   `hero=${edgeState.heroContentLeft} 区块=${edgeState.sectionContentLeft}`);
 
-/* ── 一、容器宽度与居中不变量（2026-09-18 二轮：--w-max 1428 → 1300）──
-   用户要求：主内容容器 ≈1300、水平居中、左右留白对称；
+/* ── 一、容器宽度与居中不变量（2026-09-22 晚：--w-max 1300 → 1600 宽屏放宽）──
+   用户要求：宽屏下主内容容器 1600、水平居中、左右留白对称；
    header / main / footer 三者同容器宽；导航栏本身仍 width:100%。
    这里在**同一个视口**下同时量四个容器：主内容区块 .wrap、hero、
    导航 .header-container、页脚 .site-footer .wrap，
@@ -120,10 +120,10 @@ const widthInv = JSON.parse(await ev(`(function(){
     footOffR: fb?Math.round((vw-fb.right)*10)/10:null,
     footContentL: fb?Math.round((fb.left+padL(foot))*10)/10:null
   });})()`));
-check('主容器 max-width 1300（用户要求 ≈1300）', widthInv.wrapMaxW === '1300px', String(widthInv.wrapMaxW));
+check('主容器 max-width 1600（宽屏放宽）', widthInv.wrapMaxW === '1600px', String(widthInv.wrapMaxW));
 check('主容器居中：左右偏移差 ≤1px（留白对称）', Math.abs(widthInv.wrapOffL - widthInv.wrapOffR) <= 1,
   `左=${widthInv.wrapOffL} 右=${widthInv.wrapOffR}`);
-check('hero 与主内容区块容器同宽（都是 1300 盒宽）', widthInv.heroBoxW === widthInv.wrapBoxW,
+check('hero 与主内容区块容器同宽（都是 1600 盒宽）', widthInv.heroBoxW === widthInv.wrapBoxW,
   `${widthInv.heroBoxW} vs ${widthInv.wrapBoxW}`);
 check('header 容器与主内容容器同宽', widthInv.headW === widthInv.wrapBoxW, `${widthInv.headW} vs ${widthInv.wrapBoxW}`);
 check('header 容器居中：左右偏移差 ≤1px', Math.abs(widthInv.headOffL - widthInv.headOffR) <= 1,
@@ -364,7 +364,7 @@ const w1920 = JSON.parse(await ev(`(function(){
     footW: fb?Math.round(fb.width*10)/10:null,
     overflow: document.documentElement.scrollWidth-document.documentElement.clientWidth
   });})()`));
-check('1920：主容器仍是 1300（不再随视口变宽）', w1920.wrapMaxW === '1300px' && w1920.wrapW === 1300,
+check('1920：主容器锁在 1600（不再随视口变宽）', w1920.wrapMaxW === '1600px' && w1920.wrapW === 1600,
   `${w1920.wrapMaxW} / 实测 ${w1920.wrapW}`);
 check('1920：主容器居中，左右留白相等', Math.abs(w1920.wrapOffL - w1920.wrapOffR) <= 1,
   `左=${w1920.wrapOffL} 右=${w1920.wrapOffR}`);

@@ -23,7 +23,9 @@ const results = [];
 const check = (n, ok, d = '') => { results.push({ n, ok }); console.log(`  ${ok ? '✅' : '❌'} ${n}${d ? '  —— ' + d : ''}`); };
 
 await s('Page.enable'); await s('Runtime.enable');
-await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
+// 2026-09-22：容器 --w-max 1300 → 1600。视口从 1440 提到 1920：
+// 1440 下滚动胶囊与未滚动容器都满宽，「收到 1440」断言会退化成恒真（实测）。
+await s('Emulation.setDeviceMetricsOverride', { width: 1920, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: THEME }] });
 await s('Page.addScriptToEvaluateOnNewDocument', { source: `try{localStorage.setItem('cw-theme-pref','${THEME}');}catch(e){}` });
 await s('Page.navigate', { url: BASE + '/blog/' });
@@ -55,10 +57,10 @@ const bar = await ev(`(()=>{const hd=document.querySelector('.header-container')
     pointerEvents:c.pointerEvents,
     最右:Math.round(b.right), 最左:Math.round(b.left)};})()`);
 console.log('  ' + JSON.stringify(bar));
-// 2026-09-18 二轮：主内容容器 1428 → 1300（global.css 的 --w-max），
-// 导航滚动胶囊同步 1120 → 1140（保持同样的收缩幅度）。
-const expW = Math.min(1140, bar.视口宽);
-check('滚动后胶囊宽度收到 1140', Math.abs(bar.宽 - expW) <= 2, `宽=${bar.宽} 期望=${expW}`);
+// 2026-09-22 晚：主内容容器 1300 → 1600（global.css 的 --w-max，宽屏放宽），
+// 导航滚动胶囊同步 1140 → 1440（保持 160 收缩幅度）。
+const expW = Math.min(1440, bar.视口宽);
+check('滚动后胶囊宽度收到 1440', Math.abs(bar.宽 - expW) <= 2, `宽=${bar.宽} 期望=${expW}`);
 check('胶囊居中', Math.abs(bar.最左 - (bar.视口宽 - bar.宽) / 2) <= 2, `左=${bar.最左}`);
 check('滚动后距顶部 16px（下沉）', Math.abs(bar.顶部距 - 16) <= 2, String(bar.顶部距));
 check('圆角 999px（完全圆头）', parseFloat(bar.圆角) >= 40, bar.圆角);

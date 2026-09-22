@@ -1,7 +1,7 @@
 // 推送后轮询线上，直到"本次改动的内容特征"在线上都成立为止。
 //
 // 用法（特征由你自己给，脚本里**不存任何默认特征** —— 那种默认值一定会过期）：
-//   node scripts/poll-deploy.mjs --have '--w-max:\s*1300px' --not 'hero::before'
+//   node scripts/poll-deploy.mjs --have '--w-max:\s*1600px' --not 'hero::before'
 //   node scripts/poll-deploy.mjs --url https://cloudwing.pages.dev --timeout 480 \
 //        --have 'brightness\(var\(--vid-dim' --not '--scrim-top' --not '60% 50% at 30% ?-10%'
 //

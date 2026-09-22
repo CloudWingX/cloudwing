@@ -45,7 +45,7 @@ const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const PAGES = process.argv.slice(3).length ? process.argv.slice(3) : ['/', '/blog/'];
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 const OUT = 'D:\\deep seek workplace\\_shots';
-const W = +(process.env.W || 1440), H = +(process.env.H || 900);
+const W = +(process.env.W || 1920), H = +(process.env.H || 900); // 容器 1600 后视口需 > 容器才有留白带
 
 const lum = ([r, g, b]) => {
   const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
@@ -113,8 +113,9 @@ for (const page of PAGES) {
   console.log(`\n════════ ${page} ════════`);
   console.log('  几何: ' + JSON.stringify(geo));
   const cw = geo.cw;
-  const off = Math.round((cw - 1300) / 2);
-  console.log(`  主容器: x=${off} .. ${off + 1300}  （clientWidth ${cw}）`);
+  const CONTAINER_W = 1600; // = global.css --w-max（2026-09-22 晚 1300 → 1600）
+  const off = Math.round((cw - CONTAINER_W) / 2);
+  console.log(`  主容器: x=${off} .. ${off + CONTAINER_W}  （clientWidth ${cw}）`);
   const navCs = await ev(`(()=>{const e=document.querySelector('.header-container');if(!e)return 'none';const c=getComputedStyle(e);
     return c.backgroundColor+' | blur='+c.backdropFilter+' | border='+c.borderTopColor+' | shadow='+c.boxShadow+' | mask='+(c.maskImage||c.webkitMaskImage);})()`);
   console.log('  .header-container 计算样式: ' + navCs);
@@ -134,7 +135,7 @@ for (const page of PAGES) {
       const out = [];
       for (const [tag, f, k, dg] of [['lum', lum, 1, 5], ['gray', gray, 1, 2]]) {
         const L = { o: mean4(off, y0, y1, -1, f), i: mean4(off, y0, y1, +1, f) };
-        const R = { i: mean4(off + 1299, y0, y1, -1, f), o: mean4(off + 1299, y0, y1, +1, f) };
+        const R = { i: mean4(off + CONTAINER_W - 1, y0, y1, -1, f), o: mean4(off + CONTAINER_W - 1, y0, y1, +1, f) };
         const dl = (L.i - L.o) * k, dr = (R.o - R.i) * k;
         out.push(`${tag} 左${dl >= 0 ? '+' : ''}${dl.toFixed(dg)} 右${dr >= 0 ? '+' : ''}${dr.toFixed(dg)}`);
       }
@@ -145,7 +146,7 @@ for (const page of PAGES) {
   console.log('  ── 容器级装饰层（结构性规则：容器的绝对定位伪元素 + 渐变 = 会被容器边缘切断）:');
   console.log('     ' + await ev(`(()=>{const off=${off};const out=[];
     const walk=(el)=>{const r=el.getBoundingClientRect();
-      if(Math.abs(r.width-1300)>2) return;
+      if(Math.abs(r.width-1600)>2) return;
       for(const w of ['::before','::after']){const c=getComputedStyle(el,w);
         if(!c.content||c.content==='none') continue;
         if(c.backgroundImage==='none') continue;

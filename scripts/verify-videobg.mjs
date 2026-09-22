@@ -49,12 +49,15 @@ const OUT = 'D:\\deep seek workplace\\_shots';
 const tab = await (await fetch(`${CDP}/json/new?about:blank`, { method: 'PUT' })).json();
 const ws = new WebSocket(tab.webSocketDebuggerUrl);
 await new Promise((r, j) => { ws.onopen = r; ws.onerror = j; });
-let id = 0; const p = new Map(); const errs = []; const failedReq = [];
+let id = 0; const p = new Map(); const errs = []; const failedReq = []; const reqUrl = new Map();
 const s = (m, pp = {}) => new Promise((r) => { const i = ++id; p.set(i, r); ws.send(JSON.stringify({ id: i, method: m, params: pp })); });
 ws.onmessage = (e) => {
   const m = JSON.parse(e.data);
   if (m.method === 'Runtime.exceptionThrown') errs.push((((m.params.exceptionDetails.exception || {}).description) || '').slice(0, 110));
-  if (m.method === 'Network.loadingFailed') failedReq.push(m.params.errorText + ' ' + (m.params.type || ''));
+  if (m.method === 'Network.requestWillBeSent') reqUrl.set(m.params.requestId, m.params.request.url);
+  // 带 URL：ERR_ABORTED 若落在页面切换瞬间的 video 请求上，属元素随文档销毁的正常取消，
+  // 不是加载失败 —— 没 URL 就分不清这两种情形（2026-09-22 排查记录）。
+  if (m.method === 'Network.loadingFailed') failedReq.push(m.params.errorText + ' ' + (m.params.type || '') + ' ' + (reqUrl.get(m.params.requestId) || ''));
   if (m.id && p.has(m.id)) { p.get(m.id)(m); p.delete(m.id); }
 };
 const ev = async (x) => (await s('Runtime.evaluate', { expression: x, returnByValue: true })).result?.result?.value;
@@ -62,7 +65,7 @@ const results = [];
 const check = (n, ok, d = '') => { results.push({ n, ok }); console.log(`  ${ok ? '✅' : '❌'} ${n}${d ? '  —— ' + d : ''}`); };
 
 await s('Page.enable'); await s('Runtime.enable'); await s('Network.enable');
-await s('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 2, mobile: false });
+await s('Emulation.setDeviceMetricsOverride', { width: 1920, height: 900, deviceScaleFactor: 2, mobile: false });
 await s('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: THEME }] });
 await s('Page.addScriptToEvaluateOnNewDocument', { source: `try{localStorage.setItem('cw-theme-pref','${THEME}');}catch(e){}` });
 await s('Page.navigate', { url: BASE + '/blog/' });
@@ -113,7 +116,10 @@ check('底色位移动画已停（不与视频争抢）', v.body底色动画 ===
 check('无横向溢出', v.溢出 === 0, String(v.溢出));
 
 // 视频相关请求是否成功
-const vidFail = failedReq.filter((f) => /media|mp4|video/i.test(f));
+// ⚠️ §67 起侧栏播放器会加载 /music/*.mp3 —— CDP 把 audio 请求也记成 Media 类型，
+// 且切页销毁 <audio> 时是正常的 ERR_ABORTED 取消（2026-09-22 实测）。
+// 本断言只管视频：排除 /music/*.mp3（播放器加载由 verify-music 覆盖）。
+const vidFail = failedReq.filter((f) => /media|mp4|video/i.test(f) && !/\/music\/[a-z0-9-]+\.mp3/i.test(f));
 check('视频资源加载无失败', vidFail.length === 0, vidFail[0] || '');
 
 // 播放推进检测：等 1.6s 看 currentTime 是否前进
@@ -207,7 +213,9 @@ const bgEv = async (x) => (await bgSend('Runtime.evaluate', { expression: x, ret
 await bgSend('Page.enable'); await bgSend('Runtime.enable');
 // ⚠️ 新 tab 不会继承另一个 tab 的 Emulation 覆盖，不显式设置就会按默认（移动端）渲染，
 // 量出来的框与真实页对不上（踩过：对照页 left=20 vs 真实页 133）。
-await bgSend('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+// ⚠️ 两个 tab 视口必须一致：容器 1600 后，1440 视口下容器满宽、1920 下才有
+// "容器 + 留白带"两种形态 —— 不一致则对照页框坐标必然对不上（2026-09-22 实测）。
+await bgSend('Emulation.setDeviceMetricsOverride', { width: 1920, height: 900, deviceScaleFactor: 1, mobile: false });
 await bgSend('Page.addScriptToEvaluateOnNewDocument', {
   source: `document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent=${JSON.stringify(HIDE_CSS)};document.head.appendChild(s);});`,
 });
@@ -275,10 +283,12 @@ for (const b of boxes || []) {
    2. **扫描范围绕开了分界线**：留白带只扫容器**外面**（0..65），
       而分界线正好落在容器边缘 x=65/1365 上，属于盲区。
    四轮的真凶：`.hero::before` 强调色柔光（浓度仅 6%/4%，肉眼几乎看不见）
-   只铺在 1300px 容器盒里，被 `.hero` 的 `overflow: hidden` 沿容器左右边缘切断，
+   只铺在主容器盒里（宽度跟 --w-max，现为 1600；首次抓到时是 1300），
+   被 `.hero` 的 `overflow: hidden` 沿容器左右边缘切断，
    在导航条带（左）和卡片行（右）各留一条竖分界线 —— 正是用户报的位置。 */
 const gray = ([r, g, b]) => (r + g + b) / 3; // 0..255 口径
-const bandWidth = Math.round((bg.width - 10 - 1300) / 2);
+const CONTAINER_W = 1600; // = global.css --w-max（2026-09-22 晚 1300 → 1600）
+const bandWidth = Math.round((bg.width - 10 - CONTAINER_W) / 2);
 const bandStep = (from, to) => {
   const yTop = Math.round(bg.height * 0.12), yBot = Math.round(bg.height * 0.88);
   const colMean = (f, x) => { let sum = 0, n = 0; for (let y = yTop; y < yBot; y += 3) { sum += gray(f.at(x, y)); n++; } return sum / n; };
@@ -302,14 +312,14 @@ check('容器右侧留白带内没有暗带/硬边（逐列阶跃 ≤3/255）', 
    ⚠️ 不能用"整屏平均"代替：柔光的左尾在整屏尺度上会被别的起伏抵消
    （实测整屏只有 +0.31/255，看着合格；而按 72px 分段时导航条带那一段是 +1.87/255）——踩过。 */
 const cw = await bgEv(`document.documentElement.clientWidth`);
-const offX = Math.round((cw - 1300) / 2);
+const offX = Math.round((cw - CONTAINER_W) / 2);
 const segs = [];
 for (let y0 = 8; y0 + 72 <= bg.height - 14; y0 += 72) segs.push([y0, y0 + 72]);
 const segBias = (f, y0, y1) => {
   const colMean = (x) => { let s2 = 0, n = 0; for (let y = y0; y < y1; y += 2) { s2 += gray(f.at(x, y)); n++; } return s2 / n; };
   const inner = (x) => (colMean(x) + colMean(x + 1) + colMean(x + 2) + colMean(x + 3)) / 4;
   const outer = (x) => (colMean(x) + colMean(x - 1) + colMean(x - 2) + colMean(x - 3)) / 4;
-  return { left: inner(offX) - outer(offX - 1), right: inner(offX + 1299) - outer(offX + 1300) };
+  return { left: inner(offX) - outer(offX - 1), right: inner(offX + CONTAINER_W - 1) - outer(offX + CONTAINER_W) };
 };
 let worstL = { v: 0 }, worstR = { v: 0 };
 for (const [y0, y1] of segs) {
@@ -347,7 +357,7 @@ check('容器右缘没有分界线（逐 72px 段 |内−外| ≤0.5/255）', Ma
 const containerLayers = await bgEv(`(()=>{const out=[];
   for (const el of document.querySelectorAll('body *')) {
     const r = el.getBoundingClientRect();
-    if (Math.abs(r.width - 1300) > 2) continue;
+    if (Math.abs(r.width - CONTAINER_W) > 2) continue;
     for (const w of ['::before', '::after']) {
       const c = getComputedStyle(el, w);
       if (!c.content || c.content === 'none') continue;
