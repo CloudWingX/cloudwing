@@ -326,22 +326,24 @@ const folders = [...gameMap.entries()]
     height: 62%;
     z-index: 2;
   }
+  /* §75（2026-09-22）：.folder-paper 本身就是 <img>（不是 span 包 img），
+     原 .folder-paper img 选择器匹配不到任何元素 → object-fit:cover 从未生效，
+     竖图（壁纸）/方图（AI生成）按固有比例把纸撑到 400~570px 高。
+     修复：尺寸与裁剪直接写在 .folder-paper 上（inset:0 + width/height:100%
+     明确替换元素尺寸，object-fit:cover 统一裁剪，与其他文件夹观感一致）。 */
   .folder-paper {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
     border-radius: 8px;
     border: var(--line-w) solid var(--line-2);
     overflow: hidden;
     background: var(--paper-1);
     box-shadow: var(--shadow-sm);
     transition: transform 0.32s var(--ease), box-shadow 0.32s var(--ease);
-  }
-  .folder-paper img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.5s var(--ease);
   }
   /* 三张纸错位叠放（--pi 由行内样式给 0/1/2，仅作语义标记；错位用 nth-child） */
   .folder-paper:nth-child(1) { transform: rotate(-3.5deg) translate(-8px, 2px); }
@@ -390,7 +392,6 @@ const folders = [...gameMap.entries()]
   .folder:focus-visible .folder-paper:nth-child(2) { transform: rotate(0.5deg) translateY(-18px); }
   .folder:hover .folder-paper:nth-child(3),
   .folder:focus-visible .folder-paper:nth-child(3) { transform: rotate(6deg) translate(12px, -12px); }
-  .folder:hover .folder-paper img { transform: scale(1.06); }
   /* 标签固定在最上层，不随盖子翻动，保证可读 */
   .folder-info {
     position: absolute;
@@ -472,7 +473,7 @@ const folders = [...gameMap.entries()]
 
   @media (prefers-reduced-motion: reduce) {
     .gal-card, .gal-cover img { transition: none !important; }
-    .folder-front, .folder-paper, .folder-paper img { transition: none !important; }
+    .folder-front, .folder-paper { transition: none !important; }
     .folder:hover .folder-front, .folder:focus-visible .folder-front { transform: none; }
     .folder:hover .folder-paper:nth-child(1) { transform: rotate(-3.5deg) translate(-8px, 2px); }
     .folder:hover .folder-paper:nth-child(2) { transform: rotate(1.5deg) translateY(-2px); }
