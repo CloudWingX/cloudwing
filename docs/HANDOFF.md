@@ -3683,3 +3683,32 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   「壁纸」「AI生成」、wp refs 31 / ai refs 21、`wp-014.webp`(86KB)/
   `ai-009.webp`(35KB) 均 200 → ONLINE_CHECK=PASS；CDP 残留 tab（2 个
   about:blank）已清理。
+
+## §75 文件夹纸张缩略图统一 cover 裁剪（2026-09-22 下午）
+
+- 需求：站长「把 AI生成 和壁纸这两个图集的文件夹上的缩略图缩小，和其他文件夹
+  一致，缩略图尺寸大可以裁剪的」。§74 上线后这两个文件夹的纸明显比别的长。
+- 根因（CDP 实测 + 源码比对）：`gallery/index.astro` 里纸张结构是
+  `<img class="folder-paper">`（**img 本身带类**），而 CSS 写的是
+  `.folder-paper img { width/height:100%; object-fit:cover }` —— 该选择器
+  匹配不到任何元素，**object-fit:cover 自 §59 文件夹视图上线以来从未生效过**。
+  此前横图图集（16:9）靠 absolute inset + 全局 max-width 兜出「看起来正常」的
+  ~283×172；竖图（壁纸 9:19.5）实测撑到 316×566、方图（AI 1:1）290×289，
+  固有比例直接把纸顶长。
+- 修复：尺寸与裁剪直接写到 `.folder-paper` 上（inset:0 + width/height:100% +
+  object-fit:cover + display:block）；删除同因失效的死规则
+  `.folder:hover .folder-paper img { scale(1.06) }` 与 reduced-motion 里的
+  `.folder-paper img` 残留。hover 翻盖/纸张错位动效不受影响。
+- 断言：新增探针 `_shots/folder-thumb-probe.mjs`（BASE 可传参，输出
+  THUMB_CHECK）——量每个文件夹 3 张纸的渲染尺寸 + computed object-fit，
+  断言所有文件夹同位纸张尺寸差 ≤2px 且 fit=cover。⚠️ 基准**不写死像素**
+  （第一版写死 283×172 即旧行为的意外值，直接全 FAIL），以首个文件夹为基准。
+- 回归：本地探针 **THUMB_CHECK=PASS**（五文件夹统一 ~282×147 cover）+
+  smoke **76/76**；本地截图确认壁纸（云横裁）/AI生成（Q版角色横裁）观感与
+  其他文件夹一致。
+- 环境备忘：本机托管 node 无 ws 且无 npm-cli（managed 22.22.2 无 lib/npm），
+  ESM 探针用
+  `import WebSocket from 'file:///C:/Users/24645/.workbuddy/binaries/node/workspace/node_modules/ws/index.js'`
+  绝对路径导入；ws 已用系统 node 的 npm-cli 装进托管 workspace。另：
+  `/json/new` 自新版 Edge 要求 **PUT** 动词（GET 报 unsafe verb），
+  且带 url 参数可能不导航 —— 探针统一显式 `Page.navigate`。

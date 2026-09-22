@@ -1,0 +1,12 @@
+  err: fatal: unable to access 'https://github.com/CloudWingX/cloudwing.git/': Recv failure: Connection was reset
+round 1 failed at 2026-09-22T05:33:50.533Z
+  err: fatal: unable to access 'https://github.com/CloudWingX/cloudwing.git/': Failed to connect to github.com port 443 after 21107 ms: Couldn't connect to server
+round 2 failed at 2026-09-22T05:34:42.090Z
+  err: fatal: unable to access 'https://github.com/CloudWingX/cloudwing.git/': Failed to connect to github.com port 443 after 21090 ms: Couldn't connect to server
+round 3 failed at 2026-09-22T05:35:33.619Z
+  err: fatal: unable to access 'https://github.com/CloudWingX/cloudwing.git/': Failed to connect to github.com port 443 after 21054 ms: Couldn't connect to server
+round 4 failed at 2026-09-22T05:36:25.091Z
+  err: fatal: unable to access 'https://github.com/CloudWingX/cloudwing.git/': Failed to connect to github.com port 443 after 21062 ms: Couldn't connect to server
+round 5 failed at 2026-09-22T05:37:16.605Z
+  err: fatal: unable to access 'https://github.com/CloudWingX/cloudwing.git/': Failed to connect to github.com port 443 after 21087 ms: Couldn't connect to server
+round 6 failed at 2026-09-22T05:38:08.140Z
