@@ -74,8 +74,8 @@ const d = await snap();
 console.log('  ' + JSON.stringify({ hero: d.hero, title: d.title, card: d.card }));
 
 /* 容器与下方区块对齐（2026-09-18 全局容器加宽后）：
-   两者同宽（--w-max 1428）同内边距（--gutter），所以"内容左缘"必须重合。
-   之前 hero 是写死 32px、max-width 1280，比区块窄 80px。 */
+   两者同宽（--w-max 1600）同内边距（--gutter）——容器级对齐保留；
+   内容左缘的「重合」断言已于 2026-09-22 改为整块居中对称（见下）。 */
 const edgeState = JSON.parse(await ev(`(function(){
   var w=document.querySelector('.sec .wrap'), h=document.querySelector('.hero');
   var cw=w?getComputedStyle(w):null, ch=h?getComputedStyle(h):null;
@@ -89,9 +89,25 @@ check('hero 与区块容器同宽（都用 --w-max）', edgeState.heroMaxW === e
   `${edgeState.heroMaxW} vs ${edgeState.wrapMaxW}`);
 check('hero 与区块容器同内边距（都用 --gutter）', edgeState.heroPadL === edgeState.wrapPadL,
   `${edgeState.heroPadL} vs ${edgeState.wrapPadL}`);
-check('hero 内容左缘与区块内容左缘重合（对齐主栅格）',
-  Math.abs(edgeState.heroContentLeft - edgeState.sectionContentLeft) <= 1,
-  `hero=${edgeState.heroContentLeft} 区块=${edgeState.sectionContentLeft}`);
+/* 2026-09-22：用户要求 hero 整块（文案＋代码卡）水平居中，不再偏左 ——
+   左栏不再与下方区块左缘重合（下方区块保持主栅格左对齐不动）。
+   对称性断言：整块（.hero-content 左缘 → .code-card 右缘）在 hero
+   内容盒（容器 ± padding）内左右留白相等。 */
+const centerState = JSON.parse(await ev(`(function(){
+  var h=document.querySelector('.hero'), c=document.querySelector('.hero-content'),
+      card=document.querySelector('.code-card');
+  var ch=h?getComputedStyle(h):null;
+  var hr=h?h.getBoundingClientRect():null;
+  var boxL=hr?hr.left+parseFloat(ch.paddingLeft):null;
+  var boxR=hr?hr.right-parseFloat(ch.paddingRight):null;
+  var cl=c?c.getBoundingClientRect().left:null;
+  var cr=card?card.getBoundingClientRect().right:null;
+  var r10=function(x){return x===null?null:Math.round(x*10)/10;};
+  return JSON.stringify({boxL:r10(boxL), boxR:r10(boxR), blockL:r10(cl), blockR:r10(cr)});})()`));
+check('hero 整块水平居中（块外左右留白对称 ≤2px）',
+  centerState.blockL !== null && centerState.blockR !== null &&
+  Math.abs((centerState.blockL - centerState.boxL) - (centerState.boxR - centerState.blockR)) <= 2,
+  `左留白=${(centerState.blockL - centerState.boxL).toFixed(1)} 右留白=${(centerState.boxR - centerState.blockR).toFixed(1)}`);
 
 /* ── 一、容器宽度与居中不变量（2026-09-22 晚：--w-max 1300 → 1600 宽屏放宽）──
    用户要求：宽屏下主内容容器 1600、水平居中、左右留白对称；
