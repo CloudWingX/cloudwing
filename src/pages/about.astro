@@ -1,18 +1,16 @@
 ---
 import SidebarLayout from '../layouts/SidebarLayout.astro';
-import Lanyard from '../components/ReactBits/Lanyard.jsx';
-import AboutMagicBento from '../components/AboutMagicBento.jsx';
-import ProximityText from '../components/ProximityText.jsx';
 import { SITE } from '../site';
 ---
-<SidebarLayout title="档案" center bodyClass="about-route">
+<!-- §76（2026-09-22）：站长要求删除 —— ① 底部黑色信息组件（AboutMagicBento 深色卡片网格）
+     ② 吊牌（Lanyard 挂绳工牌及其拖拽脚本）③ 文字鼠标悬浮动效（ProximityText 邻近字重 +
+     正文拉丁词光标字重脚本）。三者及专属 CSS/JS 一并移除，正文结构与 .note 页脚保留。 -->
+<SidebarLayout title="档案" center>
   <div class="about-root">
     <div class="wrap about">
       <header class="page-head" data-ent>
         <p class="kicker"><b>PROFILE</b> / 档案</p>
-        {/* 2026-09-20 壳层统一：h1 从作者名改回页面名「档案」（与其他子页面的「页面名标题」
-            同一口径）；ProximityText 邻近特效保留，只是作用的文字换成标题本身。 */}
-        <h1><ProximityText client:load label="档案" radius={190} /></h1>
+        <h1>档案</h1>
       </header>
 
       <section class="who" data-ent style="--ad:.12s">
@@ -26,7 +24,7 @@ import { SITE } from '../site';
 
       <!-- 履历：教育 · 实训 · 项目（内容来自本人简历） -->
       <section class="track" data-ent style="--ad:.16s">
-        <h2 class="track-title"><ProximityText client:load label="Education & Practice" radius={150} /></h2>
+        <h2 class="track-title">Education &amp; Practice</h2>
         <div class="tl">
           <article class="tl-row">
             <span class="tl-time">2023.09 – 2027.06</span>
@@ -58,7 +56,7 @@ import { SITE } from '../site';
 
       <!-- 技能与证书 -->
       <section class="skills" data-ent style="--ad:.2s">
-        <h2 class="track-title"><ProximityText client:load label="Stack & Cert" radius={150} /></h2>
+        <h2 class="track-title">Stack &amp; Cert</h2>
         <ul class="skill-groups">
           <li><b>后端</b><span>Java · Spring Boot · MyBatis · RESTful API · 多线程入门</span></li>
           <li><b>前端</b><span>HTML/CSS/JavaScript · Vue · Axios</span></li>
@@ -69,25 +67,7 @@ import { SITE } from '../site';
       </section>
     </div>
 
-    <section class="mb-shell" data-ent style="--ad:.2s">
-      <div class="mb-wrap">
-        <AboutMagicBento client:load />
-      </div>
-    </section>
-
     <p class="note" data-ent style="--ad:.3s">{SITE.notice}</p>
-
-    <!-- 挂绳工牌：桌面端贴在页面右上边缘；向下拖拽可切换「白日 / 夜间」（拉绳开关） -->
-    <div class="ly-floater" aria-label="挂绳工牌" data-lanyard>
-      <Lanyard
-        client:load
-        position={[0, 0, 22]}
-        gravity={[0, -40, 0]}
-        frontImage="/lanyard/avatar-front.svg"
-        imageFit="cover"
-      />
-      {/* 「下拉工牌 · 开灯/关灯」提示已移除：那是切换主题的手势，随亮色主题一并删除 */}
-    </div>
   </div>
 </SidebarLayout>
 
@@ -96,29 +76,9 @@ import { SITE } from '../site';
   .about { padding-bottom: 1rem; max-width: 720px; }
 
   /* ============================================================
-     VariableProximity（光标邻近可变字重）宿主适配
-     —— 组件 CSS 默认用 Roboto Flex；这里覆盖为站点字体，
-        并保证块级排版（组件本体零改动）
+     §76：ProximityText / 拉丁词邻近字重 / Lanyard / MagicBento 均已删除，
+     相关宿主 CSS（.px-host、.mb-shell、.ly-floater、.cw-pxw 等）一并移除。
      ============================================================ */
-  .px-host {
-    display: block;
-    font-family: var(--font-display);
-    line-height: inherit;
-  }
-  .px-host :global(.variable-proximity) {
-    font-family: var(--font-display);
-    line-height: inherit;
-    color: inherit;
-    letter-spacing: inherit;
-    text-transform: inherit;
-  }
-  /* h1 内：字号/字重继承 h1，可变轴在 Outfit 上生效（wght 400→900） */
-  .page-head h1 .px-host { font-size: inherit; font-weight: inherit; }
-  /* 小节标题（等宽风格标签）保持原字距 */
-  .track-title .px-host { font-size: inherit; letter-spacing: inherit; }
-  @media (prefers-reduced-motion: reduce) {
-    /* 减少动态时不播动画，组件本身是 hover 驱动，无需额外处理 */
-  }
 
   .who .txt { color: var(--ink-2); font-size: 1.05rem; line-height: 1.95; }
   .who .txt a { color: var(--accent-deep); text-decoration: underline; text-underline-offset: 3px; }
@@ -181,349 +141,8 @@ import { SITE } from '../site';
     .skill-groups li { flex-direction: column; gap: 0.35rem; }
   }
 
-  .mb-shell { width: min(1100px, 100%); margin: 2.6rem auto 0; padding: 0 var(--gutter); }
-  .mb-wrap { margin: 0 auto; }
-  .mb-shell :global(.card-grid) { max-width: none; margin: 0 auto; }
-
   .note {
     margin: 2.4rem auto 0; max-width: 46em; text-align: center;
     color: var(--ink-3); font-size: .85rem; padding: 0 var(--gutter);
   }
-
-  .ly-floater { position: relative; width: 100%; height: 440px; margin-top: 1rem; }
-  /* 手机端：工牌是可点区域（点一下开关灯），给出手型光标并略降高度，
-     避免这一块占掉过多竖向空间。 */
-  @media (max-width: 620px) {
-    /* ReactBits 的 .lanyard-wrapper 自带 min-height:420px，容器矮于它就会被裁；
-       这里从宿主页面调低（不动官方原码），两者一起收到 400px。 */
-    .ly-floater { height: 400px; cursor: pointer; touch-action: manipulation; }
-    .ly-floater :global(.lanyard-wrapper) { min-height: 400px; }
-  }
-
-  /* 「下拉提示」与「灯闪」反馈已随亮色主题一并删除：
-     工牌原本是"拉绳切换白日/夜间"的开关，站点现在只有一套暗色主题，该手势不复存在。 */
-
-  /* 正文拉丁词：光标邻近可变字重（原生实现，与标题的 VariableProximity 参数一致）
-     逐字符 inline-block 但不插入空白，所以词内不断行、词间/中文排版不受影响。
-     注意：这里不设 font-variation-settings 初值，远离指针时清空内联样式即回落到
-     元素自身字重（粗体文本不会被拉细）。 */
-  .about-root :global(.cw-pxw),
-  .about-root :global(.cw-pxc) {
-    display: inline-block;
-    white-space: nowrap;
-  }
-
-  /* 「灯闪」反馈与 .ly-hint 提示已随亮色主题删除（工牌不再切换主题） */
-
-  @media (min-width: 1025px) {
-    /* 贴页面右上边缘：挂点位于内容区顶边，绳子自然垂到工牌 */
-    .ly-floater {
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: min(430px, 36vw);
-      height: min(80vh, 720px);
-      margin-top: 0;
-      z-index: 1;
-      /* 扩大可拖范围：拖拽手势不触发页面滚动/选择 */
-      touch-action: none;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    .mb-shell { margin-top: 3rem; }
-  }
-
-  /* 三栏壳层下（≥1200px）：工牌绝对定位挂在内容区右上角、层级高于正文（z-index 3），
-     不占布局，所以标题照旧从页面顶部开始，版面是正常流。
-     这里**不给正文让位**：牌子就是压在字上（用户要求的「牌子盖在字上」的观感），
-     文字从牌子底下穿过。
-     标题字号已由全站 .page-head h1 统一收小（约 34px），吊绳不会再横着划过名字，
-     所以这里不再单独覆盖字号。 */
-  @media (min-width: 1200px) {
-    .about-root .ly-floater {
-      width: min(340px, 46%);
-      height: min(68vh, 520px);
-      z-index: 3; /* 浮在正文之上 */
-    }
-  }
-
-  /* 灵感导航卡已删除 → bento 现为 5 卡；
-     取消原版 CSS 对第 4 张的“大卡”规则，让 5 卡自然铺成 2 行（第 3 张 Gallery 仍为大卡） */
-  @media (min-width: 1024px) {
-    :global(body.about-route .magic-bento-card:nth-child(4)) {
-      grid-column: auto;
-      grid-row: auto;
-    }
-  }
-
-  /* ============================================================
-     MagicBento 日夜模式适配（V41，宿主覆盖，不改 ReactBits 本体）
-     卡底色/辉光色由 AboutMagicBento.jsx 按主题切换；
-     这里负责：浅色主题下卡片文字/边框/描边辉光变深色，深色主题维持原样。
-     ============================================================ */
 </style>
-
-<script>
-  // ============================================================
-  // 工牌拖拽：纯装饰性的"拉绳"手感（跟随指针、松手回弹）。
-  // ⚠️ 原来的「下拉工牌切换白日/夜间」已随亮色主题一并删除 —— 站点只有一套暗色主题，
-  //    留着这个手势只会点不动（.theme-toggle 已不存在）。
-  //
-  // ⚠️ 状态必须放在 window 全局单例上：Astro 软导航（ClientRouter）后本脚本会
-  //    重新执行，若用模块级变量，新绑定的 pointerdown 与首屏挂上的 window 级
-  //    move/up 监听会读写不同对象 → “切走再切回后功能失效”。
-  // ============================================================
-  const PULL_THRESHOLD = 220; // 记录拖拽幅度的参考值（仅用于手感反馈）
-  const pull =
-    window.__cwLanyardPull ||
-    (window.__cwLanyardPull = {
-      startY: 0,
-      triggered: false,
-      active: false,
-      moved: false,
-      pointerId: null,
-      host: null,
-    });
-
-  const isDesktop = () => window.matchMedia('(min-width: 1025px)').matches;
-
-  const onDown = (e) => {
-    // document 级事件委托：软导航重建 DOM 后无需重新绑定，永远有效
-    const host = e.target instanceof Element ? e.target.closest('[data-lanyard]') : null;
-    if (!(host instanceof HTMLElement)) return;
-    // 仅桌面端（工牌绝对定位在右上角时）启用拖拽手感；
-    // 移动端工牌是文档流中的大块区域，下拉会与页面滚动冲突
-    if (!isDesktop()) return;
-    pull.active = true;
-    pull.triggered = false;
-    pull.moved = false;
-    pull.startY = e.clientY;
-    pull.pointerId = e.pointerId;
-    pull.host = host;
-    host.classList.remove('is-triggered');
-  };
-
-  const onMove = (e) => {
-    if (!pull.active || e.pointerId !== pull.pointerId) return;
-    const host = pull.host;
-    if (!host || !host.isConnected) return;
-    const dy = e.clientY - pull.startY;
-    if (dy <= 12) return;
-    host.classList.add('is-pulling');
-    pull.moved = true;
-  };
-
-  const onUp = (e) => {
-    if (!pull.active) return;
-    if (pull.pointerId !== null && e.pointerId !== pull.pointerId) return;
-    const host = pull.host;
-    pull.active = false;
-    pull.pointerId = null;
-    pull.host = null;
-    pull.triggered = false;
-    if (!host || !host.isConnected) return;
-    host.classList.remove('is-pulling');
-    host.classList.remove('is-triggered');
-  };
-
-  const bindLanyard = () => {
-    const host = document.querySelector('[data-lanyard]');
-    if (!(host instanceof HTMLElement)) return;
-    // 手势起点只认工牌区域（由 onDown 内的 closest 判断），无需逐元素绑定
-    host.dataset.pullReady = '1';
-  };
-
-  // 全局只挂一次 pointerdown/move/up（document + window 委托）：
-  // 即使本脚本在软导航后不再执行、或容器被重建，监听依然对新 DOM 生效。
-  if (!window.__cwLanyardPullWired) {
-    window.__cwLanyardPullWired = true;
-    document.addEventListener('pointerdown', onDown, { passive: true });
-    window.addEventListener('pointermove', onMove, { passive: true });
-    window.addEventListener('pointerup', onUp, { passive: true });
-    window.addEventListener('pointercancel', onUp, { passive: true });
-  }
-  bindLanyard();
-</script>
-
-<script>
-  // ============================================================
-  // 正文拉丁词的「光标邻近可变字重」——中文/标点保持普通文本，排版无损
-  // 与标题用的 React Bits <VariableProximity /> 同一视觉参数（wght 400 → 900）。
-  // 做法：把段落文本节点里的拉丁词包成 span（逐字符），按指针距离插值字重。
-  // 只为静态 HTML 服务，不引入额外 React 岛；标题仍用组件原码。
-  // ============================================================
-  const PX = { radius: 110, from: 400, to: 900, falloff: 'gaussian' };
-  // 拉丁词/数字串：Java、Spring、Boot、MySQL、CET-4、2023.09、16:9 …
-  const LATIN_RE = /[A-Za-z0-9][A-Za-z0-9._+#/:%\-\u2013]*/g;
-  const PX_SKIP = '.variable-proximity, .sr-only, .ly-floater, .gs-fixed, script, style, noscript';
-
-  // 状态挂在 window 上做全局单例：软导航会重新执行本脚本，若状态留在闭包里，
-  // 首次注册的指针监听会一直读到旧状态（旧 DOM 元素），效果看起来「死掉」。
-  const pxState = (window.__cwLatinPX = window.__cwLatinPX || {
-    words: [],
-    raf: 0,
-    pointer: { x: -9999, y: -9999 },
-    dirty: true,
-    schedule: null,
-  });
-
-  // 把文本节点拆成「普通文本 + 拉丁词 span（逐字符 span）」
-  const wrapLatin = (textNode) => {
-    const text = textNode.nodeValue;
-    if (!text || !/[A-Za-z0-9]/.test(text)) return;
-    LATIN_RE.lastIndex = 0;
-    const frag = document.createDocumentFragment();
-    let last = 0;
-    let m;
-    while ((m = LATIN_RE.exec(text))) {
-      const word = m[0];
-      if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
-      const wordEl = document.createElement('span');
-      wordEl.className = 'cw-pxw';
-      for (const ch of word) {
-        const chEl = document.createElement('span');
-        chEl.className = 'cw-pxc';
-        chEl.textContent = ch;
-        wordEl.appendChild(chEl);
-      }
-      frag.appendChild(wordEl);
-      last = m.index + word.length;
-    }
-    if (!last) return;
-    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
-    textNode.parentNode.replaceChild(frag, textNode);
-  };
-
-  const collectLatin = (root) => {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        if (!node.nodeValue || !/[A-Za-z0-9]/.test(node.nodeValue)) return NodeFilter.FILTER_REJECT;
-        const p = node.parentElement;
-        if (!p || p.closest(PX_SKIP)) return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;
-      },
-    });
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(wrapLatin);
-  };
-
-  // 缓存字符的页面坐标（指针移动时不做布局查询，保证流畅）
-  const measureLatin = () => {
-    const sx = window.scrollX;
-    const sy = window.scrollY;
-    pxState.words = Array.from(document.querySelectorAll('.cw-pxw')).map((wordEl) => {
-      const wr = wordEl.getBoundingClientRect();
-      return {
-        left: wr.left + sx,
-        top: wr.top + sy,
-        right: wr.right + sx,
-        bottom: wr.bottom + sy,
-        chars: Array.from(wordEl.querySelectorAll('.cw-pxc')).map((chEl) => {
-          const r = chEl.getBoundingClientRect();
-          // 基准字重取元素自身计算值（400 正文 / 700 粗体），避免把粗体拉细
-          const base = parseInt(getComputedStyle(chEl).fontWeight, 10) || PX.from;
-          return {
-            el: chEl,
-            base,
-            to: Math.max(PX.to, base),
-            x: r.left + sx + r.width / 2,
-            y: r.top + sy + r.height / 2,
-          };
-        }),
-      };
-    });
-    pxState.dirty = false;
-  };
-
-  const pxFalloff = (distance) => {
-    const norm = Math.min(Math.max(1 - distance / PX.radius, 0), 1);
-    if (PX.falloff === 'exponential') return norm * norm;
-    if (PX.falloff === 'gaussian') return Math.exp(-Math.pow(distance / (PX.radius / 2), 2) / 2);
-    return norm;
-  };
-
-  const renderProximity = () => {
-    pxState.raf = 0;
-    if (pxState.dirty) measureLatin();
-    const { x, y } = pxState.pointer;
-    const r = PX.radius;
-    for (const word of pxState.words) {
-      // 词级粗筛：远离指针的词直接归位（清空内联字重）
-      const near = x > word.left - r && x < word.right + r && y > word.top - r && y < word.bottom + r;
-      if (!near) {
-        for (const ch of word.chars) {
-          if (ch.el.style.fontVariationSettings) ch.el.style.fontVariationSettings = '';
-        }
-        continue;
-      }
-      for (const ch of word.chars) {
-        const dx = ch.x - x;
-        const dy = ch.y - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance >= r) {
-          if (ch.el.style.fontVariationSettings) ch.el.style.fontVariationSettings = '';
-          continue;
-        }
-        const weight = ch.base + (ch.to - ch.base) * pxFalloff(distance);
-        ch.el.style.fontVariationSettings = `'wght' ${weight.toFixed(1)}`;
-      }
-    }
-  };
-
-  const scheduleProximity = () => {
-    if (!pxState.raf) pxState.raf = requestAnimationFrame(renderProximity);
-  };
-  // 每次执行都把自己的调度函数登记到共享状态，保证旧监听调用的是最新闭包
-  pxState.schedule = scheduleProximity;
-
-  const initLatinProximity = () => {
-    const root = document.querySelector('.about-root');
-    if (!root) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; // 减少动态：不做该效果
-    // 用 DOM 实际结果判断是否已包装：软导航后 body 上的标记会残留而内容已重建，
-    // 只看标记会漏掉重新包装（曾导致从关于页离开再返回时效果整体消失）。
-    if (!root.querySelector('.cw-pxw')) collectLatin(root);
-    pxState.dirty = true;
-    measureLatin();
-
-    if (!window.__cwLatinProximityWired) {
-      window.__cwLatinProximityWired = true;
-      // 全部通过 window 单例回调，避免软导航后旧闭包继续持有旧 DOM
-      const rerun = () => window.__cwLatinPX && window.__cwLatinPX.schedule && window.__cwLatinPX.schedule();
-      const reset = () => {
-        if (window.__cwLatinPX) window.__cwLatinPX.pointer = { x: -9999, y: -9999 };
-        rerun();
-      };
-      window.addEventListener(
-        'pointermove',
-        (e) => {
-          pxState.pointer = { x: e.clientX + window.scrollX, y: e.clientY + window.scrollY };
-          rerun();
-        },
-        { passive: true },
-      );
-      // 指针离开窗口 → 全部归位
-      document.addEventListener('pointerleave', reset);
-      // 尺寸变化 / 字体加载完成后重算坐标
-      window.addEventListener('resize', () => {
-        if (window.__cwLatinPX) window.__cwLatinPX.dirty = true;
-        rerun();
-      });
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => {
-          if (window.__cwLatinPX) window.__cwLatinPX.dirty = true;
-          rerun();
-        });
-      }
-      // 必须挂在 document 上：astro:page-load 由路由器在 document 上派发且不冒泡，
-      // 挂 window 永远收不到（软导航二次进入关于页时效果不初始化的原因）。
-      document.addEventListener('astro:page-load', () => {
-        if (window.__cwLatinPX && window.__cwLatinPX.init) window.__cwLatinPX.init();
-      });
-    }
-  };
-  pxState.init = initLatinProximity;
-
-  initLatinProximity();
-</script>
