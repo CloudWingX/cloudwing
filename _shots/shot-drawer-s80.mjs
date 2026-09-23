@@ -1,0 +1,21 @@
+// 目检截图：移动端抽屉打开态
+import WebSocket from 'file:///C:/Users/24645/.workbuddy/binaries/node/workspace/node_modules/ws/index.js';
+import { writeFileSync } from 'fs';
+const tab = await (await fetch('http://127.0.0.1:9222/json/new?about:blank', { method: 'PUT' })).json();
+const ws = new WebSocket(tab.webSocketDebuggerUrl);
+await new Promise((r, j) => { ws.on('open', r); ws.on('error', j); });
+let id = 0; const pend = new Map();
+ws.on('message', (d) => { const m = JSON.parse(d); if (m.id && pend.has(m.id)) { pend.get(m.id)(m); pend.delete(m.id); } });
+const s = (m, pp = {}) => new Promise((r) => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method: m, params: pp })); });
+const ev = async (x) => (await s('Runtime.evaluate', { expression: x, returnByValue: true })).result?.result?.value;
+await s('Page.enable');
+await s('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+await s('Page.navigate', { url: 'http://localhost:4321/blog/' });
+await new Promise((r) => setTimeout(r, 3500));
+await ev(`document.querySelector('[data-mnav-toggle]').click()`);
+await new Promise((r) => setTimeout(r, 2200));
+const shot = await s('Page.captureScreenshot', { format: 'png' });
+writeFileSync('D:\\deep seek workplace\\endfield-blog\\_shots\\sm-drawer-open-s80.png', Buffer.from(shot.result.data, 'base64'));
+console.log('SHOT_OK');
+await fetch('http://127.0.0.1:9222/json/close/' + tab.id);
+process.exit(0);

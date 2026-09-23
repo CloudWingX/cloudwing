@@ -1,7 +1,7 @@
 // 导航验收（照 ReactBits 的 shrink-on-scroll + mobile-menu）：
 //   未滚动：贴顶通栏（padding-top 0、1600 宽、64 高、无圆角、透明）
 //   滚动后：下沉 16px 收成胶囊（1440 宽、56 高、圆角 999px、玻璃底 + 模糊 + 阴影）
-//   移动端：汉堡按钮 + 顶部下拉玻璃菜单（淡入 + 下移）
+//   移动端：StaggeredMenu 抽屉（右侧滑入 + 前导层/条目错峰，2026-09-23 改版）
 // ⚠️ 1600 = global.css 的 --w-max（主内容容器盒宽，header/main/footer 一致；
 //    2026-09-22 晚从 1300 放宽）；
 //    滚动后的 1440 = 1600 − 160，保持与上一版（1300 → 1140）相同的收缩幅度。
@@ -13,15 +13,17 @@ const BASE = (process.argv[2] || 'http://127.0.0.1:4321').replace(/\/$/, '');
 const CDP = process.env.CDP_URL || 'http://127.0.0.1:9222';
 
 const tab = await (await fetch(`${CDP}/json/new?about:blank`, { method: 'PUT' })).json();
+// ⚠️ 必须用 ws 包（全局 WebSocket 在本机对 Edge 153 只 open 不回包，2026-09-23 实测）
+import WebSocket from 'file:///C:/Users/24645/.workbuddy/binaries/node/workspace/node_modules/ws/index.js';
 const ws = new WebSocket(tab.webSocketDebuggerUrl);
-await new Promise((r, j) => { ws.onopen = r; ws.onerror = j; });
+await new Promise((r, j) => { ws.on('open', r); ws.on('error', j); });
 let id = 0; const p = new Map(); const errs = [];
 const s = (m, pp = {}) => new Promise((r) => { const i = ++id; p.set(i, r); ws.send(JSON.stringify({ id: i, method: m, params: pp })); });
-ws.onmessage = (e) => {
-  const m = JSON.parse(e.data);
+ws.on('message', (e) => {
+  const m = JSON.parse(e);
   if (m.method === 'Runtime.exceptionThrown') errs.push((((m.params.exceptionDetails.exception || {}).description) || '').slice(0, 110));
   if (m.id && p.has(m.id)) { p.get(m.id)(m); p.delete(m.id); }
-};
+});
 const ev = async (x) => (await s('Runtime.evaluate', { expression: x, returnByValue: true })).result?.result?.value;
 const results = [];
 const check = (n, ok, d = '') => { results.push({ n, ok }); console.log(`  ${ok ? '✅' : '❌'} ${n}${d ? '  —— ' + d : ''}`); };
@@ -132,89 +134,68 @@ console.log('  ' + JSON.stringify(hidden));
 check('下滑后导航仍在视口内（参考不做下滑收起）', hidden.顶 >= 0 && !hidden.隐藏类 && hidden.透明度 === '1', JSON.stringify(hidden));
 check('已无遗留的顶部指示线（参考导航没有）', (await ev(`document.querySelectorAll('.nav-ind').length`)) === 0);
 
-console.log('\n=== 移动端：汉堡 + 顶部下拉菜单 ===');
+console.log('\n=== 移动端：StaggeredMenu 抽屉（2026-09-23 改版）===');
 await s('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
 await s('Page.navigate', { url: BASE + '/blog/' });
 await waitFor(`!!document.querySelector('[data-mnav-toggle]')`);
 await sleep(2200);
 const m0 = await ev(`(()=>({
-  汉堡显示:getComputedStyle(document.querySelector('[data-mnav-toggle]')).display,
+  开关显示:getComputedStyle(document.querySelector('[data-mnav-toggle]')).display,
   链接组:getComputedStyle(document.querySelector('.nav-links')).display,
   菜单初始隐藏:document.querySelector('[data-mnav-panel]').hidden,
   溢出:document.documentElement.scrollWidth-document.documentElement.clientWidth}))()`);
 console.log('  ' + JSON.stringify(m0));
-check('移动端显示汉堡', m0.汉堡显示 === 'flex', m0.汉堡显示);
+check('移动端显示 StaggeredMenu 开关', m0.开关显示 === 'flex', m0.开关显示);
 check('移动端隐藏链接组', m0.链接组 === 'none', m0.链接组);
-check('菜单初始隐藏', m0.菜单初始隐藏 === true);
+check('抽屉初始隐藏', m0.菜单初始隐藏 === true);
 check('移动端无横向溢出', m0.溢出 === 0, String(m0.溢出));
 
 await ev(`document.querySelector('[data-mnav-toggle]').click()`);
 await waitFor(`document.querySelector('[data-mnav-panel]').classList.contains('is-open')`);
-await sleep(700);
+await sleep(1400); // 等开场时间线走完（前导层 0.07 错峰 + 面板 0.65 + 条目入场）
 const m1 = await ev(`(()=>{const p=document.querySelector('[data-mnav-panel]'); const c=getComputedStyle(p);
-  const b=p.getBoundingClientRect();
-  return {打开:!p.hidden, 类:c.getPropertyValue('transform'), 透明度:c.opacity, 背景:c.backgroundColor,
-    模糊:c.backdropFilter||c.webkitBackdropFilter, 顶部:Math.round(b.top), 宽:Math.round(b.width),
-    左:Math.round(b.left), 右:Math.round(window.innerWidth - b.right),
-    圆角四角:[c.borderTopLeftRadius,c.borderTopRightRadius,c.borderBottomRightRadius,c.borderBottomLeftRadius].join('/'),
-    链接数:p.querySelectorAll('a').length,
-    一级链接数:p.querySelectorAll(':scope > a').length,
-    分类组数:p.querySelectorAll('.mm-group').length,
-    分类链接数:p.querySelectorAll('a[href*="?tag="], a[href*="?game="]').length,
-    外链组数:p.querySelectorAll('.mm-actions').length,
-    外链数:p.querySelectorAll('a[href^="http"], a[href="/rss.xml"]').length,
-    汉堡叉号:document.querySelector('[data-nav]').classList.contains('mnav-open'),
+  const inner=p.querySelector('.sm-panel'); const ci=getComputedStyle(inner); const b=inner.getBoundingClientRect();
+  const layers=[...p.querySelectorAll('.sm-prelayer')];
+  const firstLink=inner.querySelector('.sm-link');
+  return {打开:!p.hidden, 类:c.getPropertyValue('transform'), 透明度:c.opacity,
+    面板变换:ci.getPropertyValue('transform'), 背景:ci.backgroundColor, 模糊:ci.backdropFilter||ci.webkitBackdropFilter,
+    顶部:Math.round(b.top), 高:Math.round(b.height), 右缘:Math.round(window.innerWidth-b.right), 宽:Math.round(b.width),
+    前导层:layers.length, 前导层就位:layers.every(l=>Math.round(l.getBoundingClientRect().right)===Math.round(window.innerWidth)),
+    链接数:inner.querySelectorAll('a').length,
+    一级链接数:inner.querySelectorAll('.sm-link').length,
+    子链接数:inner.querySelectorAll('.sm-sub a').length,
+    编号内容:firstLink?getComputedStyle(firstLink,'::after').content:'(none)',
+    编号可见:firstLink?parseFloat(getComputedStyle(firstLink,'::after').opacity):0,
+    开关态:document.querySelector('[data-nav]').classList.contains('mnav-open'),
     aria:document.querySelector('[data-mnav-toggle]').getAttribute('aria-expanded')};})()`);
 console.log('  ' + JSON.stringify(m1));
-check('菜单已打开', m1.打开 === true);
-check('已到终态（opacity 1 / 无位移）', m1.透明度 === '1' && (m1.类 === 'none' || /matrix\(1, 0, 0, 1, 0, 0\)/.test(m1.类)), `${m1.透明度} ${m1.类}`);
-check('玻璃底 + 模糊', /rgba\(10, 10, 15, 0\.95\)/.test(m1.背景) && /blur\(20px\)/.test(String(m1.模糊)), `${m1.背景} | ${m1.模糊}`);
-check('贴在导航下方', m1.顶部 >= 60, String(m1.顶部));
-// 2026-09-18：菜单改成"四周内缩的圆角矩形浮层"（原来是占满宽度的通栏）
-check('菜单左右各内缩 12px（不再通栏）',
-  m1.左 === 12 && m1.右 === 12 && m1.宽 === 366, `左=${m1.左} 右=${m1.右} 宽=${m1.宽}`);
-// 计算值是 "16px" 这种带单位的字符串，必须 parseFloat（Number('16px') 会得到 NaN —— 踩过）
-const rr = String(m1.圆角四角).split('/').map((v) => parseFloat(v));
-check('四角圆角一致且 ≥12px（圆角矩形）',
-  rr.length === 4 && rr.every((n) => n >= 12) && rr.every((n) => Math.abs(n - rr[0]) < 0.6),
-  m1.圆角四角);
-// 抽屉内容：一级导航项 + 「记录」分组（组标题 + 缩进子链接）。
-// 2026-09-18：「作品库分类 / 画廊分类」两组按用户要求删除，这里改为断言"确实没了"。
-// 2026-09-19 晚：站长要求「文章/归档/日志」收进「记录」下拉 —— NAV 8 项 → 6 项，
-//   其中「记录」带 3 个 child；抽屉里 = 一级链接 5 + 分组标题 1 + 分组内链接 3（共 8 个 <a>）。
-// 2026-09-21：「记录」新增第 4 个 child「日历」（/calendar/，commit 78afb41）——
-//   抽屉组内链接 3 → 4，总数 8 → 9（断言随功能事实同步，非放宽）。
-// 2026-09-22：新增一级项「音乐」（/music/，§67）—— 一级链接 5 → 6，总数 9 → 10。
-check('抽屉一级链接 6 个 + 记录组内 4 个（共 10 个链接）',
-  m1.一级链接数 === 6 && m1.链接数 === 10, `一级=${m1.一级链接数} 总=${m1.链接数}`);
-check('抽屉含「记录」分组（1 组，且无 ?tag=/?game= 分类链接）',
-  m1.分类组数 === 1 && m1.分类链接数 === 0, `组=${m1.分类组数} 分类链=${m1.分类链接数}`);
-// 2026-09-18：底部 GitHub / Bilibili / RSS 三个外链按钮也按用户要求删除（桌面顶栏与页脚仍在）
-check('抽屉已无外链按钮（GitHub/Bilibili/RSS）',
-  m1.外链组数 === 0 && m1.外链数 === 0, `组=${m1.外链组数} 外链=${m1.外链数}`);
-check('汉堡变叉号（mnav-open）', m1.汉堡叉号 === true);
-check('aria-expanded=true', m1.aria === 'true');
+check('抽屉已打开', m1.打开 === true);
+check('面板已到终态（xPercent 0 / opacity 1）', m1.透明度 === '1' && /matrix\(1, 0, 0, 1, 0, 0\)/.test(m1.面板变换), `${m1.透明度} ${m1.面板变换}`);
+check('玻璃底 + 模糊', /rgba\(10, 10, 15, 0\.96\)/.test(m1.背景) && /blur\(20px\)/.test(String(m1.模糊)), `${m1.背景} | ${m1.模糊}`);
+check('右侧全高贴边（top 0 / 高=视口 / 右缘 0）',
+  m1.顶部 === 0 && Math.abs(m1.高 - 844) <= 1 && m1.右缘 === 0, `顶=${m1.顶部} 高=${m1.高} 右=${m1.右缘}`);
+check('抽屉宽度 = clamp(280px, 84vw, 400px)',
+  Math.abs(m1.宽 - Math.round(Math.min(400, Math.max(280, 390 * 0.84)))) <= 1.5, `宽=${m1.宽}`);
+check('2 层前导层已滑入到位', m1.前导层 === 2 && m1.前导层就位 === true, `层=${m1.前导层}`);
+check('一级链接 7 个（含可点的「记录」父项）+ 组内 4 个（共 11 个）',
+  m1.一级链接数 === 7 && m1.子链接数 === 4 && m1.链接数 === 11, `一级=${m1.一级链接数} 子=${m1.子链接数} 总=${m1.链接数}`);
+check('条目编号已渲染（::after 计数器存在，opacity 1）',
+  String(m1.编号内容) !== 'none' && String(m1.编号内容).includes('counter') && m1.编号可见 === 1, `${m1.编号内容} op=${m1.编号可见}`);
+check('mnav-open 态 + aria-expanded=true', m1.开关态 === true && m1.aria === 'true');
 
 await ev(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
-await sleep(600);
-check('Esc 可关闭菜单', (await ev(`document.querySelector('[data-mnav-panel]').hidden`)) === true);
+await sleep(700);
+check('Esc 可关闭抽屉', (await ev(`document.querySelector('[data-mnav-panel]').hidden`)) === true);
 
-// 移动端滚动后菜单仍不被胶囊压住
-// 注意：滚动会让 autoHideHeader 收起导航；这里滚回接近顶部，保证两者都在视口内再量。
+// 抽屉 fixed 全高：滚动页面后依旧盖满视口（几何不随滚动漂移）
 await ev(`document.querySelector('[data-mnav-toggle]').click()`);
 await waitFor(`document.querySelector('[data-mnav-panel]').classList.contains('is-open')`);
 await ev(`window.scrollTo(0, 300)`);
-await sleep(700);
-await ev(`window.scrollTo(0, 140)`);
-await sleep(1200);
-const m2 = await ev(`(()=>{const p=document.querySelector('[data-mnav-panel]').getBoundingClientRect();
-  const h=document.querySelector('.header-container').getBoundingClientRect();
-  return {菜单顶:Math.round(p.top), 胶囊底:Math.round(h.bottom), 胶囊高:Math.round(h.height),
-    视口:innerHeight};})()`);
+await sleep(900);
+const m2 = await ev(`(()=>{const b=document.querySelector('.sm-panel').getBoundingClientRect();
+  return {顶:Math.round(b.top), 右缘:Math.round(window.innerWidth-b.right), 视口:innerHeight};})()`);
 console.log('  ' + JSON.stringify(m2));
-check('滚动后菜单仍在胶囊下方（几何有效）',
-  m2.胶囊高 > 0 && m2.菜单顶 >= m2.胶囊底 - 2 && m2.菜单顶 < m2.视口,
-  JSON.stringify(m2));
+check('滚动后抽屉仍满屏贴右（fixed 几何稳定）', m2.顶 === 0 && m2.右缘 === 0, JSON.stringify(m2));
 
 check('全程无 JS 异常', errs.length === 0, errs[0] || '');
 
@@ -235,5 +216,6 @@ if (shot.result?.data) writeFileSync('D:\\deep seek workplace\\_shots\\nav-shrin
 const failed = results.filter((r) => !r.ok);
 console.log(`\n=== 结果：${results.length - failed.length}/${results.length} 通过 ===`);
 failed.forEach((f) => console.log('  ❌ ' + f.n));
+await fetch(`${CDP}/json/close/${tab.id}`).catch(() => {}); // 收尾：关掉测试 tab，别留播放态页面
 ws.close();
 process.exit(failed.length ? 1 : 0);

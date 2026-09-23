@@ -7,7 +7,7 @@
       与 global.css 的 --w-max = 1600 对齐，见下方 .site-header 的注释）
    · 强调色保留站点雾蓝（--accent），不用参考里的紫/粉/红
    · 按用户要求去掉导航里的搜索入口（悬浮窗仍可由 ⌘/Ctrl+K 打开）
-   · 保留站点功能：品牌标志、动效暂停按钮、移动端下拉菜单、二级菜单数据
+   · 保留站点功能：品牌标志、移动端 StaggeredMenu 抽屉（≤768px）、二级菜单数据
    ============================================================ */
 import { SITE, NAV } from '../site';
 import { getCollection } from 'astro:content';
@@ -120,40 +120,68 @@ try {
       {/* ★「暂停背景动态」按钮已于 2026-09-18 按用户要求删除：背景视频默认播放，
           不再提供手动暂停入口（减少动态的可访问性需求仍由 prefers-reduced-motion 兜住，
           见 VideoBackground.astro）。 */}
+      {/* ── 移动端开关（StaggeredMenu 形态，2026-09-23）：「菜单/关闭」文字滚动 + 加号图标旋转。
+          桌面端 display:none，与旧汉堡一样只在 ≤768px 出现；data-mnav-toggle 契约不变。 ── */}
       <button
         type="button"
-        class="hamburger"
+        class="sm-toggle"
         data-mnav-toggle
         aria-label="打开菜单"
         aria-expanded="false"
-        aria-controls="cw-mobile-menu"
+        aria-controls="cw-side-menu"
       >
-        <span></span>
-        <span></span>
-        <span></span>
+        <span class="sm-tw" aria-hidden="true">
+          <span class="sm-ti" data-mnav-text><span>菜单</span></span>
+        </span>
+        <span class="sm-icon" aria-hidden="true">
+          <span class="sm-line-h"></span>
+          <span class="sm-line-v"></span>
+        </span>
       </button>
     </div>
   </div>
 
-  {/* ── 移动端菜单：从顶部下拉（参考同款：淡入 + 轻微下移 + 逐项错峰）── */}
-  <div id="cw-mobile-menu" class="mobile-menu" data-mnav-panel hidden>
-    {items.map((item) =>
-      item.children ? (
-        <div class="mm-group">
-          <span class="mm-group-t">{showLabel(item.label)}</span>
-          {item.children.map((c) => (
-            <a class="mm-sub" href={c.href} aria-current={isActive(c.href) ? 'page' : undefined}>
-              {showLabel(c.label)}
-            </a>
-          ))}
-        </div>
-      ) : (
-        <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{showLabel(item.label)}</a>
-      )
-    )}
-    {/* ★手机端抽屉结构（2026-09-19 晚随「记录」下拉改形）★
-        一级链接 5 个（首页/画廊/导航/关于/互动）+「记录」分组（组标题 + 文章/归档/日志 三个缩进链接）。
-        历史：2026-09-18 按用户要求删掉了两组分类与底部外链（GitHub/Bilibili/RSS，桌面端仍可达）。 */}
+  {/* ── 移动端抽屉（StaggeredMenu 形态，2026-09-23）：右侧全高滑入 + 双色错峰前导层 +
+      条目错峰入场 + 序号。仅 ≤768px 渲染作用（桌面端 display:none 兜底）。
+      保留 data-mnav-panel / hidden / is-open 契约，动画由 nav-mobile.js 的 gsap 驱动。 ── */}
+  <div id="cw-side-menu" class="sm-drawer" data-mnav-panel hidden>
+    <div class="sm-prelayers" aria-hidden="true">
+      <div class="sm-prelayer sm-pl-b"></div>
+      <div class="sm-prelayer sm-pl-a"></div>
+    </div>
+    <aside class="sm-panel" aria-label="站点菜单">
+      <ul class="sm-list">
+        {
+          items.map((item) =>
+            item.children ? (
+              <li class="sm-item">
+                <a
+                  class="sm-link"
+                  href={item.href}
+                  aria-current={isActiveGroup(item) ? 'page' : undefined}
+                >
+                  <span class="sm-label">{showLabel(item.label)}</span>
+                </a>
+                <div class="sm-sub">
+                  {item.children.map((c) => (
+                    <a href={c.href} aria-current={isActive(c.href) ? 'page' : undefined}>
+                      {showLabel(c.label)}
+                    </a>
+                  ))}
+                </div>
+              </li>
+            ) : (
+              <li class="sm-item">
+                <a class="sm-link" href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>
+                  <span class="sm-label">{showLabel(item.label)}</span>
+                </a>
+              </li>
+            )
+          )
+        }
+      </ul>
+      {/* 一级 6 项 +「记录」组内 4 个子链接 = 10 个 <a>（verify-nav-shrink 断言同步）。 */}
+    </aside>
   </div>
 </header>
 
@@ -480,90 +508,161 @@ try {
 
   /* 「暂停背景动态」按钮已于 2026-09-18 删除（背景视频默认播放），相关样式一并移除。 */
 
-  /* ── 汉堡按钮（参考同款：三条线 → 叉号）── */
-  .hamburger {
-    display: none;
-    flex-direction: column;
-    justify-content: center;
+  /* ============================================================
+     移动端导航 —— StaggeredMenu 形态（2026-09-23，源自 React Bits 同名组件）
+     · 开关：「菜单/关闭」文字竖向滚动 + 加号图标旋转 225° 成叉（gsap 驱动）
+     · 抽屉：右侧全高滑入 + 2 层强调色前导层错峰跟进 + 条目 yPercent 错峰入场
+     · 桌面端（≥769px）整体 display:none，顶栏链接/二级下拉不受任何影响
+     · 动画只动 transform / opacity / 自定义属性；prefers-reduced-motion 由 JS 归零时长
+     ============================================================ */
+  .sm-toggle {
+    display: none; /* 桌面端不渲染 */
     align-items: center;
-    gap: 5px;
-    padding: 4px;
-    width: 28px;
-    height: 28px;
-    flex: none;
+    gap: 8px;
     background: none;
     border: none;
+    padding: 4px;
     cursor: pointer;
+    color: var(--nav-ink);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
   }
-  .hamburger span {
-    display: block;
-    width: 20px;
-    height: 2px;
-    border-radius: 2px;
-    background: var(--nav-ink);
-    transition: all 0.3s var(--nav-ease);
+  .sm-tw {
+    position: relative;
+    display: inline-block;
+    height: 1em;
+    overflow: hidden; /* 竖向滚动文字的裁剪窗 */
   }
-  .site-header.mnav-open .hamburger span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-  .site-header.mnav-open .hamburger span:nth-child(2) { opacity: 0; transform: translateX(-10px); }
-  .site-header.mnav-open .hamburger span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-  /* ── 移动端下拉菜单 ──
-     2026-09-18 改形：原来是"与导航同宽的通栏 + 只有底边框"，
-     现在改成**四周内缩的圆角矩形浮层**（左右各留 12px、圆角 18px、四边描边 + 投影），
-     整体也更紧凑（内边距 16/32 → 14/18、行间距 16 → 12）。 */
-  .mobile-menu {
-    position: absolute;
-    top: 100%;
-    left: 12px;
-    right: 12px;
+  .sm-ti {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 14px 18px 16px;
-    background: var(--nav-drawer-bg);
-    -webkit-backdrop-filter: blur(20px);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--nav-border-scrolled);
-    border-radius: 18px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-    opacity: 0;
-    visibility: hidden;
+    line-height: 1;
+  }
+  /* 行元素由 JS 动态重建（滚动序列），:global 兜住作用域外生成的节点 */
+  .sm-ti :global(span) { display: block; height: 1em; line-height: 1; }
+  .sm-icon {
+    position: relative;
+    width: 16px;
+    height: 16px;
+    flex: none;
+    will-change: transform;
+  }
+  .sm-line-h,
+  .sm-line-v {
+    position: absolute;
+    left: 0;
+    top: calc(50% - 1px);
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    border-radius: 2px;
+  }
+  .sm-line-v { transform: rotate(90deg); }
+
+  /* ── 抽屉容器：全屏但自身不吃事件（点击外部关闭由 document 委托负责） ── */
+  .sm-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 65; /* 顶栏（70）之下：开关始终可点 */
     pointer-events: none;
-    transform: translateY(-16px);
-    transition: opacity 0.35s var(--nav-ease), transform 0.35s var(--nav-ease), visibility 0.35s;
   }
-  .mobile-menu.is-open {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transform: translateY(0);
+  .sm-panel { pointer-events: auto; }
+
+  /* 前导层：与抽屉同几何，错峰滑入形成层叠色带 */
+  .sm-prelayers {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: clamp(280px, 84vw, 400px);
+    pointer-events: none;
+    overflow: hidden;
   }
-  .mobile-menu[hidden] { display: none; }
-  .mobile-menu > a {
+  .sm-prelayer {
+    position: absolute;
+    inset: 0;
+    transform: translateX(100%); /* SSR 初始即屏外，JS 接管前不闪现 */
+  }
+  .sm-pl-a { background: rgba(var(--accent-rgb), 0.30); }
+  .sm-pl-b { background: rgba(var(--accent-rgb), 0.14); }
+
+  .sm-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: clamp(280px, 84vw, 400px);
+    box-sizing: border-box;
+    padding: calc(var(--nav-h) + 24px) 26px 28px;
+    overflow-y: auto;
+    background: rgba(10, 10, 15, 0.96);
+    border-left: 1px solid var(--nav-border-scrolled);
+    box-shadow: -24px 0 60px rgba(0, 0, 0, 0.45);
+    /* ⚠️ -webkit- 必须写在标准属性之前（构建压缩会丢后写的重复声明，见 HANDOFF §22） */
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+    transform: translateX(100%);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 条目列表：counter 编号（decimal-leading-zero）+ 标签错峰入场 */
+  .sm-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    counter-reset: smitem;
+  }
+  .sm-item {
+    position: relative;
+    overflow: hidden; /* 标签 yPercent 140 入场时从这里钻出来 */
+  }
+  .sm-link {
+    position: relative;
+    display: inline-block;
+    padding: 6px 2.6em 6px 0;
     color: var(--nav-ink);
     text-decoration: none;
-    font-size: 16px;
-    padding: 8px 0;
+    font-size: 1.9rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
   }
-  .mobile-menu > a[aria-current='page'] { color: var(--accent); }
-  /* 「记录」分组（2026-09-19 晚）：组标题 + 缩进的三个子链接 */
-  .mobile-menu .mm-group { display: flex; flex-direction: column; }
-  .mobile-menu .mm-group-t {
+  .sm-label { display: inline-block; will-change: transform; transform-origin: 50% 100%; }
+  .sm-link::after {
+    counter-increment: smitem;
+    content: counter(smitem, decimal-leading-zero);
+    position: absolute;
+    top: 0.5em;
+    right: 0.1em;
+    font-family: var(--font-mono, monospace);
     font-size: 12px;
-    letter-spacing: 0.14em;
-    color: var(--nav-ink-dim);
-    padding: 2px 0 4px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    opacity: var(--sm-num, 0); /* gsap 按序号错峰补间到 1 */
+    pointer-events: none;
   }
-  .mobile-menu .mm-sub {
-    color: var(--nav-ink);
+  .sm-link:hover, .sm-link[aria-current='page'] { color: var(--accent-deep); }
+
+  /* 「记录」组内子链接：缩进小字，随抽屉淡入 */
+  .sm-sub {
+    display: flex;
+    flex-direction: column;
+    padding: 2px 0 10px 14px;
+  }
+  .sm-sub a {
+    color: var(--nav-ink-muted);
     text-decoration: none;
     font-size: 15px;
-    padding: 7px 0 7px 14px;
+    line-height: 1.4;
+    padding: 6px 0;
   }
-  .mobile-menu .mm-sub[aria-current='page'] { color: var(--accent); }
-  /* 以下已随手机端抽屉精简一并删除（2026-09-18）：
-     .mm-group / .mm-group-t / .mm-chips / .mm-chip（两组分类）
-     .mm-actions / .mm-btn（GitHub / Bilibili / RSS 外链） */
+  .sm-sub a[aria-current='page'] { color: var(--accent-deep); }
 
   /* ── 断点（参考实测：≤1024 pad 24 且容器满宽、≤768 换汉堡）──
      参考在 768–1100 之间没有处理，因为它的 4 个链接比本站 5 个短；
@@ -583,7 +682,7 @@ try {
   }
   @media (max-width: 768px) {
     .nav-links { display: none; }
-    .hamburger { display: flex; }
+    .sm-toggle { display: flex; } /* StaggeredMenu 开关只在移动端出现 */
     .site-header {
       --nav-pad-x: 20px;
       --nav-pad-x-scrolled: 16px;
@@ -592,7 +691,10 @@ try {
     html[data-scrolled='1'] .header-container { max-width: 100%; height: 52px; }
     .btn-github span { display: none; }
     .btn-github { padding: 8px 10px; }
-    .mobile-menu { padding: 12px 16px 14px; border-radius: 16px; }
+  }
+  /* 双保险：桌面端即使 HTML 被复用也绝不渲染移动抽屉 */
+  @media (min-width: 769px) {
+    .sm-drawer { display: none; }
   }
 </style>
 

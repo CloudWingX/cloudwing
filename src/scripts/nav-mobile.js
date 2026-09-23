@@ -3,7 +3,7 @@
 //
 //   1) 滚缩：滚动时导航"贴顶通栏 → 下沉 16px 收成胶囊"
 //      由 ui.js 的 setMaterial() 切 html[data-scrolled]，形态过渡全在 CSS（0.4s）。
-//   2) 移动端：汉堡按钮切换顶部下拉的玻璃菜单（淡入 + 轻微下移）。
+//   2) 移动端：StaggeredMenu 抽屉（右侧滑入 + 前导层错峰 + 条目错峰，gsap 驱动）。
 //   3) 顶部两条指示线（保留）：一条跟鼠标在菜单项间滑动，一条停在当前路由下方。
 //
 // 只动画 transform / opacity；prefers-reduced-motion 下不播过渡。
@@ -16,49 +16,164 @@ function ready(fn) {
   else fn();
 }
 
-/* ---------- 移动端汉堡菜单 ---------- */
+/* ---------- 移动端 StaggeredMenu 抽屉（2026-09-23，移植自 React Bits 同名组件）----------
+   形态：右侧全高滑入 + 2 层强调色前导层错峰跟进 + 条目 yPercent 错峰入场 +
+   序号淡入 + 加号图标旋转 225° + 「菜单/关闭」文字竖向滚动。
+   架构不变：document 委托 + window 单例（软导航重建 Header 后依然有效）；
+   契约不变：data-mnav-toggle / [data-mnav-panel] hidden / is-open / mnav-open。
+   prefers-reduced-motion：所有时长归零（状态瞬间到位，不播动画）。 */
 function initMobileNav() {
   const st = (window.__cwMNav ||= { wired: false, open: false });
   if (st.wired) return;
   st.wired = true;
 
-  const panel = () => document.querySelector('[data-mnav-panel]');
-  const header = () => document.querySelector('[data-nav]');
+  const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const D = () => (reduced() ? 0 : 1); // 时长倍率：reduce → 0（瞬间到位）
 
-  const sync = () => {
-    const p = panel();
-    const h = header();
-    const t = document.querySelector('[data-mnav-toggle]');
-    if (!p || !h || !t) return;
-    p.hidden = !st.open;
-    // 先移除 hidden 再加类，否则过渡不会从初始态开始
-    if (st.open) requestAnimationFrame(() => p.classList.add('is-open'));
-    else p.classList.remove('is-open');
-    h.classList.toggle('mnav-open', st.open);
-    t.setAttribute('aria-expanded', String(st.open));
-    t.setAttribute('aria-label', st.open ? '关闭菜单' : '打开菜单');
+  const els = () => ({
+    panel: document.querySelector('[data-mnav-panel]'),
+    header: document.querySelector('[data-nav]'),
+    toggle: document.querySelector('[data-mnav-toggle]'),
+  });
+  const parts = (panel) => ({
+    inner: panel.querySelector('.sm-panel'),
+    layers: Array.from(panel.querySelectorAll('.sm-prelayer')),
+    labels: Array.from(panel.querySelectorAll('.sm-label')),
+    links: Array.from(panel.querySelectorAll('.sm-link')),
+    subs: Array.from(panel.querySelectorAll('.sm-sub')),
+  });
+
+  /* 关闭态初值：与 CSS 的 SSR 初始态一致（屏外 / 标签压下 / 序号透明）。
+     ⚠️ 必须显式 x:0 —— CSS 里的 translateX(100%) 会被 gsap 解析成独立 x 分量
+     与 xPercent 叠加（起点变 200%、终态卡在 100%），2026-09-23 实测。 */
+  const applyClosed = (panel) => {
+    if (!panel) return;
+    const p = parts(panel);
+    gsap.set([p.inner, ...p.layers], { x: 0, xPercent: 100 });
+    gsap.set(p.labels, { yPercent: 140, rotate: 10 });
+    gsap.set(p.links, { '--sm-num': 0 });
+    gsap.set(p.subs, { y: 14, opacity: 0 });
+    panel.hidden = true;
+  };
+  const killTweens = () => {
+    openTlRef?.kill(); openTlRef = null;
+    closeTweenRef?.kill(); closeTweenRef = null;
+    textTweenRef?.kill(); textTweenRef = null;
+    iconTweenRef?.kill(); iconTweenRef = null;
   };
 
-  const close = () => { if (st.open) { st.open = false; sync(); } };
-  const toggle = () => { st.open = !st.open; sync(); };
+  let openTlRef = null, closeTweenRef = null, textTweenRef = null, iconTweenRef = null;
+
+  /* 开关的图标 + 文字动画（打开/关闭共用） */
+  const animateIcon = (opening) => {
+    const icon = els().toggle?.querySelector('.sm-icon');
+    if (!icon) return;
+    iconTweenRef?.kill();
+    iconTweenRef = opening
+      ? gsap.to(icon, { rotate: 225, duration: 0.8 * D(), ease: 'power4.out', overwrite: 'auto' })
+      : gsap.to(icon, { rotate: 0, duration: 0.35 * D(), ease: 'power3.inOut', overwrite: 'auto' });
+  };
+  const animateText = (opening) => {
+    const inner = els().toggle?.querySelector('[data-mnav-text]');
+    if (!inner) return;
+    const cur = opening ? '菜单' : '关闭';
+    const target = opening ? '关闭' : '菜单';
+    const seq = [cur];
+    for (let i = 0; i < 3; i++) seq.push(seq[seq.length - 1] === '菜单' ? '关闭' : '菜单');
+    if (seq[seq.length - 1] !== target) seq.push(target);
+    inner.innerHTML = seq.map((l) => `<span>${l}</span>`).join('');
+    textTweenRef?.kill();
+    gsap.set(inner, { yPercent: 0 });
+    textTweenRef = gsap.to(inner, {
+      yPercent: -((seq.length - 1) / seq.length) * 100,
+      duration: (0.5 + seq.length * 0.07) * D(),
+      ease: 'power4.out',
+    });
+  };
+
+  const open = () => {
+    const { panel, header, toggle } = els();
+    if (!panel) return;
+    closeTweenRef?.kill(); closeTweenRef = null;
+    applyClosed(panel);
+    panel.hidden = false;
+    panel.classList.add('is-open'); // verify 契约：开抽屉即有 is-open
+    st.open = true;
+    header?.classList.add('mnav-open');
+    toggle?.setAttribute('aria-expanded', 'true');
+    toggle?.setAttribute('aria-label', '关闭菜单');
+
+    const p = parts(panel);
+    if (reduced()) { // 瞬间到位
+      gsap.set([p.inner, ...p.layers], { xPercent: 0 });
+      gsap.set(p.labels, { yPercent: 0, rotate: 0 });
+      gsap.set(p.links, { '--sm-num': 1 });
+      gsap.set(p.subs, { y: 0, opacity: 1 });
+    } else {
+      const tl = gsap.timeline();
+      openTlRef = tl;
+      p.layers.forEach((l, i) =>
+        tl.fromTo(l, { xPercent: 100 }, { xPercent: 0, duration: 0.5, ease: 'power4.out' }, i * 0.07));
+      const at = p.layers.length * 0.07 + 0.08;
+      tl.fromTo(p.inner, { xPercent: 100 }, { xPercent: 0, duration: 0.65, ease: 'power4.out' }, at);
+      tl.to(p.labels, { yPercent: 0, rotate: 0, duration: 1, ease: 'power4.out', stagger: 0.09 }, at + 0.1);
+      tl.to(p.links, { '--sm-num': 1, duration: 0.6, ease: 'power2.out', stagger: 0.06 }, at + 0.15);
+      tl.to(p.subs, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out', stagger: 0.07 }, at + 0.22);
+    }
+    animateIcon(true);
+    animateText(true);
+  };
+
+  const close = () => {
+    const { panel, header, toggle } = els();
+    if (!panel || !st.open) { st.open = false; return; }
+    st.open = false;
+    openTlRef?.kill(); openTlRef = null;
+    panel.classList.remove('is-open');
+    header?.classList.remove('mnav-open');
+    toggle?.setAttribute('aria-expanded', 'false');
+    toggle?.setAttribute('aria-label', '打开菜单');
+
+    const p = parts(panel);
+    if (reduced()) {
+      applyClosed(panel);
+    } else {
+      closeTweenRef?.kill();
+      closeTweenRef = gsap.to([p.inner, ...p.layers], {
+        x: 0, xPercent: 100, duration: 0.32, ease: 'power3.in', overwrite: 'auto',
+        onComplete: () => applyClosed(panel),
+      });
+    }
+    animateIcon(false);
+    animateText(false);
+  };
+  const closeNow = () => { // 软导航换页/回桌面：不等动画，立即归位
+    killTweens();
+    st.open = false;
+    const { panel, header, toggle } = els();
+    if (panel) applyClosed(panel);
+    header?.classList.remove('mnav-open');
+    toggle?.setAttribute('aria-expanded', 'false');
+    toggle?.setAttribute('aria-label', '打开菜单');
+  };
 
   document.addEventListener('click', (ev) => {
     const t = ev.target instanceof Element ? ev.target : null;
     if (!t) return;
-    if (t.closest('[data-mnav-toggle]')) { ev.preventDefault(); toggle(); return; }
-    // 点菜单里的链接 → 收起（导航交给 ClientRouter）
+    if (t.closest('[data-mnav-toggle]')) { ev.preventDefault(); st.open ? close() : open(); return; }
+    // 点抽屉里的链接 → 收起（导航交给 ClientRouter）
     if (t.closest('[data-mnav-panel] a')) { close(); return; }
-    // 点菜单外 → 收起
+    // 点抽屉外 → 收起
     if (st.open && !t.closest('[data-mnav-panel]') && !t.closest('[data-nav]')) close();
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && st.open) { ev.preventDefault(); close(); }
   });
-  // 视口变宽（回到桌面）或换页时收起，避免菜单残留
+  // 视口变宽（回到桌面）或换页时收起，避免抽屉残留
   const mq = window.matchMedia('(min-width: 769px)');
-  if (mq.addEventListener) mq.addEventListener('change', () => close());
-  document.addEventListener('astro:page-load', () => { st.open = false; sync(); });
-  sync();
+  if (mq.addEventListener) mq.addEventListener('change', () => closeNow());
+  document.addEventListener('astro:page-load', () => closeNow());
+  closeNow();
 }
 
 /* ---------- 顶部指示线：悬停跟随 + 当前页激活 ---------- */
