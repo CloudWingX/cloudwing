@@ -3781,3 +3781,39 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
 - 回归：verify-nav-shrink **40/40** + verify-music **53/53** + smoke **76/76**。
 - **§78 部署上线（同日）**：提交 `91c4338`（2 文件，+17/−5）push-retry 第 8 轮
   推送成功；线上探针第 3 轮 **NAV_FIX=PASS**；CDP tab 无残留。
+
+## §79 音乐页官方封面 + 同步歌词（2026-09-23 晚）
+
+- 需求：站长「音乐页面的音乐请你自行去网络上找专辑图片和歌词」。
+  现状：4 张封面为自制占位图、歌词目录只有 README（两首纯音乐页面自动显示
+  「♪ 纯音乐」占位，无需歌词；需要补的是 4 张封面 + 2 份带时间轴 LRC）。
+- 数据源侦查过程（多源降级）：
+  - VGMdb 证实站内数据正确：`Avid / Hands Up to the Sky`（VVCL-1869）Disc1-05
+    即 `Into the Sky <MODv> 3:49`（站内 duration 229.8 吻合）—— album 标注无误。
+  - vgmdb.info API / coverartarchive.org 本机与代理均不可达（curl 000）；
+    MusicBrainz ws/2 API 可达但 2012 原版 OST 无封面标记。
+  - **封面最终来源**：Apple Music iTunes Search API（JP 区）命中
+    `Avid / Hands Up to the Sky - EP`（1568248139）与
+    `魔法使いの夜 オリジナルサウンドトラック`（1576619125），artworkUrl100
+    替换 `600x600bb` 下载官方图；Deemo 合辑不在 Apple Music JP，改从
+    **QQ 音乐**（client_search_cp API）拿『Deemo』Song Collection 合辑封面
+    （y.gtimg.cn CDN，500×500）—— 注意首个搜索命中是「Deemo」原声集
+    （albummid 001mGMiQ39D1q2），必须按 albumname 含 "Song Collection" 过滤
+    拿到正确合辑（003L52404b944F）。
+  - **歌词最终来源**：LRCLIB（lrclib.net/api）—— into-the-sky 用 dur=230.4
+    的 SawanoHiroyuki 条目（内容与 91flac/LETRAS 交叉印证为 MODv 版）；
+    starry-night 站内音源 230.5s 是 **Game Ver.**（LRCLIB 完整版 269s 不匹配），
+    搜到 `~Game Ver.~` 条目（dur=230，开场即副歌「星が瞬くこんな夜に願い事を…」，
+    正确）。两份 LRC 末行时间戳 224.8s / 218.9s 均在音源时长内。
+- 入库：4 张封面覆盖 `covers/<id>.jpg`（Deemo 合辑封面同用于两首 Deemo 曲）；
+  `lyrics/into-the-sky.lrc`（41 行）+ `lyrics/starry-night.lrc`（34 行）；
+  README「自制生成图」说明更新为官方封面来源。
+- 断言更新：verify-music 原「有词曲目缺 LRC 时显示『暂无歌词』」已过时
+  （该状态不复存在），改为「歌词面板显示同步歌词行」（正则
+  `/Do you feel alone/i`）。
+- 回归：verify-music **53/53** + smoke **76/76**。
+- **§79 部署上线（同日）**：提交 `607f9e6`（8 文件）推送成功（github 443 抖动
+  严重，重试 3 次后 round 1 成功）；线上轮询第 2 轮 PASS（covers/lrc 200 +
+  LRC 内容含同步行）；线上 CDP 端到端探针 `_shots/music-e2e-s79.mjs`：
+  唱片盘芯 `background-image` 指向官方封面、切到 Into the Sky 后歌词面板渲染
+  **40 行**（首行 "Do you feel alone?"）→ E2E=PASS；截图目检通过。

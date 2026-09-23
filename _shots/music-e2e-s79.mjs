@@ -1,0 +1,30 @@
+// §79 线上端到端探针：封面渲染 + 歌词面板渲染
+import WebSocket from 'file:///C:/Users/24645/.workbuddy/binaries/node/workspace/node_modules/ws/index.js';
+const CDP = 'http://127.0.0.1:9222';
+const BASE = process.argv[2] || 'https://cloudwing.pages.dev';
+const list = await (await fetch(CDP + '/json/new?url=' + encodeURIComponent('about:blank'), { method: 'PUT' })).json();
+const ws = new WebSocket(list.webSocketDebuggerUrl, { perMessageDeflate: false });
+let id = 0; const pend = new Map();
+const send = (method, params = {}) => new Promise((res) => { const i = ++id; pend.set(i, res); ws.send(JSON.stringify({ id: i, method, params })); });
+ws.on('message', (m) => { const d = JSON.parse(m); if (d.id && pend.has(d.id)) { pend.get(d.id)(d.result); pend.delete(d.id); } });
+await new Promise(r => ws.on('open', r));
+await send('Page.enable');
+await send('Page.navigate', { url: BASE + '/music/' });
+await new Promise(r => setTimeout(r, 7000));
+const ev = async (expr) => (await send('Runtime.evaluate', { expression: expr, returnByValue: true })).result?.value;
+
+const cov = await ev(`(()=>{const l=document.querySelector('[data-mp-label]');const cs=l?getComputedStyle(l):null;return JSON.stringify({bg:cs?cs.backgroundImage.slice(0,70):'none'})})()`);
+console.log('COVER:', cov);
+await ev(`document.querySelector('[data-mp-next]').click()`);
+await new Promise(r => setTimeout(r, 2500));
+await ev(`[...document.querySelectorAll('[data-mp-lyrics-toggle],button')].find(b=>/词/.test(b.textContent||'')||b.hasAttribute('data-mp-lyrics-toggle'))?.click()`);
+await new Promise(r => setTimeout(r, 2500));
+const ly = await ev(`(()=>{const i=document.querySelector('[data-mp-lyrics-inner]');return JSON.stringify({lines:i?i.querySelectorAll('.mp-ly-line').length:0, first:(i?.querySelector('.mp-ly-line')?.textContent||'').slice(0,40), empty:(i?.querySelector('.mp-ly-empty')?.textContent||'').slice(0,20)})})()`);
+console.log('LYRICS:', ly);
+const ok = /"bg":"url\(/.test(cov) && /"lines":\d+/.test(ly) && !/"lines":0/.test(ly);
+console.log('E2E=' + (ok ? 'PASS' : 'CHECK_MANUALLY'));
+const shot = await send('Page.captureScreenshot', { format: 'png' });
+const fs = await import('fs');
+fs.writeFileSync('_shots/music-covers-s79' + (BASE.includes('localhost') ? '-local' : '') + '.png', Buffer.from(shot.data, 'base64'));
+await fetch(CDP + '/json/close/' + list.id);
+process.exit(0);
