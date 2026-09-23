@@ -167,15 +167,19 @@ const m1 = await ev(`(()=>{const p=document.querySelector('[data-mnav-panel]'); 
     编号内容:firstLink?getComputedStyle(firstLink,'::after').content:'(none)',
     编号可见:firstLink?parseFloat(getComputedStyle(firstLink,'::after').opacity):0,
     开关态:document.querySelector('[data-nav]').classList.contains('mnav-open'),
+    开关可点:(()=>{const t=document.querySelector('[data-mnav-toggle]');const b=t.getBoundingClientRect();
+      const el=document.elementFromPoint(b.left+b.width/2, b.top+b.height/2);
+      return !!el && (el===t || t.contains(el) || !!el.closest('[data-mnav-toggle]'));})(),
     aria:document.querySelector('[data-mnav-toggle]').getAttribute('aria-expanded')};})()`);
 console.log('  ' + JSON.stringify(m1));
 check('抽屉已打开', m1.打开 === true);
+check('开关在抽屉之上仍可点（elementFromPoint 命中开关）', m1.开关可点 === true, String(m1.开关可点));
 check('面板已到终态（xPercent 0 / opacity 1）', m1.透明度 === '1' && /matrix\(1, 0, 0, 1, 0, 0\)/.test(m1.面板变换), `${m1.透明度} ${m1.面板变换}`);
-check('玻璃底 + 模糊', /rgba\(10, 10, 15, 0\.96\)/.test(m1.背景) && /blur\(20px\)/.test(String(m1.模糊)), `${m1.背景} | ${m1.模糊}`);
+check('低可见度磨砂底 + 模糊', /rgba\(10, 10, 15, 0\.5\)/.test(m1.背景) && /blur\(16px\)/.test(String(m1.模糊)), `${m1.背景} | ${m1.模糊}`);
 check('右侧全高贴边（top 0 / 高=视口 / 右缘 0）',
   m1.顶部 === 0 && Math.abs(m1.高 - 844) <= 1 && m1.右缘 === 0, `顶=${m1.顶部} 高=${m1.高} 右=${m1.右缘}`);
 check('抽屉宽度 = clamp(280px, 84vw, 400px)',
-  Math.abs(m1.宽 - Math.round(Math.min(360, Math.max(260, 390 * 0.76)))) <= 1.5, `宽=${m1.宽}`);
+  Math.abs(m1.宽 - Math.round(Math.min(200, Math.max(170, 390 * 0.38)))) <= 1.5, `宽=${m1.宽}`);
 check('2 层前导层已滑入到位', m1.前导层 === 2 && m1.前导层就位 === true, `层=${m1.前导层}`);
 check('一级链接 7 个（含可点的「记录」父项）+ 组内 4 个（共 11 个）',
   m1.一级链接数 === 7 && m1.子链接数 === 4 && m1.链接数 === 11, `一级=${m1.一级链接数} 子=${m1.子链接数} 总=${m1.链接数}`);
