@@ -22,8 +22,12 @@
 
 约定：
 - 文件名用**英文/数字**（`<id>.mp3`），避免中文与空格的 URL 编码问题；
-- 封面放 `covers/<id>.jpg`（当前为自制生成图，源 FLAC 无内嵌封面；换真实封面直接覆盖同名文件）；
-- 歌词放 `lyrics/<id>.lrc` 即自动启用同步高亮（零配置，见 `lyrics/README.md`）；
+- 封面放 `covers/<id>.jpg`（§79，2026-09-23 已换成官方专辑封面：Deemo 合辑封面
+  取自 QQ 音乐『Deemo』Song Collection、Into the Sky <MODv> 取自 Apple Music
+  「Avid / Hands Up to the Sky - EP」、魔法使いの夜 OST 取自 Apple Music 同名专辑）；
+- 歌词放 `lyrics/<id>.lrc` 即自动启用同步高亮（零配置，见 `lyrics/README.md`；
+  §79：into-the-sky / starry-night 为 LRCLIB 社区同步歌词，后者为 Game Ver. 版本，
+  与站点音源时长一致）。
 - 音乐涉及版权，请只放自己有权使用的内容。
 
 ## Range 补丁（§67.8，public/sw.js）

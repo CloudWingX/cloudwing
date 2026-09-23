@@ -97,12 +97,12 @@ check('序号显示 02 / 04', String(s3.序号).trim() === '02 / 04', String(s3.
 check('第二首自动播放', s3.暂停 === false);
 check('第二首时长 ≈ 3:50', s3.时长 > 224 && s3.时长 < 236, String(s3.时长));
 
-console.log('\n=== 有词曲目缺 LRC 时显示「暂无歌词」===');
+console.log('\n=== 有词曲目已接入同步歌词（§79：LRC 落库后此断言从「暂无歌词」改为歌词行） ===');
 await ev(`document.querySelector('[data-mu-lyrics]').click()`);
 await sleep(900);
 const s3l = await ev(`(()=>{const p=document.querySelector('[data-mu-lyrics-panel]');
-  return (p?.textContent||'').trim().slice(0,10);})()`);
-check('歌词面板显示「暂无歌词」', String(s3l).includes('暂无歌词'), String(s3l));
+  return (p?.textContent||'').trim().slice(0,40);})()`);
+check('歌词面板显示同步歌词行', /Do you feel alone/i.test(String(s3l)), String(s3l));
 await ev(`document.querySelector('[data-mu-lyrics]').click()`);
 await sleep(300);
 
