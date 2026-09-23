@@ -216,6 +216,10 @@ const fmtLen = (s?: number) => {
     aspect-ratio: 1 / 1;
     will-change: transform;
     overflow: clip;
+    /* §79.1（2026-09-23 晚）：阴影从 disc 移过来后必须同步圆形化 ——
+       box-shadow 跟随 border-radius，方形 wrap 会让外阴影呈矩形扩散
+       （用户实测「唱片周围有矩形边框」）。50% 与唱片圆一致，观感复原。 */
+    border-radius: 50%;
     box-shadow:
       0 26px 70px rgba(0, 0, 0, 0.55),
       0 6px 18px rgba(0, 0, 0, 0.45);
