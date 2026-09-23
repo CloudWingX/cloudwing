@@ -204,11 +204,21 @@ const fmtLen = (s?: number) => {
     align-items: center;
   }
 
-  /* 唱片：wrap 吃 3D 视差（JS transform），disc 吃自转（CSS animation），互不打架 */
+  /* 唱片：wrap 吃 3D 视差（JS transform），disc 吃自转（CSS animation），互不打架。
+     §78（2026-09-23）：wrap 加 overflow:clip —— disc 是正方形盒做 360° 自转，
+     转到 45° 时渲染 bounding 变成对角线尺寸（手机端 300px 盒 → ~424px），
+     越界部分会撑大文档 scrollWidth：手机端 layout viewport 跟着扩展，
+     fixed 导航被拉宽 → 「开启播放时导航栏移动」。唱片是圆、旋转越界部分
+     本就不可见，裁掉无视觉差异；外部阴影移到不旋转的 wrap 上（overflow:clip
+     不裁自身 box-shadow，阴影外观与原先完全一致）。 */
   .mp-discwrap {
     width: 100%;
     aspect-ratio: 1 / 1;
     will-change: transform;
+    overflow: clip;
+    box-shadow:
+      0 26px 70px rgba(0, 0, 0, 0.55),
+      0 6px 18px rgba(0, 0, 0, 0.45);
   }
   .mp-disc {
     position: relative;
@@ -217,10 +227,7 @@ const fmtLen = (s?: number) => {
     border-radius: 50%;
     background: radial-gradient(circle at 50% 50%, #262e38 0 16.5%, #12161d 17% 47%, #0a0d12 47.5% 100%);
     border: 1px solid rgba(255, 255, 255, 0.07);
-    box-shadow:
-      0 26px 70px rgba(0, 0, 0, 0.55),
-      0 6px 18px rgba(0, 0, 0, 0.45),
-      inset 0 0 40px rgba(0, 0, 0, 0.55);
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.55);
     animation: mp-spin 24s linear infinite;
     animation-play-state: paused;
   }
