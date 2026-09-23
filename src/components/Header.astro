@@ -260,8 +260,7 @@ try {
      脚本会兜底：verify-nav-shrink.mjs 断言 1600/1440，
      并断言"导航容器与主内容容器同宽、同左缘"。 */
   .header-container {
-    position: relative;
-    z-index: 66; /* 高于抽屉（65）：抽屉打开时「关闭」开关/品牌仍可见可点 */
+    position: relative; /* 不设 z-index：抽屉（67）要盖住导航条，仅开关靠自身 z-68 浮出 */
     box-sizing: border-box;
     width: 100%;
     max-width: 1600px;
@@ -518,6 +517,8 @@ try {
      · 动画只动 transform / opacity / 自定义属性；prefers-reduced-motion 由 JS 归零时长
      ============================================================ */
   .sm-toggle {
+    position: relative;
+    z-index: 68; /* 高于抽屉（67）：菜单按钮永远浮在抽屉之上可点 */
     display: none; /* 桌面端不渲染 */
     align-items: center;
     gap: 8px;
@@ -566,8 +567,14 @@ try {
   .sm-drawer {
     position: fixed;
     inset: 0;
-    z-index: 65; /* 顶栏（70）之下：开关始终可点 */
+    z-index: 67; /* 高于导航条（无层级）/低于开关（68）：抽屉盖住导航栏 */
     pointer-events: none;
+  }
+  /* 抽屉打开时摘掉胶囊的 backdrop-filter：防止 container 形成层叠上下文
+     把开关困在抽屉之下（只有滚动态胶囊才有 blur，展开瞬间被抽屉盖住无感） */
+  .site-header.mnav-open .header-container {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
   .sm-panel { pointer-events: auto; }
 

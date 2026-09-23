@@ -170,10 +170,15 @@ const m1 = await ev(`(()=>{const p=document.querySelector('[data-mnav-panel]'); 
     开关可点:(()=>{const t=document.querySelector('[data-mnav-toggle]');const b=t.getBoundingClientRect();
       const el=document.elementFromPoint(b.left+b.width/2, b.top+b.height/2);
       return !!el && (el===t || t.contains(el) || !!el.closest('[data-mnav-toggle]'));})(),
+    盖住导航条:(()=>{const gh=document.querySelector('.btn-pro')||document.querySelector('.btn-github');if(!gh)return false;
+      const b=gh.getBoundingClientRect();
+      const el=document.elementFromPoint(b.left+b.width/2, b.top+b.height/2);
+      return !!el && (!!el.closest('.sm-panel') || !!el.closest('.sm-drawer'));})(),
     aria:document.querySelector('[data-mnav-toggle]').getAttribute('aria-expanded')};})()`);
 console.log('  ' + JSON.stringify(m1));
 check('抽屉已打开', m1.打开 === true);
 check('开关在抽屉之上仍可点（elementFromPoint 命中开关）', m1.开关可点 === true, String(m1.开关可点));
+check('抽屉盖住导航条（GitHub 按钮位置命中的是抽屉）', m1.盖住导航条 === true, String(m1.盖住导航条));
 check('面板已到终态（xPercent 0 / opacity 1）', m1.透明度 === '1' && /matrix\(1, 0, 0, 1, 0, 0\)/.test(m1.面板变换), `${m1.透明度} ${m1.面板变换}`);
 check('低可见度磨砂底 + 模糊', /rgba\(10, 10, 15, 0\.5\)/.test(m1.背景) && /blur\(16px\)/.test(String(m1.模糊)), `${m1.背景} | ${m1.模糊}`);
 check('右侧全高贴边（top 0 / 高=视口 / 右缘 0）',

@@ -3853,3 +3853,9 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   材质 rgba(10,10,15,0.5)+blur(16px)；**顺手修出截图文案 bug：抽屉（header 子元素 z-65）
   盖住 header-container（无层级）→「关闭」开关不可见**，container 抬 z-66；
   verify 加 elementFromPoint 开关可点断言，39/39。
+
+- **§80 补 3（同晚）**：站长「抽屉覆盖导航栏，菜单按钮保持不覆盖」——层级反转：
+  container 摘掉 z-index（抽屉 z-67 盖住导航条），开关自身 z-68 浮出；
+  关键坑：滚动态胶囊 backdrop-filter 会形成层叠上下文困住开关，
+  菜单打开时（mnav-open）显式 backdrop-filter:none。verify 加「抽屉盖住导航条」
+  elementFromPoint 断言（探针用 .btn-pro，GitHub 按钮在抽屉左缘外测不到），40/40。
