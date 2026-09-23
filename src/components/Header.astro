@@ -154,13 +154,17 @@ try {
         {
           items.map((item) =>
             item.children ? (
-              <li class="sm-item">
+              <li class="sm-item has-sub">
                 <a
                   class="sm-link"
                   href={item.href}
+                  aria-expanded="false"
                   aria-current={isActiveGroup(item) ? 'page' : undefined}
                 >
                   <span class="sm-label">{showLabel(item.label)}</span>
+                  <svg class="caret" viewBox="0 0 10 6" aria-hidden="true">
+                    <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
                 </a>
                 <div class="sm-sub">
                   {item.children.map((c) => (
@@ -658,12 +662,23 @@ try {
   }
   .sm-link:hover, .sm-link[aria-current='page'] { color: var(--accent-deep); }
 
-  /* 「记录」组内子链接：缩进小字，随抽屉淡入 */
+  /* 「记录」组内子链接：默认收进下拉（点父项展开，见 nav-mobile.js 捕获委托） */
   .sm-sub {
-    display: flex;
+    display: none; /* 收起态：不占位 */
     flex-direction: column;
     padding: 2px 0 10px 14px;
   }
+  .sm-item.open .sm-sub { display: flex; }
+  .sm-item .sm-link .caret {
+    width: 10px;
+    height: 6px;
+    flex: none;
+    align-self: center;
+    opacity: 0.7;
+    transition: transform 0.25s var(--nav-ease), opacity 0.2s ease;
+  }
+  .sm-item.open .sm-link .caret { transform: rotate(180deg); opacity: 1; }
+  .sm-item.open .sm-sub a[aria-current='page'] { color: var(--accent-deep); }
   .sm-sub a {
     color: var(--nav-ink-muted);
     text-decoration: none;

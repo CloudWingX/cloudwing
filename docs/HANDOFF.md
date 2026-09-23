@@ -3859,3 +3859,8 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   关键坑：滚动态胶囊 backdrop-filter 会形成层叠上下文困住开关，
   菜单打开时（mnav-open）显式 backdrop-filter:none。verify 加「抽屉盖住导航条」
   elementFromPoint 断言（探针用 .btn-pro，GitHub 按钮在抽屉左缘外测不到），40/40。
+
+- **§80 补 4（同晚）**：站长「把记录下的二级标题全部收进记录的下拉菜单里」——
+  子链接默认 display:none，点「记录」父项展开（capture 委托 + stopPropagation，
+  不跳转不关抽屉），再点收起；父项加 aria-expanded + caret 旋转；
+  开场时间线移除子链接动画。verify 加初始收起/展开/收起三断言，43/43。

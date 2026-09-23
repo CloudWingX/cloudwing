@@ -52,7 +52,6 @@ function initMobileNav() {
     gsap.set([p.inner, ...p.layers], { x: 0, xPercent: 100 });
     gsap.set(p.labels, { yPercent: 140, rotate: 10 });
     gsap.set(p.links, { '--sm-num': 0 });
-    gsap.set(p.subs, { y: 14, opacity: 0 });
     panel.hidden = true;
   };
   const killTweens = () => {
@@ -108,7 +107,6 @@ function initMobileNav() {
       gsap.set([p.inner, ...p.layers], { xPercent: 0 });
       gsap.set(p.labels, { yPercent: 0, rotate: 0 });
       gsap.set(p.links, { '--sm-num': 1 });
-      gsap.set(p.subs, { y: 0, opacity: 1 });
     } else {
       const tl = gsap.timeline();
       openTlRef = tl;
@@ -118,7 +116,6 @@ function initMobileNav() {
       tl.fromTo(p.inner, { xPercent: 100 }, { xPercent: 0, duration: 0.65, ease: 'power4.out' }, at);
       tl.to(p.labels, { yPercent: 0, rotate: 0, duration: 1, ease: 'power4.out', stagger: 0.09 }, at + 0.1);
       tl.to(p.links, { '--sm-num': 1, duration: 0.6, ease: 'power2.out', stagger: 0.06 }, at + 0.15);
-      tl.to(p.subs, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out', stagger: 0.07 }, at + 0.22);
     }
     animateIcon(true);
     animateText(true);
@@ -156,6 +153,26 @@ function initMobileNav() {
     toggle?.setAttribute('aria-expanded', 'false');
     toggle?.setAttribute('aria-label', '打开菜单');
   };
+
+  /* 「记录」组：点击父项只展开/收起下拉，不跳转不关抽屉。
+     必须捕获阶段 + stopPropagation：抢在 ClientRouter（bubble）与本文件的
+     「点抽屉链接即收起」委托之前，否则 preventDefault 拦不住 pushState 导航。 */
+  document.addEventListener('click', (ev) => {
+    const t = ev.target instanceof Element ? ev.target : null;
+    if (!t) return;
+    const link = t.closest('[data-mnav-panel] .sm-item.has-sub > .sm-link');
+    if (!link) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    const item = link.closest('.sm-item.has-sub');
+    const on = !item.classList.contains('open');
+    item.classList.toggle('open', on);
+    link.setAttribute('aria-expanded', String(on));
+    if (on && !reduced()) {
+      const subLinks = item.querySelectorAll('.sm-sub a');
+      gsap.fromTo(subLinks, { y: -8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: 'power3.out', stagger: 0.05 });
+    }
+  }, true);
 
   document.addEventListener('click', (ev) => {
     const t = ev.target instanceof Element ? ev.target : null;

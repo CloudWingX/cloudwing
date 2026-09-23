@@ -167,6 +167,7 @@ const m1 = await ev(`(()=>{const p=document.querySelector('[data-mnav-panel]'); 
     编号内容:firstLink?getComputedStyle(firstLink,'::after').content:'(none)',
     编号可见:firstLink?parseFloat(getComputedStyle(firstLink,'::after').opacity):0,
     开关态:document.querySelector('[data-nav]').classList.contains('mnav-open'),
+    记录收起:getComputedStyle(document.querySelector('[data-mnav-panel] .sm-sub')).display==='none',
     开关可点:(()=>{const t=document.querySelector('[data-mnav-toggle]');const b=t.getBoundingClientRect();
       const el=document.elementFromPoint(b.left+b.width/2, b.top+b.height/2);
       return !!el && (el===t || t.contains(el) || !!el.closest('[data-mnav-toggle]'));})(),
@@ -191,6 +192,27 @@ check('一级链接 7 个（含可点的「记录」父项）+ 组内 4 个（�
 check('条目编号已渲染（::after 计数器存在，opacity 1）',
   String(m1.编号内容) !== 'none' && String(m1.编号内容).includes('counter') && m1.编号可见 === 1, `${m1.编号内容} op=${m1.编号可见}`);
 check('mnav-open 态 + aria-expanded=true', m1.开关态 === true && m1.aria === 'true');
+check('「记录」子链接默认收进下拉（不占位）', m1.记录收起 === true);
+
+// 点「记录」父项 → 展开下拉（不跳转、不关抽屉），再点收起
+await ev(`document.querySelector('[data-mnav-panel] .sm-item.has-sub > .sm-link').click()`);
+await sleep(500);
+const m15 = await ev(`(()=>{const it=document.querySelector('[data-mnav-panel] .sm-item.has-sub');
+  const sub=it.querySelector('.sm-sub');
+  return {open:it.classList.contains('open'), 展开:getComputedStyle(sub).display!=='none',
+    子链接数:sub.querySelectorAll('a').length,
+    aria:it.querySelector(':scope > .sm-link').getAttribute('aria-expanded'),
+    抽屉仍开:document.querySelector('[data-mnav-panel]').classList.contains('is-open')};})()`);
+console.log('  ' + JSON.stringify(m15));
+check('点「记录」展开下拉（4 个子链接，不跳转不关抽屉）',
+  m15.open === true && m15.展开 === true && m15.子链接数 === 4 && m15.aria === 'true' && m15.抽屉仍开 === true,
+  JSON.stringify(m15));
+await ev(`document.querySelector('[data-mnav-panel] .sm-item.has-sub > .sm-link').click()`);
+await sleep(400);
+const m16 = await ev(`(()=>{const it=document.querySelector('[data-mnav-panel] .sm-item.has-sub');
+  return {收起:getComputedStyle(it.querySelector('.sm-sub')).display==='none',
+    aria:it.querySelector(':scope > .sm-link').getAttribute('aria-expanded')};})()`);
+check('再点「记录」收起下拉', m16.收起 === true && m16.aria === 'false', JSON.stringify(m16));
 
 await ev(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
 await sleep(700);

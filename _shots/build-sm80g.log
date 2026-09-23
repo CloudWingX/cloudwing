@@ -1,0 +1,44 @@
+[2m22:39:58[22m [34m[content][39m Syncing content
+[2m22:39:59[22m [34m[content][39m Synced content
+[2m22:39:59[22m [34m[types][39m Generated [2m618ms[22m
+[2m22:39:59[22m [34m[build][39m output: [34m"static"[39m
+[2m22:39:59[22m [34m[build][39m mode: [34m"static"[39m
+[2m22:39:59[22m [34m[build][39m directory: [34mD:\deep seek workplace\endfield-blog\dist\[39m
+[2m22:39:59[22m [34m[build][39m Collecting build info...
+[2m22:39:59[22m [34m[build][39m [32m✓ Completed in 672ms.[39m
+[2m22:40:03[22m [34m[build][39m Building static entrypoints...
+[2m22:40:04[22m [34m[vite][39m [32m✓ built in 1.32s[39m
+[2m22:40:08[22m [34m[vite][39m [32m✓ built in 4.27s[39m
+[2m22:40:08[22m [34m[build][39m Rearranging server assets...
+
+[42m[30m generating static routes [39m[49m
+[2m22:40:09[22m   [34m├─[39m [2m/404.html[22m [31m(+2.05s)[39m 
+[2m22:40:11[22m   [34m├─[39m [2m/about/index.html[22m [2m(+137ms)[22m 
+[2m22:40:11[22m   [34m├─[39m [2m/account/index.html[22m [2m(+132ms)[22m 
+[2m22:40:11[22m   [34m├─[39m [2m/blog/index.html[22m [31m(+3.08s)[39m 
+[2m22:40:14[22m   [34m├─[39m [2m/calendar/index.html[22m [2m(+292ms)[22m 
+[2m22:40:15[22m   [34m├─[39m [2m/gallery/index.html[22m [2m(+288ms)[22m 
+[2m22:40:15[22m   [34m├─[39m [2m/log/index.html[22m [31m(+635ms)[39m 
+[2m22:40:16[22m   [34m├─[39m [2m/music/index.html[22m [31m(+635ms)[39m 
+[2m22:40:16[22m   [34m├─[39m [2m/nav/index.html[22m [2m(+130ms)[22m 
+[2m22:40:16[22m   [34m├─[39m [2m/posts/2025-12-05-log/index.html[22m [2m(+128ms)[22m 
+[2m22:40:16[22m   [34m├─[39m [2m/posts/2025-12-08-headless-regression/index.html[22m [2m(+126ms)[22m 
+[2m22:40:17[22m   [34m├─[39m [2m/posts/2026-06-14-cloudflare-pages-notes/index.html[22m [2m(+166ms)[22m 
+[2m22:40:17[22m   [34m├─[39m [2m/posts/2026-09-07-log/index.html[22m [2m(+131ms)[22m 
+[2m22:40:17[22m   [34m├─[39m [2m/posts/2026-09-08-log/index.html[22m [31m(+987ms)[39m 
+[2m22:40:18[22m   [34m├─[39m [2m/posts/2026-09-09-log/index.html[22m [2m(+127ms)[22m 
+[2m22:40:18[22m   [34m├─[39m [2m/posts/2026-09-10-log/index.html[22m [2m(+128ms)[22m 
+[2m22:40:18[22m   [34m├─[39m [2m/posts/2026-09-11-log/index.html[22m [31m(+638ms)[39m 
+[2m22:40:19[22m   [34m├─[39m [2m/posts/2026-09-14-log/index.html[22m [2m(+132ms)[22m 
+[2m22:40:19[22m   [34m├─[39m [2m/posts/2026-09-15-log/index.html[22m [31m(+635ms)[39m 
+[2m22:40:19[22m   [34m├─[39m [2m/posts/2026-09-18-log/index.html[22m [2m(+126ms)[22m 
+[2m22:40:20[22m   [34m├─[39m [2m/posts/2026-09-19-rebuild-as-blog/index.html[22m [31m(+641ms)[39m 
+[2m22:40:20[22m   [34m├─[39m [2m/posts/index.html[22m [2m(+129ms)[22m 
+[2m22:40:20[22m   [34m├─[39m [2m/rss.xml[22m [2m(+49ms)[22m 
+[2m22:40:20[22m   [34m├─[39m [2m/index.html[22m [2m(+128ms)[22m 
+[2m22:40:21[22m [32m✓ Completed in 12.13s.
+[39m
+[2m22:40:21[22m [34m[build][39m [32m✓ Completed in 18.00s.[39m
+[2m22:40:21[22m [34m[@astrojs/sitemap][39m `sitemap-index.xml` created at `dist`
+[2m22:40:21[22m [34m[build][39m 23 page(s) built in [1m22.76s[22m
+[2m22:40:21[22m [34m[build][39m [1mComplete![22m
