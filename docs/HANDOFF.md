@@ -3843,3 +3843,7 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   前导层 2 层就位/编号 opacity/滚动后 fixed 稳定）+ smoke **76/76**；截图目检通过。
 - 归档：_shots/sm-drawer-open-s80.png（打开态截图）、_shots/diag2/3/4-sm80.mjs
   （定位探针）、verify/smoke/build 日志。
+
+- **§80 补（同晚）**：站长反馈「抽屉向右缩一缩，右边没有文字空隙太大」——
+  宽度 clamp(280,84vw,400)→clamp(260,76vw,360)、条目右留白 2.6em→1.9em、
+  面板右内边距 26→20px；verify 断言同步，38/38 复跑全绿。
