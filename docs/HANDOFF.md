@@ -3756,3 +3756,28 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
 - **§77 部署上线（同日）**：提交 `40d63e4`（21 文件）push-retry 第 8 轮推送
   成功（github 443 持续抖动）；线上轮询第 3 轮 PASS（folder=28 张 +
   peak-028.jpg 365KB）；CDP 残留 tab 已清理。
+
+## §78 修复：手机端音乐页播放时导航横移（2026-09-23 上午）
+
+- 需求：站长「音乐子页面在手机端开启播放时，导航栏会发生移动，请核查并修复」。
+- 取证（CDP iPhone 视口 390×844，点播放前后密集采样）：点播放瞬间
+  `.header-container` 从 390 宽涨到 **405**（W421 的 mp-disc 左 -15 右 +405），
+  `document.scrollWidth` 同步 390 → 405，约 5s 后回落；desktop 视口无此现象。
+- 根因：`.mp-disc` 是**正方形盒做 360° 自转**（mp-spin），转到 45° 附近时渲染
+  bounding 变成对角线尺寸（手机端 300px 盒 → ~424px，实测 W421 吻合）→ 越界
+  部分撑大文档 scrollWidth → 手机端 layout viewport 扩展 → `fixed` 导航
+  （left:0;right:0）被拉宽 → 观感「导航栏移动」。桌面端唱片 400px 且周围留白
+  足够，越界不出视口，所以从未复现。
+- 修复（两层，视觉零损）：
+  ① `music/index.astro`：`.mp-discwrap` 加 `overflow: clip` 裁掉旋转盒越界
+  （唱片是圆、越界部分本就不可见）；disc 的两片外部阴影移到**不旋转**的 wrap
+  （overflow:clip 不裁自身 box-shadow，阴影外观完全一致；inset 阴影留在 disc）。
+  ② `global.css`：`html { overflow-x: clip }` 全站兜底 —— 任何元素横向越界
+  都不再产生横滚/扩展 layout viewport（clip 不建滚动容器不建 BFC，零副作用；
+  旧浏览器不支持时退化为原行为）。
+- 探针：`_shots/music-nav-probe.mjs / -probe2.mjs`（复现：navW 390→405）→
+  `music-nav-verify.mjs`（修复验证：播放后 7.4s 内 9 次采样 scrollW=navW=390
+  恒定，NAV_FIX=PASS；截图目检唱片/阴影/播放态无异常）。
+- 回归：verify-nav-shrink **40/40** + verify-music **53/53** + smoke **76/76**。
+- **§78 部署上线（同日）**：提交 `91c4338`（2 文件，+17/−5）push-retry 第 8 轮
+  推送成功；线上探针第 3 轮 **NAV_FIX=PASS**；CDP tab 无残留。

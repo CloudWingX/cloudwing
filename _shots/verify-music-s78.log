@@ -1,0 +1,92 @@
+=== 初始状态（侧栏播放器）===
+  {"有音频":true,"src":"evolution-era.mp3","暂停":true,"当前时间":0,"时长":292.11,"卡片状态":"loading","曲名":"Evolution Era","序号":"01 / 04","进度宽":"0%","时间显示":"0:00","总时长显示":"4:52"}
+  ✅ 音频单例已创建
+  ✅ 默认加载第一首（evolution-era.mp3）  —— evolution-era.mp3
+  ✅ 初始为暂停
+  ✅ 时长已知（≈4:52，元数据已加载）  —— 292.11
+
+=== 播放 ===
+  ✅ 点击播放后不再暂停
+  ✅ 卡片状态为 playing  —— playing
+  ✅ 时间在推进  —— 1.57s
+  ✅ 进度条宽度非 0  —— 0.461468%
+  ✅ 当前时间文本已更新  —— 0:01
+
+=== 歌词面板（词按钮弹出）===
+  ✅ 点「词」后面板展开
+  ✅ 展开态 aria-expanded=true  —— true
+  ✅ 纯音乐曲目显示「纯音乐」占位  —— ♪ 纯音乐，请欣赏
+  ✅ 再点收起面板
+
+=== 暂停 ===
+  ✅ 再次点击暂停
+  ✅ 暂停后时间不再推进  —— 2.88 -> 2.88
+
+=== 下一首 ===
+  ✅ 切到第二首（into-the-sky.mp3）  —— into-the-sky.mp3
+  ✅ 曲名已更新  —— Into the Sky <MODv>
+  ✅ 序号显示 02 / 04  —— 02 / 04
+  ✅ 第二首自动播放
+  ✅ 第二首时长 ≈ 3:50  —— 229.84
+
+=== 有词曲目缺 LRC 时显示「暂无歌词」===
+  ✅ 歌词面板显示「暂无歌词」  —— 暂无歌词
+
+=== 上一首 ===
+  ✅ 回到第一首  —— evolution-era.mp3
+  ✅ 序号显示 01 / 04  —— 01 / 04
+
+=== 等待元数据就绪（线上首访 duration 要等网络加载）===
+  ✅ 音频元数据就绪（duration 为有限值）  —— isFinite(duration)
+
+=== 进度条点击跳转（点 75% 处）===
+  ✅ 跳转到约 75%（292.1s 的 ≈219s）  —— 219.81s / 292.11s
+
+=== 软导航切页后是否继续播放 ===
+  ✅ 切页后音频仍在
+  ✅ 切页后仍在播放（未被打断）  —— paused=false
+  ✅ 切页后曲名仍正确  —— Evolution Era
+  ✅ 切页后进度条仍在推进  —— 76.5737%
+
+=== 控制按钮在切页后仍可用（委托是否失效）===
+  ✅ 切页后点暂停有效
+
+=== /music/ 音乐页 ===
+  {"有音频":true,"src":"evolution-era.mp3","暂停":true,"页状态":"paused","盘旋转类":false,"盘动画":"paused","曲名":"Evolution Era","曲目数":4,"参数项":10,"歌词":"♪ 这是一首纯音乐 · 请尽情欣赏","tilt":""}
+  ✅ 页面容器存在（data-music-page）
+  ✅ 页面音频单例已创建并加载第一首  —— evolution-era.mp3
+  ✅ 曲目表 4 项  —— 4
+  ✅ 参数网格 10 项  —— 10
+  ✅ 初始暂停 → 唱片无旋转类  —— false/paused
+  ✅ 歌词区显示纯音乐占位  —— ♪ 这是一首纯音乐 · 请尽情欣赏
+
+=== 音乐页播放：唱片旋转 ===
+  ✅ 音乐页播放中
+  ✅ 唱片加 is-playing 类
+  ✅ 动画 play-state = running  —— running
+
+=== 悬停视差 ===
+  ✅ 视差 tilt 已生效（transform 非空）  —— perspective(900px) rotateX(3.99deg) rotateY(7.19deg)
+
+=== 状态同步：共享音频单例（§67.9，软导航往返验证）===
+  /music/ 页在播（软导航前）: true
+  ✅ 软导航前音乐页音频仍在播放  —— true
+  {"同一元素":true,"卡片状态":"playing","曲名":"Evolution Era","序号":"01 / 04","在播":true,"src":"evolution-era.mp3"}
+  ✅ 侧栏与音乐页指向同一 <audio>（共享单例同一性）  —— {"同一元素":true,"卡片状态":"playing","曲名":"Evolution Era","序号":"01 / 04","在播":true,"src":"evolution-era.mp3"}
+  ✅ 软导航后音频继续播放且仍是原曲  —— {"同一元素":true,"卡片状态":"playing","曲名":"Evolution Era","序号":"01 / 04","在播":true,"src":"evolution-era.mp3"}
+  ✅ 侧栏卡片自动同步为播放中  —— {"同一元素":true,"卡片状态":"playing","曲名":"Evolution Era","序号":"01 / 04","在播":true,"src":"evolution-era.mp3"}
+  ✅ 侧栏曲名/序号与实况一致  —— {"同一元素":true,"卡片状态":"playing","曲名":"Evolution Era","序号":"01 / 04","在播":true,"src":"evolution-era.mp3"}
+  {"暂停":true,"当前时间":6.8}
+  ✅ 侧栏点暂停即全局暂停（同一元素被控）  —— {"暂停":true,"当前时间":6.8}
+  ✅ 暂停时进度已保留（不是重置）  —— 6.8s
+  {"页状态":"paused","暂停":true,"src":"evolution-era.mp3","曲名":"Evolution Era"}
+  ✅ 回 /music/ 后页面同步为暂停态  —— {"页状态":"paused","暂停":true}
+  ✅ 回 /music/ 后曲目仍是暂停时那一首  —— evolution-era.mp3
+  ✅ 回 /music/ 后唱片未旋转（暂停态）  —— false/paused
+
+=== 音乐页曲目表点选 ===
+  ✅ 点第 3 首切换到 wings-of-piano  —— wings-of-piano.mp3
+  ✅ 曲名同步为 Wings of Piano  —— Wings of Piano
+  ✅ 全程无 JS 异常
+
+=== 结果：53/53 通过 ===
