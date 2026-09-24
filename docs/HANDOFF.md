@@ -1645,7 +1645,9 @@ mobile-shots 15/15（零横向溢出）、diag-errors 7 页全 0。
 ```powershell
 cd 'D:\deep seek workplace\endfield-blog'
 # 特征由你自己给（脚本故意不存默认特征 —— 默认值一定会过期）。--have 正向 / --not 反向。
-node scripts/poll-deploy.mjs --have '--w-max:\s*1300px' --have 'brightness\(var\(--vid-dim' `
+# 例（2026-09-24 现值）：容器令牌现为 --w-max:1600px（§68）；bash 调用时 \s 会被
+# MSYS 参数转换吃掉，改用 ' *'（PowerShell 不受影响）。
+node scripts/poll-deploy.mjs --have '--w-max: *1600px' --have 'brightness\(var\(--vid-dim' `
                             --not 'hero::before' --not '60% 50% at 30% ?-10%'
 # 超时/失败会打印逐项结果并以退出码 1 结束（可用于脚本里卡住"确认上线"这一步）
 ```
@@ -1924,8 +1926,10 @@ node scripts/run-regress.mjs          # 期望「总结: 24/24 通过」
 
 # 4) 线上同一套（先确认推送成功、CF 构建完成；反向特征检查见 §7.5）
 git ls-remote origin main
-node scripts/poll-deploy.mjs --have '--w-max:\s*1300px' --not 'hero::before'   # 通了才继续
-node scripts/smoke.mjs https://cloudwing.pages.dev                 # 期望 73/73（#424 已修复，见 §37）
+node scripts/poll-deploy.mjs --have '--w-max: *1600px'   # 通了才继续（§68 起 --w-max=1600）
+#   ⚠️ bash 里给 poll-deploy 传含 \s 的正则会被 MSYS 参数转换吃成 /s（2026-09-24 实测，
+#      线上明明有该特征却轮询 5 分钟全不命中）—— 用 ' *' 代替 '\s*'；PowerShell 不受影响
+node scripts/smoke.mjs https://cloudwing.pages.dev                 # 期望 76/76
 node scripts/verify-videobg.mjs https://cloudwing.pages.dev dark   # 期望 23/23（§62 断言迁移 +1，见 §62.2）
 node scripts/verify-copy.mjs https://cloudwing.pages.dev           # 期望 31/31（走 sitemap 枚举全站页面）
 

@@ -124,6 +124,8 @@ node scripts/smoke.mjs http://127.0.0.1:4321    # 期望 76/76
 - **推送成功判据不是 "Everything up-to-date"，必须 verify remote ref**：`git ls-remote origin main`。
 - **部署确认用 `scripts/poll-deploy.mjs --have <正向特征> --not <反向特征>`**
   （别用 chunk 哈希；删除类改动必须给 `--not` 反向特征，且要防边缘缓存骗过——§43.2/§7.5）。
+  ⚠️ **bash 里传正则特征别写 `\s`**：MSYS 参数转换会把它吃成 `/s`，导致线上明明有该特征
+  却永远轮询不命中（2026-09-24 实测）——用 `' *'` 代替 `'\s*'`；PowerShell 不受影响。
 - 视觉类缺陷：部署后要求无残留闪烁/重复加载，完整验证后才算成功。
 
 ### C1.4 内容纪律
