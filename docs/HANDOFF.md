@@ -15,7 +15,11 @@
 > （见 §43.1），其"简版硬规则"职责并入本文件。
 > 文中的本机路径（`D:\deep seek workplace\...`、Edge 路径、代理端口）来自开发机，换机器请按实际情况替换。
 >
-> 最后更新：2026-09-23 晚 **移动端导航改形 StaggeredMenu 抽屉（§80，四轮迭代）：
+> 最后更新：2026-09-24 早 **verify-music（§67，53/53）加入 `run-regress.mjs` 批跑队列
+> （§81 遗留待办清零，队列 23 → 24，§0/§7.2 旧数"21"系 buildstamp/noreload 加入前口径一并修正）；
+> 补齐交接压缩入口 `docs/handover/HANDOVER.md`
+> （C0–C3 分级，方案 v1.0 承诺的入口文件此前实际缺失）；引言/§0/§7.2/§14 基线数字修正**；
+> 2026-09-23 晚 **移动端导航改形 StaggeredMenu 抽屉（§80，四轮迭代）：
 > 右侧滑入低可见度磨砂玻璃抽屉盖住导航栏、双色前导层/条目错峰动画、counter 编号
 > 内联跟排零右留白、「记录」二级收进下拉点父项展开；桌面端零改动（§5 铁律与
 > data-mnav-* 契约全保）**；同日 **音乐页官方封面 + 同步歌词（§79：iTunes/QQ 音乐
@@ -60,8 +64,8 @@
 > 单页/组件 → 只跑该页冒烟 e2e（`node scripts/smoke.mjs`）+ 该模块脚本；
 > 功能模块 → 相关模块脚本 + 关键路径 e2e；
 > **全量回归 `run-regress.mjs` 只在 PR 前 / 合并前 / 发布前 / 站长明确要求时跑，且优先交给 CI**。
-> 自检入口仍为 `cd endfield-blog && node scripts/run-regress.mjs`（**现为 21 个脚本**一次批跑）→
-> 最近一次 **21/21 全绿**（2026-09-20 下午，GitHub 热榜卡 + 新脚本 verify-ghhot 加入后的发布前全量，见 §56；
+> 自检入口仍为 `cd endfield-blog && node scripts/run-regress.mjs`（**现为 24 个脚本**一次批跑）→
+> 最近一次 **24/24 全绿**（2026-09-24 早，verify-music 入队后的首次全量，串行逐脚本退出码全 0；
 > 此前 20/20 见 §53 / §54）；
 > 单入口 `node scripts/smoke.mjs` 为 **73/73**（2026-09-20 晚，日历子页面：壳层 +5 + 功能断言 +4，见 §64；此前画廊文件夹视图回归段 +3，见 §59）。
 > ✅ **文案漂移现在有断言了**（2026-09-19）：`scripts/verify-copy.mjs`（31 条，见 §7.2 / §42.2）——
@@ -82,15 +86,16 @@
 个人博客与档案站「云翼 / CloudWing」，**Astro 7 静态站 + React 岛 + 暗色电影感玻璃 UI**，源码在 `endfield-blog/`，
 线上 <https://cloudwing.pages.dev>，仓库 <https://github.com/CloudWingX/cloudwing>（公开），
 推 `main` 即由 Cloudflare Pages 自动构建部署。**站点处于可用且已验证的状态**：
-验证脚本现为 **verify-\* 20 个**（其中 **19 个**入批跑队列 `scripts/run-regress.mjs`；
-单入口 `smoke.mjs` **76/76**，2026-09-23 晚）；**verify-music（§67，53/53）尚未入队**，
-音乐页改动后需单独跑（入队列入 §81 待办）；可读性 0 处不达标、
+验证脚本现为 **verify-\* 20 个**（**19 个**入批跑队列 `scripts/run-regress.mjs`：
+`verify-music`（§67，53/53）已于 2026-09-24 入队；未入队的仅 `verify-countup`
+（侧栏统计 CountUp，非死代码，按需手跑））。
+单入口 `smoke.mjs` **76/76**（2026-09-23 晚）；可读性 0 处不达标、
 8 个页面 0 JS 异常、手机端 0 横向溢出（三机型 × 7 页）。
 （另有若干**工具/诊断脚本**：`diag-edges` / `probe-point` / `diag-424` / `poll-deploy` /
 `border-check` / `imgstats` / `shot-*` 等——不在批跑队列但不是死代码，清单见 §7.2 表尾。）
 ⚠️ **"一键批跑"不等于"每次改动都要跑"** —— 测试按 §47 分层，全量只在 PR/合并/发布/明确要求时跑。
 
-> **接手第一件事**：`cd endfield-blog && npm run build && node scripts/smoke.mjs`（期望 **64/64**）。
+> **接手第一件事**：`cd endfield-blog && npm run build && node scripts/smoke.mjs`（期望 **76/76**）。
 > ⚠️ 必须用 `npm run build`（= `astro build && pagefind --site dist`）——只跑 astro build
 > 不会生成 pagefind 索引，verify-search 会全红。⚠️ 回归前确认 4321 服务是**新起的**
 > （陈旧的 preview 会让你测一小时的旧 dist，见 §41）。
@@ -1501,7 +1506,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 > ★**怎么选脚本：按 §47 的分层策略，不是每次都跑全套**★
 > 改一个子页面 → `smoke.mjs` + 该页对应的一条脚本；
 > 改一个功能模块 → 本表里相关的那几条；
-> **全套 `node scripts/run-regress.mjs`（21 个脚本串行 + 汇总 PASS/FAIL）只在
+> **全套 `node scripts/run-regress.mjs`（24 个脚本串行 + 汇总 PASS/FAIL）只在
 > PR 前 / 合并前 / 发布前 / 站长明确要求时跑，且优先交给 CI。**
 > `verify-copy.mjs` 与 `verify-nav-icons.mjs` 是**不需要无头浏览器**的两个
 > （只读源码 / 已构建的 `dist/`；`verify-copy` 也可直接给线上 URL 走 sitemap 枚举），
@@ -1518,6 +1523,7 @@ const ws = new WebSocket(tab.webSocketDebuggerUrl);
 | `verify-theme.mjs` | 单主题不变量：默认暗色/系统浅色仍暗色/历史偏好切不回浅色/无开关/首屏逐帧无浅色帧 | **11/11** |
 | `verify-redesign.mjs` | 暗色电影感：玻璃令牌取值、**无暂停按钮 + 视频默认在播 + 旧暂停接口已移除 + reduced-motion 仍不播**、导航滚动过渡 | **16/16**（2026-09-18 暂停按钮删除后由 14 条改为此 6 条） |
 | `verify-search.mjs` | 搜索悬浮窗：懒加载、开关、出结果、快捷键、软导航后仍可用 | **17/17** |
+| `verify-music.mjs` | ★**音乐模块全链路**（§67/§67.9/§79，2026-09-24 入批跑队列）：播放/暂停、进度、上下曲、切页不中断、进度条跳转、歌词面板（词按钮弹出/纯音乐占位）、/music/ 页（唱片旋转+视差+曲目表+参数）、**侧栏播放器与音乐页共享同一音频单例**（软导航往返曲目与播放态保持）、同步歌词行、全程无 JS 异常 | **53/53** |
 | `verify-videobg.mjs` | 背景视频：播放/层级/透明度/遮罩 + hero 文字在视频上的**实际像素**对比度（用"隐藏文字的对照页"取样，并自检对照页版式与真实页一致）+ **主容器左右边缘无分界线（逐 72px 段、8bit 灰度口径、三帧取最小）** + **结构判定：与容器同宽的元素不得有绝对定位的渐变伪元素** + **降级底断言（§62 迁移）：底色渐变由 body::after 承载、html 持有不透明深色画布** | **23/23**（2026-09-21 早 §62 断言迁移 22 → 23） |
 | `verify-videobg-global.mjs` | 全站背景一致性：逐页硬刷新 + 软导航一圈，视频未被重建、旧背景仍在（含 `/nav/` 与 `/log/`） | **37/37**（2026-09-19 晚 `/log/` 加入后 33 → 37） |
 | `verify-copy.mjs` | ★**文案断言**：① 禁用词（浅色通透 / 双主题 / 主题切换 / 开灯… 等"描述已删除功能"的措辞）不得出现在任何页面的可见文案与 meta；② 占位词（TODO/待补/lorem…）不得出现；③ 文案锚点 —— `site.ts` 的 notice/tagline 非空且不含禁用词，notice 必须出现在关于页可见文案、tagline 必须出现在 meta description；④ 每页都有非空 title/description。**只扫页面固定文案与 meta，不扫文章正文**（历史文章合法会提"浅色主题/作品库"） | **31/31** |
@@ -1909,8 +1915,11 @@ $ud = Join-Path $env:TEMP ("cwcdp-" + (Get-Date -Format 'HHmmss'))
 Start-Process 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' -ArgumentList @('--headless=new','--remote-debugging-port=9222','--remote-allow-origins=*',"--user-data-dir=$ud",'--no-first-run','--disable-extensions')
 
 # 3) 串行跑全部脚本（当前基线见 §7.2）—— 一条命令搞定
-node scripts/run-regress.mjs          # 期望「总结: 21/21 通过」
-# （它内部按固定顺序串行 spawn 21 个脚本；不要自己并发跑，见 §7.1 第 6 条）
+node scripts/run-regress.mjs          # 期望「总结: 24/24 通过」
+# （它内部按固定顺序串行 spawn 24 个脚本；不要自己并发跑，见 §7.1 第 6 条）
+# ⚠️ 沙箱环境若整片 FAIL(null)（error=EBUSY）：沙箱禁止 node 进程派生子进程，
+#    spawnSync 机制跑不了 —— 等价替代：bash for 循环按队列顺序逐个顶层 `node scripts/<名>.mjs`
+#    （同样串行、以退出码判定），2026-09-24 实测 24/24 全绿。
 # 单独重跑某个脚本：node scripts/<名>.mjs http://127.0.0.1:4321 [light|dark]
 
 # 4) 线上同一套（先确认推送成功、CF 构建完成；反向特征检查见 §7.5）
@@ -3897,7 +3906,7 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
 
 **当前基线（2026-09-23 晚）**
 - smoke **76/76**；verify-nav-shrink **43/43**；verify-music **53/53**。
-- 最近一次发布前全量 run-regress 日期见 §7.2 表；**verify-music 尚未入队**（见下）。
+- 最近一次发布前全量 run-regress 日期见 §7.2 表；verify-music 已于 2026-09-24 入队（24/24 全绿）。
 
 **本日新坑速查（细节与证据在 §80）**
 1. **gsap × SSR transform 叠加**：元素 CSS 带 `translateX(100%)` 时，gsap 首次接管把
@@ -3914,7 +3923,9 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
    （禁用，见长期记忆）→ 文件操作用 node/PowerShell，延时用 node setTimeout。
 
 **遗留待办**
-- [ ] `verify-music` 加入 `run-regress.mjs` 队列（音乐页改动后才不会被全量回归漏掉）。
+- [x] `verify-music` 加入 `run-regress.mjs` 队列 —— **已完成（2026-09-24 早）**：
+      入队后单跑 53/53；全量串行 24/24 全绿（队列此前实为 23 项——§0/§7.2 的"21"
+      是 verify-buildstamp/verify-noreload 加入前的旧数，本次一并修正为 24）。
 - [ ] §10（遗留问题）/ §13（下一步参考）中的旧条目仍然有效，按需推进。
 - [ ] 9222 无头 Edge 再遇「ws open 但不回包」：按序换 profile → 加 --no-proxy-server →
       核对 preview 端口协议（localhost vs 127.0.0.1）。
