@@ -19,6 +19,8 @@ const scripts = [
   'verify-noreload',
   'verify-hero', 'verify-home', 'verify-nav-shrink', 'verify-nav',
   'verify-brand', 'verify-theme', 'verify-redesign', 'verify-search',
+  // 音乐模块全链路（§67/§79：侧栏播放器 + /music/ 页 + 共享音频单例）
+  'verify-music',
   'verify-videobg', 'verify-videobg-global', 'contrast-audit',
   'verify-ghhot',
   'mobile-shots', 'diag-errors', 'diag-424',
