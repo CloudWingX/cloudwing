@@ -67,7 +67,14 @@ const BUILD_ID = import.meta.env.PROD ? globalThis.__cwBuildId : 'dev';
          却是一个阻塞渲染的跨域请求 —— 不再引回。 -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..500&display=swap" rel="stylesheet" />
+    <!-- §83.4（2026-09-25）：字体 CSS 改异步加载。原来同步 rel=stylesheet 在手机网络上
+         fonts.googleapis.com 不可达/慢时**阻塞首绘**到超时（真机「刷新特别慢」的一大来源）。
+         media=print 技巧：下载不阻塞渲染，onload 后切回 all 生效；font-display=swap
+         保证切换前用回退字体正常显示文字。noscript 兜底无 JS 环境仍同步加载。 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..500&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..500&display=swap" rel="stylesheet" />
+    </noscript>
     <meta name="generator" content={Astro.generator} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={`${title} — ${SITE.latin}`} />

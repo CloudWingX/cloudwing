@@ -378,6 +378,21 @@ try { bgWs.close(); } catch { /* 忽略 */ }
 
 check('无 JS 异常', errs.length === 0, errs[0] || '');
 
+// ── §83.4 手机端不加载背景视频（2026-09-25）──
+// 真机「刷新特别慢 + JS 功能失效」主因：6MB 视频自动播放与 JS 包抢带宽。
+// 手机端（≤768）视频不赋 src（不下载），poster 静帧兜底；桌面端行为不变（src 由脚本赋值）。
+await s('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+await s('Page.navigate', { url: BASE + '/' });
+await sleep(4000);
+const mobV = await ev(`(() => { const v = document.querySelector('.video-bg__el'); const w = document.querySelector('.video-bg');
+  return { src: v ? v.getAttribute('src') : 'NO-EL', ds: v ? (v.getAttribute('data-src') || '').split('/').pop() : '',
+    bg: w ? getComputedStyle(w).backgroundImage : '', disp: v ? getComputedStyle(v).display : '' }; })()`);
+check('手机端背景视频不加载（无 src，§83.4）', mobV.src === null || mobV.src === '', `src=${mobV.src} display=${mobV.disp}`);
+check('手机端 poster 静帧兜底', /bg-poster/.test(mobV.bg), mobV.bg.slice(0, 80));
+check('手机端 data-src 保留（桌面脚本可赋值）', mobV.ds === 'bg-loop.mp4', mobV.ds);
+// 恢复桌面视口（后续截图用）
+await s('Emulation.setDeviceMetricsOverride', { width: 1920, height: 900, deviceScaleFactor: 2, mobile: false });
+
 // 截图取首页（hero + 背景视频一起入镜，最能反映观感）
 const shot = await s('Page.captureScreenshot', { format: 'png' });
 if (shot.result?.data) { writeFileSync(`${OUT}\\videobg-hero-${THEME}.png`, Buffer.from(shot.result.data, 'base64')); console.log(`\n  ✓ videobg-hero-${THEME}.png`); }

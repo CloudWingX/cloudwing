@@ -26,11 +26,11 @@ const on = Boolean(VIDEO_BG.src);
       class="video-bg"
       transition:persist="video-bg"
       aria-hidden="true"
-      style={`--vid-opacity-dark:${VIDEO_BG.opacityDark};--vid-opacity-light:${VIDEO_BG.opacityLight};--vid-dim:${VIDEO_BG.dim};`}
+      style={`--vid-opacity-dark:${VIDEO_BG.opacityDark};--vid-opacity-light:${VIDEO_BG.opacityLight};--vid-dim:${VIDEO_BG.dim};${VIDEO_BG.poster ? `--vb-poster:url('${VIDEO_BG.poster}')` : ''}`}
     >
       <video
         class="video-bg__el"
-        src={VIDEO_BG.src}
+        data-src={VIDEO_BG.src}
         poster={VIDEO_BG.poster || undefined}
         autoplay
         loop
@@ -86,6 +86,20 @@ const on = Boolean(VIDEO_BG.src);
   @media (prefers-reduced-motion: reduce) {
     .video-bg__el { transition: none; }
   }
+  /* §83.4 手机端（≤768）：不加载视频，poster 静帧兜底（真机「刷新慢 + JS 功能失效」
+     的带宽主因）。★与 §62 的区别★：手机端 video 已 display:none（无半透明视频层叠），
+     poster 铺在 .video-bg 底上不会被"洗亮"——§62 的禁令针对的是 poster 垫在视频之下。 */
+  @media (max-width: 768px) {
+    .video-bg__el { display: none; }
+    /* poster URL 经 markup 的 --vb-poster 注入（<style> 内不做模板插值，${} 会成字面量） */
+    .video-bg {
+      background-color: #05080c;
+      background-image: var(--vb-poster, none);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+  }
   /* 视频一旦能出画，就淡入 —— 避免加载瞬间的"跳一下"。
      没加 has-poster 时（组件未接管）保持可见，避免万一脚本失效导致视频被永久藏住。 */
   .video-bg.has-poster:not(.is-playing) .video-bg__el { opacity: 0; }
@@ -138,6 +152,12 @@ const on = Boolean(VIDEO_BG.src);
     if (!v || !wrap || v.__cwWired) return;
     v.__cwWired = true;
     wrap.classList.add('has-poster'); // 由脚本接管淡入（脚本没跑时视频保持可见，不会永久隐藏）
+
+    /* §83.4 手机端不加载背景视频（2026-09-25）：6MB 视频与 JS 包抢带宽是
+       真机「刷新特别慢 + JS 功能失效」的主因。手机端（≤768）不赋 src（不下载），
+       poster 静帧兜底（CSS）；桌面端立即赋 src，行为与此前一致。 */
+    var mobileBg = !window.matchMedia('(min-width: 769px)').matches;
+    if (!mobileBg && v.dataset.src) { v.src = v.dataset.src; }
 
     var playing = function () { wrap.classList.add('is-playing'); wrap.classList.remove('is-failed'); };
 
