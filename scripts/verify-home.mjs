@@ -105,6 +105,17 @@ check('移动端影像元信息常显（不靠悬停）', mob.影像元信息常
 check('移动端无横向溢出', mob.溢出 === 0, String(mob.溢出));
 check('无 JS 异常', errs.length === 0, errs[0] || '');
 
+// §83 真机反馈回归守护（2026-09-25）：手机上「刷新后代码卡片下方内容消失、过会儿才有」
+// = rAF 冻结时 sweep 兜底失效。ui.js 已加 pageshow/visibilitychange 同步 sweep + 2.5s 超时强制显现。
+// ⚠️ 缺陷本身只在真机 rAF 冻结场景出现，脚本环境复现不了红——本断言为守护性回归断言：
+// 防未来把这两道保险删掉后此场景回归。
+await ev(`window.scrollTo(0, 950)`);
+await sleep(400);
+await s('Page.reload');
+await sleep(3600);
+const rvLeft = await ev(`document.querySelectorAll('.rv:not(.in)').length`);
+check('刷新（恢复滚动位）后 3.5s 内滚动显现全部完成', rvLeft === 0, 'unrevealed=' + rvLeft);
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n=== 结果：${results.length - failed.length}/${results.length} 通过 ===`);
 failed.forEach((f) => console.log('  ❌ ' + f.n));

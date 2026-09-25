@@ -240,6 +240,19 @@ function scanReveals() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
+    /* 手机端保险（2026-09-25，§83 反馈「刷新后代码卡片下方内容消失、过一会儿才有」）：
+       手机浏览器息屏/切后台时 rAF 冻结，上面这条 rAF 节流的 sweep 会被卡住，
+       未显现元素停在 opacity:0 直到回前台。补两道与 rAF 无关的驱动：
+       ① pageshow（bfcache 前进后退恢复）与 visibilitychange（切后台回前台）直接同步 sweep；
+       ② 超时强制显现：加载后 2.5s 仍未显现的一律放行——入场动画远在此之前就该完成，
+          最坏情况元素只可能隐藏 2.5s，杜绝任何环境下「永久隐藏」。 */
+    window.addEventListener('pageshow', sweepRv);
+    document.addEventListener('visibilitychange', sweepRv);
+    if (!window.__rvForceTimer) {
+      window.__rvForceTimer = setTimeout(() => {
+        document.querySelectorAll('.rv:not(.in)').forEach((el) => el.classList.add('in'));
+      }, 2500);
+    }
   }
   sweepRv();
 }
