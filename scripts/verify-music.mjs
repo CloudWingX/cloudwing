@@ -222,6 +222,19 @@ check('曲名同步为 Wings of Piano', String(m3.曲名).includes('Wings'), Str
 
 check('全程无 JS 异常', errs.length === 0, errs[0] || '');
 
+// §83.3 无 JS 降级（2026-09-25）：真机反馈「唱片没有加载、点按无反应」= 手机上 JS 包迟到/未跑。
+// 唱片封面原为空壳 div + JS 注入 → 无 JS 时唱片没有封面。现 SSR 直出第一首封面（JS 接管后照常换图）。
+// 断言：禁用脚本执行 → /music/ 的 mp-label 必须已带 SSR 封面（红：空壳无背景图）。
+await send('Emulation.setScriptExecutionDisabled', { value: true });
+await send('Page.navigate', { url: BASE + '/music/' });
+await sleep(3000);
+const nojs = await ev(`(() => { const l = document.querySelector('[data-mp-label]');
+  const bg = l ? getComputedStyle(l).backgroundImage : '';
+  const grooves = !!document.querySelector('.mp-grooves');
+  return { hasLabel: !!l, bgHasCover: bg.includes('covers/'), grooves }; })()`);
+check('无 JS 时唱片封面由 SSR 直出（真机降级，§83.3）', nojs.hasLabel && nojs.bgHasCover && nojs.grooves, JSON.stringify(nojs));
+await send('Emulation.setScriptExecutionDisabled', { value: false });
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n=== 结果：${results.length - failed.length}/${results.length} 通过 ===`);
 if (failed.length) failed.forEach((f) => console.log('  ❌ ' + f.name));
