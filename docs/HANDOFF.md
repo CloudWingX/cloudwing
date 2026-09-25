@@ -4033,6 +4033,28 @@ poll-deploy 确认（⚠️ poll 特征别带冒号——MSYS 会把 `x:y` 当�
 - 至此双保险齐备：① 慢网「包迟到」→ 3s rv-expired 失效开关；② 真机 rAF 冻结 →
   pageshow/visibilitychange sweep + 2.5s 超时。
 
+### §83.4 手机端加载根治（2026-09-25 晚，站长：「手机端有严重加载问题」）
+
+> 手机刷新慢/JS 功能失效的**带宽层根因**：6MB 背景视频自动播放 + 渲染阻塞的字体 CSS，
+> 与交互 JS 包抢带宽 → 包迟到 → 音乐页/显现全灭。三刀修复（全部手机端行为，桌面零变化）：
+
+1. **背景视频手机端不加载**（省 5.92MB）：video 改 `data-src`（无 src 不下载），
+   `initVideoBg` 桌面（≥769px）立即赋 src（has-poster/is-playing 淡入流程与此前完全一致）；
+   手机端 video `display:none` + `.video-bg` 以 poster 静帧兜底（§62 洗亮禁令不适用：
+   手机端没有视频层叠在 poster 之上；poster URL 经 markup `--vb-poster` 注入——
+   ⚠️ Astro `<style>` 内不做模板插值，`${}` 会成字面量）。
+2. **字体 CSS 异步化**：`media="print" onload="this.media='all'"` + noscript 兜底
+   （手机网络上 fonts.googleapis.com 不可达时原同步 stylesheet **阻塞首绘到超时**）。
+3. **modulepreload 注入 22 页**：新 `plugins/vite-modulepreload.mjs`（Astro **integration**，
+   `astro:build:done` 钩子改写落盘 HTML——⚠️ vite 的 `transformIndexHtml`/`generateBundle`
+   对 Astro 静态页 HTML **都不触发**；`dir` 是 URL 对象须 `fileURLToPath`）。
+   交互 JS 在 head 解析时即以高优先级起拉。
+
+**断言**：verify-videobg 新增 3 条手机断言（无 src / poster 兜底 / data-src 保留）——
+旧代码红（src=/media/bg-loop.mp4），改后绿，**26/26**；verify-home 28/28、verify-music 54/54、
+smoke 76/76 全绿。提交 `8f21309`，poll 三特征（rv-expired/modulepreload/vb-poster）确认上线。
+真机预期：刷新不再被视频与字体阻塞，JS 秒级就位，音乐页/显现功能恢复正常。
+
 ### §83.3 音乐页手机端降级：唱片封面 SSR 直出（2026-09-25 晚）
 
 > 站长真机反馈：手机端 /music/ 唱片没有加载、点按播放无反应。取证（390×844 CDP +
