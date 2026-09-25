@@ -390,6 +390,14 @@ const mobV = await ev(`(() => { const v = document.querySelector('.video-bg__el'
 check('手机端背景视频不加载（无 src，§83.4）', mobV.src === null || mobV.src === '', `src=${mobV.src} display=${mobV.disp}`);
 check('手机端 poster 静帧兜底', /bg-poster/.test(mobV.bg), mobV.bg.slice(0, 80));
 check('手机端 data-src 保留（桌面脚本可赋值）', mobV.ds === 'bg-loop.mp4', mobV.ds);
+// §83.5：手机端背景统一（poster 叠暗化层≈桌面视频暗度）+ 黑边根治（禁回弹露出 html 底色）
+const bgU = await ev(`(() => { const w = document.querySelector('.video-bg'); const wcs = w ? getComputedStyle(w) : null;
+  const hcs = getComputedStyle(document.documentElement);
+  return { img: wcs ? wcs.backgroundImage : '', insetTop: wcs ? wcs.top : '',
+    overscroll: hcs.overscrollBehaviorY, htmlBg: hcs.backgroundColor }; })()`);
+check('手机端 poster 叠暗化层（与桌面观感统一）', /bg-poster/.test(bgU.img) && /linear-gradient/.test(bgU.img), bgU.img.slice(0, 90));
+check('手机端禁止回弹露黑底（overscroll-behavior）', bgU.overscroll === 'none' || bgU.overscroll === 'contain', bgU.overscroll);
+check('手机端 html 底色改深青（非近纯黑）', bgU.htmlBg !== 'rgb(3, 6, 10)', bgU.htmlBg);
 // 恢复桌面视口（后续截图用）
 await s('Emulation.setDeviceMetricsOverride', { width: 1920, height: 900, deviceScaleFactor: 2, mobile: false });
 

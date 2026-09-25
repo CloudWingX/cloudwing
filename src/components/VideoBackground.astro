@@ -91,13 +91,20 @@ const on = Boolean(VIDEO_BG.src);
      poster 铺在 .video-bg 底上不会被"洗亮"——§62 的禁令针对的是 poster 垫在视频之下。 */
   @media (max-width: 768px) {
     .video-bg__el { display: none; }
-    /* poster URL 经 markup 的 --vb-poster 注入（<style> 内不做模板插值，${} 会成字面量） */
+    /* §83.5 手机端背景统一（2026-09-25）：
+       ① poster 原帧偏亮，与桌面「视频半透明叠在深色底上」的观感差太多 → 叠一层
+          rgba(5,8,12,.55) 暗化（≈ 桌面 video opacity .45 压在 #05080c 上的效果）；
+       ② inset 上下各外扩 80px：手机浏览器地址栏伸缩/回弹会改变可视视口，
+          fixed inset:0 只覆盖布局视口，边缘会露出 html 底色形成「黑色矩形边框」；
+       ③ 与 §62 洗亮禁令不冲突：手机上 video 已 display:none，poster 之上没有半透明视频层。 */
     .video-bg {
+      inset: -80px 0 -80px 0;
       background-color: #05080c;
-      background-image: var(--vb-poster, none);
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
+      background-image: linear-gradient(rgba(5, 8, 12, 0.55), rgba(5, 8, 12, 0.55)),
+        var(--vb-poster, none);
+      background-size: cover, cover;
+      background-position: center, center;
+      background-repeat: no-repeat, no-repeat;
     }
   }
   /* 视频一旦能出画，就淡入 —— 避免加载瞬间的"跳一下"。

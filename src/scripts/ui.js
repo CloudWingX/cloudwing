@@ -788,6 +788,10 @@ function disposeEleg() {
 function startElegantTrails() {
   const canvas = document.querySelector('.stars-canvas');
   if (!canvas) { disposeEleg(); return; }
+  /* §83.5（2026-09-25）：星轨是鼠标轨迹效果——触屏设备（手机/平板）没有鼠标，
+     却仍要维护 canvas + rAF + resize 监听，白耗 CPU/电量。触屏直接不启动。
+     桌面（pointer: fine）行为完全不变。 */
+  if (!window.matchMedia('(pointer: fine)').matches) { disposeEleg(); return; }
   const host = canvas.parentElement;
   const ctx = canvas.getContext('2d');
   if (!ctx || !host) return;

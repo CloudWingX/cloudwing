@@ -172,6 +172,19 @@ html, body { margin: 0; }
 html {
   background: var(--bg-deep);
 }
+/* §83.5 手机端（≤768）背景统一 + 黑边根治（2026-09-25）：
+   ① 禁止回弹/滚动链（小米浏览器/Safari 的 overscroll 会露出 html 底色，
+      与 poster 亮星野之间出现「黑色矩形边框」）；
+   ② html 底色在手机端改深青（--bg-deep #03060a 近纯黑，与星野反差太大）→
+      即使露出也融入画面，不再像一块黑矩形。桌面端完全不变。 */
+@media (max-width: 768px) {
+  /* ★需要 !important★：Base.astro 为防白屏把底色写在 html 的**行内 style** 上（§62），
+     行内优先级高于任何 CSS 规则——不使用 !important 这条不生效（已实测踩到）。 */
+  html {
+    background: #071620 !important; /* 与 poster 星野暗部同族的深青 */
+    overscroll-behavior-y: none;
+  }
+}
 body {
   display: flex;
   flex-direction: column;
