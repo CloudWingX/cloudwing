@@ -105,6 +105,12 @@ const BUILD_ID = import.meta.env.PROD ? globalThis.__cwBuildId : 'dev';
       })();
       // 尽早打上 js 标记，让「入场/显现」动效只在 JS 可用时接管（无 JS 则直接显示）
       document.documentElement.classList.add('js');
+      // §83.1 慢网保险（2026-09-25）：js 标记让 .rv 隐藏态从首帧生效，而显现逻辑在 JS 包里——
+      // 慢网络刷新时「HTML/CSS 先到、包迟到」，下方内容会隐形数秒（真机实证）。
+      // 3s 后打 rv-expired 强制全部可见（内容优先于入场动画；包及时接管则不受影响）。
+      setTimeout(function () {
+        document.documentElement.classList.add('rv-expired');
+      }, 3000);
     </script>
     <script is:inline>
       // §60 构建指纹自愈（2026-09-21）：ClientRouter 软导航后，astro:page-load 时

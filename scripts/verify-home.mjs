@@ -116,6 +116,20 @@ await sleep(3600);
 const rvLeft = await ev(`document.querySelectorAll('.rv:not(.in)').length`);
 check('刷新（恢复滚动位）后 3.5s 内滚动显现全部完成', rvLeft === 0, 'unrevealed=' + rvLeft);
 
+// §83.1 慢网保险（2026-09-25）：屏蔽全部 _astro JS 包（模拟手机慢网「HTML 先到、包迟到」），
+// 4s 后代码卡下方内容必须可见（rv-expired 失效开关兜底）。红线：js 标记已打而包未运行 → .rv 全隐形。
+await s('Network.enable');
+await s('Network.setBlockedURLs', { urls: ['*://*/*_astro/*.js*'] });
+await s('Page.reload');
+await sleep(4200);
+const slow = await ev(`(() => {
+  const posts = document.querySelector('.sec-posts');
+  return { opacity: posts ? getComputedStyle(posts).opacity : 'NO-ELEMENT',
+    expired: document.documentElement.classList.contains('rv-expired') };
+})()`);
+check('慢网（JS 包被阻断）4s 后内容可见（rv-expired 兜底）', slow.opacity === '1' && slow.expired === true, `opacity=${slow.opacity} expired=${slow.expired}`);
+await s('Network.setBlockedURLs', { urls: [] });
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n=== 结果：${results.length - failed.length}/${results.length} 通过 ===`);
 failed.forEach((f) => console.log('  ❌ ' + f.n));

@@ -44,6 +44,15 @@ html.js .rv.in {
   opacity: 1;
   transform: none;
 }
+/* §83.1 慢网保险（2026-09-25）：js 标记由 <head> 内联脚本先于首帧打上，而显现逻辑在
+   JS 包里——慢网络刷新时「HTML/CSS 先到、包迟到」，这段窗口里 .rv 全部隐形（真机实证：
+   手机刷新后代码卡片下方内容消失）。Base.astro 内联脚本 3s 后打 rv-expired，此处强制
+   全部显现：内容优先于入场动画。包若及时接管则 3s 前已正常显现，不受影响。 */
+html.rv-expired .rv,
+html.rv-expired .sli {
+  opacity: 1 !important;
+  transform: none !important;
+}
 
 /* ---------- 等高线圆环：缓慢旋转（装饰性） ---------- */
 .contour { animation: contour-spin 80s linear infinite; }
