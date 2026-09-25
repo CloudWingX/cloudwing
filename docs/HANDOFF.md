@@ -4015,3 +4015,20 @@ poll-deploy 确认（⚠️ poll 特征别带冒号——MSYS 会把 `x:y` 当�
 - **断言**：verify-home 移动块新增守护断言「刷新（恢复滚动位）后 3.5s 内滚动显现全部完成」
   —— ⚠️ 缺陷仅在真机 rAF 冻结场景出现，脚本环境复现不了红，此断言为**守护性回归断言**
   （防未来删掉两道保险），如实记录红验证受限。verify-home **27/27**，smoke **76/76**。
+
+### §83.2 慢网刷新隐形根治（2026-09-25 晚，站长补充「刷新特别慢」后定位的真主因）
+
+> 站长补充关键信息后重新定位：**js 标记由 head 内联脚本先于首帧打上，而显现逻辑在 JS 包里**。
+> 慢网络刷新时「HTML/CSS 先到、JS 包迟到数秒」，这段窗口内所有 `.rv` 隐形——hero/代码卡
+> 不是 `.rv` 所以照常显示，下方内容却「消失」。上节的 rAF 冻结是次因，此为主因。
+
+- **红验证成立（§7.6）**：verify-home 用 `Network.setBlockedURLs` 阻断 `*_astro/*.js`
+  （模拟包迟到/被掐），旧代码 4s 后 `.sec-posts` opacity=0（**红**，27/28）。
+- **修复**：Base.astro 内联脚本 `setTimeout(3s)` 给 html 打 `rv-expired`；motion.css
+  `html.rv-expired .rv, .sli { opacity:1 !important; transform:none !important }`
+  （放 motion.css 保证级联顺序在隐藏规则之后）。包及时接管则 3s 前已正常显现、动效不受影响；
+  慢网时牺牲入场动画换内容可见——**内容优先**。
+- **绿**：阻断场景 4s 后 opacity=1、expired=true，verify-home **28/28**，smoke **76/76**；
+  提交 `e592e52`，poll `--have rv-expired` 确认线上生效。
+- 至此双保险齐备：① 慢网「包迟到」→ 3s rv-expired 失效开关；② 真机 rAF 冻结 →
+  pageshow/visibilitychange sweep + 2.5s 超时。
