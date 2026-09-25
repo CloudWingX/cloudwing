@@ -7,11 +7,11 @@
 >
 > - 完整历史日志 + 常驻手册：`docs/HANDOFF.md`（每轮交付照旧在彼处追加编号章节；
 >   工作区根目录 `<工作区>/HANDOFF.md` 是同一文件的副本，改完两边同步）。
-> - 历史全文归档：`docs/handover/archive/HANDOFF_full_v1_2026-09-23.md`
->   （SHA256 见同目录 `SHA256.txt`，截至 §81 / 2026-09-23 晚）。
+> - 历史全文归档：`docs/handover/archive/HANDOFF_full_v2_2026-09-25.md`（**最新**，
+>   SHA256 见同目录 `SHA256.txt`）；更早的 `HANDOFF_full_v1_2026-09-23.md` 保留备查（截至 §81）。
 > - 本机路径（`D:\deep seek workplace\...`、Edge、代理端口）来自开发机，换机器按实际替换。
 >
-> 最后更新：2026-09-24 早（verify-music 入批跑队列；基线见 C3 末尾）。
+> 最后更新：2026-09-25 晚（§82 性能与自定义域 + §83 手机端重构系列；基线见 C3.3）。
 
 ---
 
@@ -34,10 +34,16 @@
 - **不提交 `package-lock.json`**（Windows lock 缺平台可选依赖，CF `npm ci` 必挂）；
   `react`/`react-dom` 精确锁 **19.2.8**；`.npmrc` 保留 `legacy-peer-deps=true`。
 - **`IMG_CDN = ''`（`src/site.ts`）**：图片本地相对路径，不改回 jsDelivr。
-- 构建脚本保留 `plugins/vite-cjs-inline-shim.mjs`（删了构建失败）。
+- 构建脚本保留 `plugins/vite-cjs-inline-shim.mjs`（删了构建失败）与
+  `plugins/vite-modulepreload.mjs`（§83.4；删了失去 JS 预加载，手机慢网首屏退化）。
+  ⚠️ 后者是 **Astro integration**（`astro:build:done` 钩子）——vite 的 HTML 钩子对
+  Astro 静态页**不触发**；`dir` 是 URL 对象，须 `fileURLToPath`。
 - **★禁止在 bash 里做删除★**（`rm`/`git rm` 会被损坏的沙箱钩子接管并连带删整个父目录，
   曾实测 `git rm -r public/covers` 把整个 `public/` 与 `scripts/` 删掉）。
   删除一律"同卷 Move-Item 到中转目录 + `git add -A` 记录"，删后必须 `git status` 逐文件比对。
+  清理 `_shots` 类目录时**先 `git ls-files <目录>` 分清 tracked/untracked**——
+  untracked 才是垃圾，tracked 的历史证据误删会连累（2026-09-24 实测误移 100+ 个跟踪文件，`git restore --worktree` 无损还原）。
+  ⚠️ `git add -A` 会把未跟踪的 `_shots` 证据一并暂存 → 记得 `git restore --staged -- _shots/`。
 - bash 里 `npm`/`npx` 是坏 shim；构建/脚本用**绝对路径 node 直接跑入口**
   （`node ./node_modules/astro/bin/astro.mjs build`）；`npm run xxx` 走 PowerShell。
 - 推送失败先分清"代理坏了"还是"网络断了"（github.com:443 间歇不可达，
@@ -73,6 +79,27 @@ html 持不透明深色背景（#03060a）；body 永久无背景；底色渐变
 
 跑任何测试/探针不得让音乐出声：CDP 调试浏览器必须带 **`--mute-audio`** 启动。
 
+### C0.8 ★手机端专属硬约束（§83 系列，2026-09-25，站长：改手机不得影响 PC）★
+
+1. **手机端（≤768）背景视频不加载**：`<video>` 只给 `data-src`（不给 src 即不下载），
+   `initVideoBg` 在桌面（≥769px）才赋 src；手机端 video `display:none`，
+   由 `.video-bg` 的 **poster 静帧 + 55% 暗化层**兜底（观感与桌面视频一致）。
+2. **手机端 html 底色/回弹**：`overscroll-behavior-y:none` + 深青 `#071620`——
+   ⚠️ **必须 `!important`**，否则被 Base.astro 的 html **行内 style**（§62 防白屏）压过。
+   `.video-bg` 手机端 `inset:-80px 0` 外扩，吸收地址栏伸缩露出的黑边。
+3. **显现兜底（防"内容永久隐形"）**：`js` 标记由 head 内联脚本先于首帧打上，
+   而显现逻辑在 JS 包里 → 3s `rv-expired` 强制可见 + pageshow/visibilitychange 同步 sweep + 2.5s 超时。
+   慢网/真机 rAF 冻结是真实场景，**任何"JS 未运行则内容不可见"的实现都不允许**。
+4. **能 SSR 的视觉不许交给 JS**：唱片封面 `mp-label` 已 SSR 直出（`MUSIC[0].cover`），
+   JS 只负责切曲目换图。
+5. **改手机端前先确认 PC 零影响**：所有手机端改动一律写在 `@media (max-width: 768px)` 内，
+   或用 JS `matchMedia` 分支；桌面行为不得改变（站长明确要求）。
+
+### C0.9 触屏降级原则（§83.5）
+
+鼠标专属动效（星轨 canvas、大标题 3D tilt）用 `(pointer: fine)` 守卫——
+触屏设备无鼠标却要维护 canvas + rAF + resize 监听，纯耗 CPU/电量；桌面行为不变。
+
 ---
 
 ## C1 操作（build / 验证 / 上线）
@@ -107,6 +134,11 @@ Start-Process 'cmd.exe' -ArgumentList @('/c','"D:\deep seek workplace\endfield-b
 node scripts/smoke.mjs http://127.0.0.1:4321    # 期望 76/76
 ```
 
+⚠️ **preview 起不来的头号原因**：残留 `.astro/preview.json` + WorkBuddy 的 safe-delete shim
+（astro 启动时会 `fs.rm` 旧锁文件 → 被拦 → 4 秒自杀）。解法：先 `renameSync` 挪走锁文件再起；
+`existsSync` 有陈旧缓存（真删了仍报 true），**rename 抛 ENOENT 应视为"已清掉"直接继续**，
+别像早期那样重试 10 次白等。
+
 ### C1.2 验证脚本
 
 - 全部在 `scripts/`，用法 `node scripts/<名>.mjs [url]`；前置：4321 preview + 9222 浏览器。
@@ -120,14 +152,25 @@ node scripts/smoke.mjs http://127.0.0.1:4321    # 期望 76/76
 
 ### C1.3 部署与确认
 
+- **一键推送（2026-09-25 起）**：`bash "D:/deep seek workplace/.workbuddy/gh-push.sh" [分支=main]`
+  —— 探测驱动：SSH over 443（主）→ HTTPS 直连 → TCP 隧道（自动探测可达 IP），推完自动
+  **核验 remote ref**。理由：github.com:443 有间歇 SNI 干扰（§2），SSH 无 SNI 可掐，实测秒推。
+  依赖：`~/.ssh/id_ed25519`（公钥已加 GitHub）+ 仓库级 `core.sshCommand` 指向
+  `~/.ssh/github_config`（**用户的 `~/.ssh/config` 有写保护，别碰**）。
+  ⚠️ 凭据坑：一次失败重试会触发 PortableGit 的 `helper-selector`，把 `~/.gitconfig` 写成
+  `credential.helper=`（空值禁用一切）→ 之后全部 401。修法：`.gitconfig` 设
+  `helper = !"…git-credential-manager.exe"`（凭据库已有 `git:https://github.com` 存量）。
 - 推 `main` → Cloudflare Pages 自动构建（`npm run build`）→ 线上 <https://cloudwing.pages.dev>；
   **主域 `https://cloudwing.top`**（2026-09-25 起绑定，腾讯云注册 NS 已托管 CF）——两域名并行服务，
   canonical/sitemap/RSS 用 cloudwing.top。
 - **推送成功判据不是 "Everything up-to-date"，必须 verify remote ref**：`git ls-remote origin main`。
 - **部署确认用 `scripts/poll-deploy.mjs --have <正向特征> --not <反向特征>`**
   （别用 chunk 哈希；删除类改动必须给 `--not` 反向特征，且要防边缘缓存骗过——§43.2/§7.5）。
-  ⚠️ **bash 里传正则特征别写 `\s`**：MSYS 参数转换会把它吃成 `/s`，导致线上明明有该特征
-  却永远轮询不命中（2026-09-24 实测）——用 `' *'` 代替 `'\s*'`；PowerShell 不受影响。
+  ⚠️ **bash 里传正则特征别带冒号也别写 `\s`**：MSYS 会把 `x:y` 当路径表转换、
+  把 `\s` 吃成 `/s`（两次实测翻车）——用 `' *'` 代替 `'\s*'`、特征串避开冒号；PowerShell 不受影响。
+  ⚠️ **poll-deploy 只扫首页引用的 HTML+CSS chunk**：`/music/` 之类的页面特征要直接
+  `fetch('https://cloudwing.pages.dev/music/')` 验（音乐页 SSR 封面就是这么验的）。
+  ⚠️ Astro scoped 样式编译成 `.类名[data-astro-cid-…]{…}`，裸类名+属性串匹配不到。
 - 视觉类缺陷：部署后要求无残留闪烁/重复加载，完整验证后才算成功。
 
 ### C1.4 内容纪律
@@ -155,14 +198,17 @@ node scripts/smoke.mjs http://127.0.0.1:4321    # 期望 76/76
   192° 青蓝）+ 5 套色卡预设（`site.ts` 的 `ACCENTS`，§34）；玻璃令牌
   `--glass-blur/--line-2/--r-s|l|m` 全站走令牌不写死；边框 1px 或 2px（Blink 把 1.5px
   渲染成 1px）；字体 Inter + 系统中文回退。
-- **背景**：5.92MB mp4 自托管（2026-09-25 从 15.55MB 瘦身，§82 A1）+ 渐变遮罩 + poster 降级，
-  `transition:persist` 防软导航重建；分层绘制见 C0.5。
-- **导航三态**：贴顶通栏 → 滚动收胶囊（0.28s）→ 回顶恢复；「记录」分组悬停下拉（§51/§54）。
+- **背景**：桌面 5.92MB mp4 自托管（2026-09-25 从 15.55MB 瘦身，§82 A1）+ 渐变遮罩 +
+  poster 降级，`transition:persist` 防软导航重建；**手机端不加载视频**（poster 静帧 + 55%
+  暗化层，观感与桌面一致，§83.4/§83.5）。分层绘制见 C0.5。
 - **音乐**：四首曲目自托管转码 mp3 + 官方封面（iTunes/QQ/MusicBrainz/VGMdb 图源优先级，
   §79）+ LRCLIB 同步歌词（**务必按音源时长核对版本变体**）；侧栏播放器与 /music/ 页
-  共享 window 单例音频（§67.9）。
-- **死代码备忘**（在仓库但零引用，删前问站长）：`hero-anim.js`、`DriftWallBackground.astro`、
-  `HomeShapeGrid.jsx`、`TextType.astro`、`Ticker.astro`（§42.5）。
+  共享 window 单例音频（§67.9）；**唱片封面 SSR 直出**（§83.3，JS 迟到也能显示）。
+- **手机端首页排版**（§83）：精选影像 ≤620 两列（影像区 1630→605px）、hero 底部 padding 40；
+  详见 C0.8。
+- **已清理死代码**（2026-09-25 删，原 §42.5 候选）：`hero-anim.js`、`TextType.astro`、
+  `Ticker.astro`、`DriftWallBackground.astro`、`HomeShapeGrid.jsx`——均零引用，
+  已移入中转目录并从仓库注销；ReactBits 官方原码按 §5 铁律三未动。
 
 ---
 
@@ -172,7 +218,8 @@ node scripts/smoke.mjs http://127.0.0.1:4321    # 期望 76/76
 
 §0（现状）→ §1（五分钟上手，照做 build+smoke）→ §2/§3（硬约束/目录）→
 §5+§6（铁律/踩坑手册，先通读标题）→ §7（验证与调试）→ §8–§9+§47（壳层/令牌/测试分层）→
-§10+§13+§14（遗留/下一步/自检清单）→ §78–§81（最近变更）。
+§10+§13+§14（遗留/下一步/自检清单）→ **§78–§83（最近变更，含手机端重构与性能系列）**。
+手机端相关先看 C0.8/C0.9，再读 §82/§83/§83.1–§83.5。
 
 ### C3.2 主题 → 章节（§57.2 摘要）
 
@@ -188,17 +235,29 @@ node scripts/smoke.mjs http://127.0.0.1:4321    # 期望 76/76
 | 右栏挂件（热榜/日历/天气/音乐） | §56 §8 §67；`ui.js` 对应函数 |
 | 音乐模块 | §67（全链路）§67.9（共享单例）§79（封面/歌词）§78（部署回归） |
 | 移动端导航抽屉 | §80（四轮迭代终态 + gsap×SSR transform 坑） |
+| ★手机端加载/背景/显现（2026-09-25） | §82（诊断与分级方案）§83（排版）§83.1/§83.2（显现隐形根治）§83.3（音乐页降级）§83.4（视频/字体/预加载）§83.5（背景统一+黑边+删冗余） |
+| ★推送与凭据（卡在提交就看这里） | §2（SSH over 443 主路 + gh-push.sh 一键 + helper-selector 关凭据的坑） |
 | 验证脚本（新写/排查假失败） | §7.2 §7.6 §46.5 §43.2 |
-| 构建与部署 | §44.5（pagefind 坑）§43.2（边缘缓存坑）§7.5（poll-deploy）§60/§63（构建指纹） |
-| 白屏闪/背景分层 | §61 §62 §63（根因三部曲） |
+| 构建与部署 | §44.5（pagefind 坑）§43.2（边缘缓存坑）§7.5（poll-deploy）§60/§63（构建指纹）§83.4（modulepreload） |
+| 白屏闪/背景分层 | §61 §62 §63（根因三部曲）+ §83.5（手机端黑边） |
 | 历史"为什么删了它" | §40（作品库）§27（亮色主题）§41（极简化）§43（CODEX.md） |
 | 历史大事故与恢复 | §37（React #424）§2（bash 删除事故） |
 
-完整章节目录：`docs/handover/_index_raw.txt`（§0–§81 全部标题）。
+完整章节目录：`docs/handover/_index_raw.txt`（§0–§83.5 标题）。
 
-### C3.3 当前基线（2026-09-24 早）
+### C3.3 当前基线（2026-09-25 晚，手机端重构后）
 
-- `smoke.mjs` **76/76**；`verify-music` **53/53**；`verify-nav-shrink` **43/43**。
-- `run-regress.mjs` 队列 **24 脚本**（2026-09-24 `verify-music` 入队，§81 遗留待办完成）。
-- 可读性 0 处不达标；8 页 0 JS 异常；手机端 0 横向溢出。
-- 最近一次 L3 全量：2026-09-24 早（本文件落盘同轮，逐脚本串行全绿，详见当日日志）。
+| 脚本 | 基线 |
+|---|---|
+| `smoke.mjs` | **76/76** |
+| `verify-music.mjs` | **54/54**（+1：无 JS 封面 SSR 断言） |
+| `verify-home.mjs` | **28/28**（影像两列 + 刷新显现断言） |
+| `verify-videobg.mjs` | **29/29**（+3：手机端视频/posters/回弹/底色） |
+| `verify-theme.mjs` | **11/11**（单主题不变量） |
+| `run-regress.mjs` | 队列 **24 脚本**（含 2026-09-24 入队的 verify-music） |
+
+- 线上：**<https://cloudwing.top>**（主域）+ cloudwing.pages.dev 并行；背景视频 5.92MB（桌面）。
+- 可读性 0 处不达标；8 页 0 JS 异常；手机端 0 横向溢出；首页滚动深度 3516px（手机，原 4565）。
+- 最近一次 L3 全量：2026-09-24 早（24/24 逐脚本串行全绿）；此后按 §47 分层只跑受影响模块。
+- ⚠️ 沙箱限制：本会话沙箱禁止 node 派生子进程（`run-regress` 的 spawnSync 跑不了），
+  全量回归需 bash for 循环逐个顶层调用（见 C1.2）。
