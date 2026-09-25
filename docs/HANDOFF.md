@@ -4032,3 +4032,20 @@ poll-deploy 确认（⚠️ poll 特征别带冒号——MSYS 会把 `x:y` 当�
   提交 `e592e52`，poll `--have rv-expired` 确认线上生效。
 - 至此双保险齐备：① 慢网「包迟到」→ 3s rv-expired 失效开关；② 真机 rAF 冻结 →
   pageshow/visibilitychange sweep + 2.5s 超时。
+
+### §83.3 音乐页手机端降级：唱片封面 SSR 直出（2026-09-25 晚）
+
+> 站长真机反馈：手机端 /music/ 唱片没有加载、点按播放无反应。取证（390×844 CDP +
+> 真实点击 Input.dispatchMouseEvent）：模拟器一切正常（点击→播放/唱片旋转/封面注入，
+> 零异常）——与 §83.1/§83.2 同根：**手机上 JS 包迟到/未跑时，音乐页的 JS 依赖部分全灭**。
+
+- **封面原为空壳**：`mp-label` 在 SSR HTML 里是无背景的空 div，封面由 JS 从
+  `data-mp-covers` 注入——JS 没跑 = 唱片没有封面。
+- **修复**：`music/index.astro` 对 `mp-label` **SSR 直出第一首封面**
+  （`style="background-image:url('${MUSIC[0].cover}')"`）；JS 接管后切曲目照常换图（同一属性）。
+- **断言（红→绿）**：verify-music 新增「无 JS 降级」——`Emulation.setScriptExecutionDisabled`
+  禁脚本后 /music/ 的 mp-label 必须已带封面。旧代码红（bgHasCover:false），修复后绿，
+  **54/54**；smoke **76/76**；提交 `df82095`，线上 /music/ HTML 已核验。
+- **遗留说明**：播放按钮的点击处理仍需 JS（音频播放本就必须 JS）——JS 包迟到期间按钮
+  无响应是物理限制，缓解手段是 §83.2 的带宽优化方向（视频延后加载/预加载提示），未实施，
+  需站长决策。
