@@ -120,7 +120,9 @@ node scripts/smoke.mjs http://127.0.0.1:4321    # 期望 76/76
 
 ### C1.3 部署与确认
 
-- 推 `main` → Cloudflare Pages 自动构建（`npm run build`）→ 线上 <https://cloudwing.pages.dev>。
+- 推 `main` → Cloudflare Pages 自动构建（`npm run build`）→ 线上 <https://cloudwing.pages.dev>；
+  **主域 `https://cloudwing.top`**（2026-09-25 起绑定，腾讯云注册 NS 已托管 CF）——两域名并行服务，
+  canonical/sitemap/RSS 用 cloudwing.top。
 - **推送成功判据不是 "Everything up-to-date"，必须 verify remote ref**：`git ls-remote origin main`。
 - **部署确认用 `scripts/poll-deploy.mjs --have <正向特征> --not <反向特征>`**
   （别用 chunk 哈希；删除类改动必须给 `--not` 反向特征，且要防边缘缓存骗过——§43.2/§7.5）。
