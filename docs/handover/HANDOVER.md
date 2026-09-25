@@ -153,8 +153,8 @@ node scripts/smoke.mjs http://127.0.0.1:4321    # 期望 76/76
   192° 青蓝）+ 5 套色卡预设（`site.ts` 的 `ACCENTS`，§34）；玻璃令牌
   `--glass-blur/--line-2/--r-s|l|m` 全站走令牌不写死；边框 1px 或 2px（Blink 把 1.5px
   渲染成 1px）；字体 Inter + 系统中文回退。
-- **背景**：15.5MB mp4 自托管 + 渐变遮罩 + poster 降级，`transition:persist` 防软导航重建；
-  分层绘制见 C0.5。
+- **背景**：5.92MB mp4 自托管（2026-09-25 从 15.55MB 瘦身，§82 A1）+ 渐变遮罩 + poster 降级，
+  `transition:persist` 防软导航重建；分层绘制见 C0.5。
 - **导航三态**：贴顶通栏 → 滚动收胶囊（0.28s）→ 回顶恢复；「记录」分组悬停下拉（§51/§54）。
 - **音乐**：四首曲目自托管转码 mp3 + 官方封面（iTunes/QQ/MusicBrainz/VGMdb 图源优先级，
   §79）+ LRCLIB 同步歌词（**务必按音源时长核对版本变体**）；侧栏播放器与 /music/ 页
