@@ -3967,8 +3967,10 @@ V16 的 body 浅色渐变（旧「页面底色真实取值」）与 V17 的 `htm
   （`ollie/marty.ns.cloudflare.com`，ZDNS 注册局 RDAP 证实，RDAP 是绕解析缓存的权威验证手段）；
   Pages 自定义域证书已签发（apex=Google Trust Services，www=Let's Encrypt `*.cloudwing.top` 泛域名）；
   apex `https://cloudwing.top` 实测 **200 OK**；canonical 已切新域（`astro.config.mjs` site +
-  `rss.xml.ts` 兜底，commit `51488bf`，sitemap 22 条全量更新）。⚠️ 遗留：`www` 一度 530
-  （子域初始化中间态），待复测——若持续 530 去 Pages→Custom domains 看 www 状态/重挂。
+  `rss.xml.ts` 兜底，commit `51488bf`，sitemap 22 条全量更新）。
+  ⚠️ `www` **未在 Pages 添加**（站长仅绑了 apex）——SNI 探测 www 返回 530 属预期
+  （zone 的 Universal SSL 有 `*.cloudwing.top` 泛域证书，但 Pages 无 www 路由）；
+  要支持 www 访客：Pages→Custom domains→添加 `www.cloudwing.top` 即可（自动建记录+路由）。
   ⚠️ 本机运营商解析缓存 TTL 3600，切换后约 1h 内本机可能 ENOTFOUND（全球其它解析器即时生效）；
   验证手法：`_shots/tls-sni-probe.cjs`（直连边缘 IP + SNI，绕 DNS）。
 - **B2 双线托管**：镜像部署腾讯 EdgeOne Pages（默认域名大陆可达性显著优于 pages.dev，
