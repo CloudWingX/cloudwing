@@ -10,7 +10,7 @@ export async function GET(context: APIContext) {
     (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
   );
 
-  const site = context.site ?? 'https://cloudwing.pages.dev';
+  const site = context.site ?? 'https://cloudwing.top';
   const feedUrl = new URL('rss.xml', site).href;
 
   return rss({

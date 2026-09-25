@@ -7,7 +7,7 @@ import reactSafeUnmount from './plugins/vite-react-safe-unmount.mjs';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://cloudwing.pages.dev', // 线上地址（Cloudflare Pages）
+  site: 'https://cloudwing.top', // 主域（腾讯云注册，Cloudflare 全托管；pages.dev 仍并行服务）
   output: 'static',
   integrations: [
     react(),
