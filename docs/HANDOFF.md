@@ -4055,6 +4055,30 @@ poll-deploy 确认（⚠️ poll 特征别带冒号——MSYS 会把 `x:y` 当�
 smoke 76/76 全绿。提交 `8f21309`，poll 三特征（rv-expired/modulepreload/vb-poster）确认上线。
 真机预期：刷新不再被视频与字体阻塞，JS 秒级就位，音乐页/显现功能恢复正常。
 
+### §83.5 手机端重构：背景统一 + 黑边根治 + 删冗余（2026-09-25 晚，小米浏览器反馈）
+
+> 站长指令：手机端重构（导航栏除外）、删冗余、优化加载、**动效保留**、
+> **首页背景统一**（「代码卡片下方又出现黑色矩形边框」）、**任何改动不得影响 PC**。
+
+- **黑边机理**：手机端（§83.4）视频已不下发、poster 亮星野兜底，但
+  ① 小米/Safari 的 **overscroll 回弹**会露出 html 底色（§62 的 `#03060a` 近纯黑）
+  → 与亮星野之间出现「黑色矩形」；② 地址栏伸缩改变可视视口，fixed `inset:0` 只覆盖布局视口。
+- **背景统一 + 黑边根治**（仅 ≤768）：
+  1. poster 叠 `linear-gradient(rgba(5,8,12,.55))` 暗化层 ≈ 桌面「视频 opacity .45 压在 #05080c 上」的观感；
+  2. `.video-bg` 上下各外扩 80px（`inset:-80px 0`）吸收地址栏伸缩；
+  3. `html{overscroll-behavior-y:none}` 禁回弹；`html` 底色改深青 `#071620`（与星野暗部同族）。
+  ⚠️ **必须 `!important`**：Base.astro 把底色写在 html 的**行内 style** 上（§62 防白屏），
+  行内优先级压过一切 CSS——这条不加 !important 实测不生效。
+- **删冗余**：`hero-anim.js`（仅剩注释提及，§33 后不再加载）、`TextType.astro`、`Ticker.astro`、
+  `DriftWallBackground.astro`、`HomeShapeGrid.jsx`——全部零引用（grep 逐个核过），
+  移入中转目录 + `git add -A` 记录删除（不用 rm）。ReactBits 官方原码按 §5 铁律三未动。
+- **触屏跳过无效动效**：`startElegantTrails`（星轨 canvas = 鼠标轨迹，触屏无鼠标却要维护
+  canvas+rAF+resize）加 `pointer: fine` 守卫；桌面行为不变（可见动效全保留）。
+- **断言**（红→绿）：verify-videobg 手机段 +3 条（poster 叠暗化层 / overscroll / html 非近纯黑）
+  → 旧构建红（26/29），新构建绿 **29/29**；verify-home 28/28、verify-music 54/54、
+  verify-theme 11/11、smoke 76/76。提交 `7c98f1e`，线上特征齐备。
+- **待决策**：粒子岛（ReactBits 51KB + 运行时）手机端是否停用——因「动效保留」本轮未动。
+
 ### §83.3 音乐页手机端降级：唱片封面 SSR 直出（2026-09-25 晚）
 
 > 站长真机反馈：手机端 /music/ 唱片没有加载、点按播放无反应。取证（390×844 CDP +
