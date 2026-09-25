@@ -100,7 +100,7 @@ const mob = await ev(`(()=>({
   溢出:document.documentElement.scrollWidth-document.documentElement.clientWidth,
   标题字号:getComputedStyle(document.querySelector('.hero-title')).fontSize}))()`);
 console.log('  ' + JSON.stringify(mob));
-check('移动端单列堆叠', mob.作品列.split(' ').length === 1 && mob.影像列.split(' ').length === 1, `作品=${mob.作品列}`);
+check('移动端作品单列 + 影像两列（§82 手机排版优化，2026-09-25）', mob.作品列.split(' ').length === 1 && mob.影像列.split(' ').length === 2, `作品=${mob.作品列} 影像=${mob.影像列}`);
 check('移动端影像元信息常显（不靠悬停）', mob.影像元信息常显 === '1', mob.影像元信息常显);
 check('移动端无横向溢出', mob.溢出 === 0, String(mob.溢出));
 check('无 JS 异常', errs.length === 0, errs[0] || '');

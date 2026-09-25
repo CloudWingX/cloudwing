@@ -792,7 +792,7 @@ const codeSample = [
       justify-content: center;
       align-items: stretch; /* 左栏不再被居中拉伸，内容真正从左边起排 */
       gap: 40px;
-      padding: 96px 20px 64px;
+      padding: 96px 20px 40px; /* pb 64→40（2026-09-25）：手机端 hero→「最新文章」空白 144→120px */
       text-align: left;
     }
     .hero-content { text-align: left; max-width: 100%; }
@@ -952,7 +952,11 @@ const codeSample = [
   }
   @media (max-width: 620px) {
     .sec { padding: 80px 0; }
-    .work-cards, .shot-grid { grid-template-columns: minmax(0, 1fr); }
+    .work-cards { grid-template-columns: minmax(0, 1fr); }
+    /* 精选影像手机端改两列（2026-09-25 §82 手机排版优化）：预览语义下大图单列
+       把影像区推到 1630px；两列后省约 1100px 滚动深度。画廊页维持单列不变（§9.1）。 */
+    .shot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .shot-meta { gap: 0.35rem; font-size: 0.66rem; }
     /* 手机上不靠悬停：元信息常显 */
     .shot-meta { opacity: 1; transform: none; }
   }
